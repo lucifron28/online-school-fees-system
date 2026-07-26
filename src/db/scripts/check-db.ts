@@ -1,0 +1,24 @@
+import { neon } from '@neondatabase/serverless';
+import 'dotenv/config';
+
+async function checkDatabaseConnection() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    console.error('❌ Error: DATABASE_URL environment variable is not defined.');
+    process.exit(1);
+  }
+
+  try {
+    console.log('🔄 Checking database connection to Neon PostgreSQL...');
+    const sql = neon(databaseUrl);
+    const result = await sql`SELECT NOW() as current_time, VERSION() as version;`;
+    console.log('✅ Database connection successful!');
+    console.log('Timestamp:', result[0]?.current_time);
+    console.log('Version:', result[0]?.version);
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    process.exit(1);
+  }
+}
+
+checkDatabaseConnection();
