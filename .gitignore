@@ -44,3 +44,7 @@ next-env.d.ts
 
 # codegraph
 .codegraph/
+
+.antigravity/
+.agents/workflows/
+docs/antigravity-workflows/

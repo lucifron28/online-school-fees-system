@@ -1,0 +1,9 @@
+.next
+node_modules
+pnpm-lock.yaml
+coverage
+dist
+build
+.codegraph
+playwright-report
+test-results
