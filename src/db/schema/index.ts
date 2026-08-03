@@ -5,6 +5,17 @@ export const userRoleEnum = pgEnum('user_role', ['ADMIN', 'FINANCE_STAFF', 'PARE
 
 // Academic Status Enums
 export const schoolYearStatusEnum = pgEnum('school_year_status', ['DRAFT', 'ACTIVE', 'ARCHIVED']);
+export const studentStatusEnum = pgEnum('student_status', [
+  'ACTIVE',
+  'INACTIVE',
+  'WITHDRAWN',
+  'GRADUATED',
+]);
+export const feeStructureStatusEnum = pgEnum('fee_structure_status', [
+  'DRAFT',
+  'ACTIVE',
+  'ARCHIVED',
+]);
 
 // ---------------------------------------------------------------------------
 // Better Auth Core Tables
@@ -109,5 +120,88 @@ export const sections = pgTable('sections', {
     .references(() => schoolYears.id, { onDelete: 'cascade' }),
   name: text('name').notNull(), // e.g. 'Section A'
   code: text('code').notNull(), // e.g. 'G10-A'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Student & Guardian Domain Tables
+// ---------------------------------------------------------------------------
+
+export const students = pgTable('students', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  studentNumber: text('student_number').notNull().unique(), // e.g. 'S2026-0001'
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  email: text('email').notNull(),
+  gradeLevelId: uuid('grade_level_id').references(() => gradeLevels.id),
+  sectionId: uuid('section_id').references(() => sections.id),
+  schoolYearId: uuid('school_year_id').references(() => schoolYears.id),
+  status: text('status').default('ACTIVE').notNull(), // ACTIVE | INACTIVE | WITHDRAWN | GRADUATED
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const guardians = pgTable('guardians', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone').notNull(),
+  relationship: text('relationship').default('Parent').notNull(), // Parent | Father | Mother | Guardian
+  address: text('address').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const guardianStudents = pgTable('guardian_students', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  guardianId: uuid('guardian_id')
+    .notNull()
+    .references(() => guardians.id, { onDelete: 'cascade' }),
+  studentId: uuid('student_id')
+    .notNull()
+    .references(() => students.id, { onDelete: 'cascade' }),
+  isPrimary: boolean('is_primary').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Fee Category & Structure Domain Tables
+// ---------------------------------------------------------------------------
+
+export const feeCategories = pgTable('fee_categories', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(), // e.g. 'Tuition Fee'
+  code: text('code').notNull().unique(), // e.g. 'TUITION'
+  description: text('description'),
+  status: text('status').default('ACTIVE').notNull(), // ACTIVE | ARCHIVED
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const feeStructures = pgTable('fee_structures', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  schoolYearId: uuid('school_year_id')
+    .notNull()
+    .references(() => schoolYears.id),
+  gradeLevelId: uuid('grade_level_id')
+    .notNull()
+    .references(() => gradeLevels.id),
+  name: text('name').notNull(), // e.g. 'Grade 10 Standard Fees SY 2024-2025'
+  status: text('status').default('ACTIVE').notNull(), // DRAFT | ACTIVE | ARCHIVED
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const feeStructureItems = pgTable('fee_structure_items', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  feeStructureId: uuid('fee_structure_id')
+    .notNull()
+    .references(() => feeStructures.id, { onDelete: 'cascade' }),
+  feeCategoryId: uuid('fee_category_id')
+    .notNull()
+    .references(() => feeCategories.id),
+  name: text('name').notNull(), // e.g. 'Tuition Fee (Full Year)'
+  amountCentavos: integer('amount_centavos').notNull(), // Amount in centavos (₱12,000.00 = 1200000)
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
