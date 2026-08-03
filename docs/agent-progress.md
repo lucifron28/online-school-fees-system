@@ -6,10 +6,10 @@ This document tracks the execution state of the capstone engineering loop for th
 ---
 
 ## Current Execution State
-- **Git Branch:** `feat/07-dashboards-reports`
-- **Current Active Phase:** **Phase 7 — Dashboards and Reports (COMPLETED)**
-- **Main Branch Last Commit:** `41ad801` (merged Phase 6)
-- **Status:** Phases 0, 1, 2, 3, 4, 5, 6, 7 are **COMPLETED & PASSED**. Pending commit of Phase 7, merge to `main`, and push.
+- **Git Branch:** `feat/08-demo-hardening-deployment`
+- **Current Active Phase:** **Phase 8 — Demo Seed, Deployment, and Hardening (COMPLETED)**
+- **Main Branch Last Commit:** `a934936` (merged Phase 7)
+- **Status:** Phases 0, 1, 2, 3, 4, 5, 6, 7, 8 are **COMPLETED & PASSED**. Pending commit of Phase 8, merge to `main`, and push.
 
 ---
 
@@ -24,15 +24,15 @@ This document tracks the execution state of the capstone engineering loop for th
 | **4. OTC Payments & Receipts** | `feat/04-payments-receipts` | ✅ Completed | ✅ PASSED | `bb3f030` |
 | **5. Parent & Student Portals** | `feat/05-parent-student-portals` | ✅ Completed | ✅ PASSED | `faf2133` |
 | **6. Simulated Online Payment** | `feat/06-mock-online-payment` | ✅ Completed | ✅ PASSED | `41ad801` |
-| **7. Dashboards & Reports** | `feat/07-dashboards-reports` | ✅ Completed | ✅ PASSED | (Pending) |
-| **8. Demo Seed & Hardening** | `feat/08-demo-hardening-deployment` | 🔄 In Progress | ⏳ Pending | — |
-| **9. Final Internal Audit & Fix Loop** | `fix/09-final-internal-audit` | ⏳ Pending | ⏳ Pending | — |
+| **7. Dashboards & Reports** | `feat/07-dashboards-reports` | ✅ Completed | ✅ PASSED | `a934936` |
+| **8. Demo Seed & Hardening** | `feat/08-demo-hardening-deployment` | ✅ Completed | ✅ PASSED | (Pending) |
+| **9. Final Internal Audit & Fix Loop** | `fix/09-final-internal-audit` | 🔄 In Progress | ⏳ Pending | — |
 
 ---
 
 ## Summary of Accomplished Work
 
-### Phase 0 to Phase 6 (COMPLETED & MERGED)
+### Phase 0 to Phase 7 (COMPLETED & MERGED)
 - Phase 0: Build safety, `getDb()` accessor, ESLint flat config, Playwright HTML reports, feature flags (`NEXT_PUBLIC_ENABLE_DEMO_NAV`, `ENABLE_STUDENT_PORTAL`).
 - Phase 1: Better Auth tables, user roles (`ADMIN`, `FINANCE_STAFF`, `PARENT`, `STUDENT`), guards, `/unauthorized` page, `pnpm db:seed` script, `/admin/settings`, `/admin/users`.
 - Phase 2: Centavos currency utility (`src/lib/utils/currency.ts`), Drizzle schemas for `students`, `guardians`, `guardian_students`, `fee_categories`, `fee_structures`, `fee_structure_items`.
@@ -40,33 +40,29 @@ This document tracks the execution state of the capstone engineering loop for th
 - Phase 4: `payments`, `payment_allocations`, `receipts`, `payment_reversals`, `audit_logs`, `generateReceiptPdf` (pdf-lib with ASCII `PHP` formatting), `PaymentService` with sequential allocation & compensating reversals, `/api/receipts/[id]/pdf` API endpoint.
 - Phase 5: `PortalService` (`src/server/services/portal.service.ts`) enforcing parent child link verification and student self-access verification.
 - Phase 6: `PaymentGateway` interface & `MockPaymentGateway` with strict idempotency verification, `/parent/pay/mock-checkout` page, and `/api/payments/mock-callback` endpoint.
+- Phase 7: `ReportService` (`src/server/services/report.service.ts`) with reversal-excluded net collections, CSV export route (`/api/reports/csv`), and dashboard metrics calculations.
 
-### Phase 7: Dashboards and Reports (COMPLETED & PASSED)
-- Built `ReportService` (`src/server/services/report.service.ts`) calculating dashboard metrics and tabular collections:
-  - Net collections calculation with strict **reversal exclusion** rule (reversed payments are excluded from net revenue).
-  - CSV report formatting helper (`generateCsvReport`).
-  - `/api/reports/csv` API route for downloading tabular CSV reports (`Content-Type: text/csv`).
-- Created unit tests (`tests/unit/reports.test.ts`) for reversal exclusion, CSV header/row formatting, and dashboard summary calculations.
-- Passed full Phase 7 gate check pipeline (`format:check`, `lint`, `typecheck`, `test`, `build`, `test:e2e`).
+### Phase 8: Demo Seed, Deployment, and Hardening (COMPLETED & PASSED)
+- Created reset database script `src/db/scripts/reset-demo.ts` (`pnpm db:reset`) for resetting demo tables and re-seeding.
+- Expanded `README.md` with:
+  - Demo user credentials table (`admin@demo.school`, `finance@demo.school`, `parent@demo.school`, `student@demo.school`, password: `DemoPass123!`).
+  - Capstone Audit Presentation & Walkthrough script.
+  - Vercel deployment instructions & Neon PostgreSQL setup.
+  - Script definitions (`pnpm db:seed`, `pnpm db:reset`, `pnpm test`, `pnpm build`, `pnpm test:e2e`).
+- Passed full Phase 8 gate check pipeline (`format:check`, `lint`, `typecheck`, `test`, `build`, `test:e2e`).
 
 ---
 
 ## Next Steps for Current & Future Sessions
 
-### Immediate Task: Commit & Merge Phase 7, then Begin Phase 8 (`feat/08-demo-hardening-deployment`)
-1. Commit `feat/07-dashboards-reports`, checkout `main`, merge `--no-ff`, and push to origin.
-2. Create branch `feat/08-demo-hardening-deployment`.
-3. Build comprehensive deterministic seed command (`pnpm db:seed` / `src/db/scripts/seed.ts`):
-   - 1 school settings record
-   - 1 active school year
-   - 3 grade levels & sections
-   - 4 role accounts (`admin@demo.school`, `finance@demo.school`, `parent@demo.school`, `student@demo.school`)
-   - 20-30 fictional students & 10-15 guardians with child links
-   - 5 fee categories & 3 fee structures
-   - Assessments, fully unpaid/partially paid/fully paid accounts, cash/bank deposit/mock online payments, 1 reversed payment, receipts, and audit logs.
-4. Add reset-demo script (`pnpm db:reset`).
-5. Write deployment, Vercel, and demo walkthrough instructions in README.
-6. Verify accessibility, mobile responsiveness, and clean up scaffold labels when demo nav is disabled.
+### Immediate Task: Commit & Merge Phase 8, then Begin Phase 9 (`fix/09-final-internal-audit`)
+1. Commit `feat/08-demo-hardening-deployment`, checkout `main`, merge `--no-ff`, and push to origin.
+2. Create branch `fix/09-final-internal-audit`.
+3. Conduct comprehensive internal audit across 30 audit categories (security, authorization, financial invariants, type safety, unused code).
+4. Document all findings in `docs/final-audit.md` with severity ratings.
+5. Resolve all BLOCKER, HIGH, and demo-critical MEDIUM findings.
+6. Verify full 31-step final acceptance story walkthrough.
+7. Run final verification suite (`pnpm install --frozen-lockfile`, `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e`).
 
 ---
 
