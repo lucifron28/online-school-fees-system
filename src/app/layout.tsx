@@ -24,8 +24,7 @@ export default function RootLayout({
                   MP
                 </div>
                 <div>
-                  <h1 className="text-sm font-semibold leading-none tracking-tight text-slate-900 dark:text-slate-100">
-                  </h1>
+                  <h1 className="text-sm font-semibold leading-none tracking-tight text-slate-900 dark:text-slate-100"></h1>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Online School Fees System
                   </p>

@@ -1,4 +1,3 @@
-'use me';
 'use client';
 
 import React from 'react';
@@ -12,12 +11,12 @@ import { CreditCard, DollarSign, Users, ChevronRight, GraduationCap } from 'luci
 export default function ParentDashboardPage() {
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+          <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
             Screen #10 • PARENT DASHBOARD
           </Badge>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 mt-1">
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             Dashboard
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -26,8 +25,8 @@ export default function ParentDashboardPage() {
         </div>
 
         <Link href="/parent/pay">
-          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 shadow-sm">
-            <CreditCard className="h-4 w-4 mr-1.5" />
+          <Button className="h-9 bg-emerald-600 text-xs text-white shadow-sm hover:bg-emerald-700">
+            <CreditCard className="mr-1.5 h-4 w-4" />
             <span>Make Online Payment</span>
           </Button>
         </Link>
@@ -41,13 +40,17 @@ export default function ParentDashboardPage() {
               <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                 Total Outstanding Balance
               </span>
-              <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700">
+              <div className="rounded-xl bg-emerald-100 p-2 text-emerald-700 dark:bg-emerald-900/60">
                 <CreditCard className="h-5 w-5" />
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">₱14,000.00</div>
-              <p className="text-xs text-slate-500 mt-1">Due for SY 2024–2025 across all enrolled children</p>
+              <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">
+                ₱14,000.00
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                Due for SY 2024–2025 across all enrolled children
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -58,13 +61,15 @@ export default function ParentDashboardPage() {
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Total Paid (SY 2024–2025)
               </span>
-              <div className="p-2 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60">
+              <div className="rounded-xl bg-blue-50 p-2 text-blue-600 dark:bg-blue-950/60">
                 <DollarSign className="h-5 w-5" />
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">₱38,000.00</div>
-              <p className="text-xs text-slate-500 mt-1">Total payments processed to date</p>
+              <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">
+                ₱38,000.00
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Total payments processed to date</p>
             </div>
           </CardContent>
         </Card>
@@ -79,16 +84,20 @@ export default function ParentDashboardPage() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors gap-4">
+            <div className="flex flex-col justify-between gap-4 p-5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50 sm:flex-row sm:items-center">
               <div className="flex items-center space-x-4">
                 <ImagePlaceholder type="avatar" className="h-14 w-14 border-2 border-emerald-500" />
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Juan Dela Cruz Jr.</h4>
-                  <p className="text-xs text-slate-500 font-mono">Grade 10 - Section A • Student ID: 2024-0001</p>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Juan Dela Cruz Jr.
+                  </h4>
+                  <p className="font-mono text-xs text-slate-500">
+                    Grade 10 - Section A • Student ID: 2024-0001
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between sm:justify-end space-x-6">
+              <div className="flex items-center justify-between space-x-6 sm:justify-end">
                 <div className="text-right">
                   <span className="text-[11px] text-slate-500">Outstanding Balance</span>
                   <p className="text-base font-extrabold text-rose-600">₱14,000.00</p>
@@ -97,7 +106,7 @@ export default function ParentDashboardPage() {
                 <Link href="/parent/children/S2024-0001">
                   <Button variant="outline" size="sm" className="h-9 text-xs">
                     <span>View Details</span>
-                    <ChevronRight className="h-4 w-4 ml-1 text-slate-400" />
+                    <ChevronRight className="ml-1 h-4 w-4 text-slate-400" />
                   </Button>
                 </Link>
               </div>

@@ -1,10 +1,16 @@
 import { neon } from '@neondatabase/serverless';
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 async function checkDatabaseConnection() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    console.error('❌ Error: DATABASE_URL environment variable is not defined.');
+    console.error(
+      '❌ Error: DATABASE_URL environment variable is missing. Please set DATABASE_URL in .env.local or environment.'
+    );
     process.exit(1);
   }
 

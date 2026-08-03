@@ -9,18 +9,35 @@ export function Table({ className, ...props }: React.HTMLAttributes<HTMLTableEle
   );
 }
 
-export function TableHeader({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn('[&_tr]:border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50', className)} {...props} />;
+export function TableHeader({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLTableSectionElement>) {
+  return (
+    <thead
+      className={cn(
+        'border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/50 [&_tr]:border-b',
+        className
+      )}
+      {...props}
+    />
+  );
 }
 
 export function TableBody({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return <tbody className={cn('[&_tr:last-child]:border-0', className)} {...props} />;
 }
 
-export function TableFooter({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
+export function TableFooter({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <tfoot
-      className={cn('border-t bg-slate-100/50 font-medium [&>tr]:last-child:border-b-0 dark:bg-slate-800/50', className)}
+      className={cn(
+        '[&>tr]:last-child:border-b-0 border-t bg-slate-100/50 font-medium dark:bg-slate-800/50',
+        className
+      )}
       {...props}
     />
   );
@@ -42,7 +59,7 @@ export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTa
   return (
     <th
       className={cn(
-        'h-10 px-4 text-left align-middle font-medium text-slate-500 [&:has([role=checkbox])]:pr-0 dark:text-slate-400',
+        'h-10 px-4 text-left align-middle font-medium text-slate-500 dark:text-slate-400 [&:has([role=checkbox])]:pr-0',
         className
       )}
       {...props}
@@ -53,13 +70,19 @@ export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTa
 export function TableCell({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
   return (
     <td
-      className={cn('p-4 align-middle [&:has([role=checkbox])]:pr-0 text-slate-700 dark:text-slate-300', className)}
+      className={cn(
+        'p-4 align-middle text-slate-700 dark:text-slate-300 [&:has([role=checkbox])]:pr-0',
+        className
+      )}
       {...props}
     />
   );
 }
 
-export function TableCaption({ className, ...props }: React.HTMLAttributes<HTMLTableCaptionElement>) {
+export function TableCaption({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLTableCaptionElement>) {
   return (
     <caption
       className={cn('mt-4 text-sm text-slate-500 dark:text-slate-400', className)}
