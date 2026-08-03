@@ -16,6 +16,15 @@ export const feeStructureStatusEnum = pgEnum('fee_structure_status', [
   'ACTIVE',
   'ARCHIVED',
 ]);
+export const assessmentStatusEnum = pgEnum('assessment_status', ['DRAFT', 'POSTED', 'CANCELLED']);
+export const adjustmentTypeEnum = pgEnum('adjustment_type', ['DEBIT', 'CREDIT']);
+export const ledgerEntryTypeEnum = pgEnum('ledger_entry_type', [
+  'ASSESSMENT',
+  'PAYMENT',
+  'REVERSAL',
+  'DEBIT_ADJUSTMENT',
+  'CREDIT_ADJUSTMENT',
+]);
 
 // ---------------------------------------------------------------------------
 // Better Auth Core Tables
@@ -148,7 +157,7 @@ export const guardians = pgTable('guardians', {
   lastName: text('last_name').notNull(),
   email: text('email').notNull(),
   phone: text('phone').notNull(),
-  relationship: text('relationship').default('Parent').notNull(), // Parent | Father | Mother | Guardian
+  relationship: text('relationship').default('Parent').notNull(),
   address: text('address').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -172,10 +181,10 @@ export const guardianStudents = pgTable('guardian_students', {
 
 export const feeCategories = pgTable('fee_categories', {
   id: uuid('id').defaultRandom().primaryKey(),
-  name: text('name').notNull(), // e.g. 'Tuition Fee'
-  code: text('code').notNull().unique(), // e.g. 'TUITION'
+  name: text('name').notNull(),
+  code: text('code').notNull().unique(),
   description: text('description'),
-  status: text('status').default('ACTIVE').notNull(), // ACTIVE | ARCHIVED
+  status: text('status').default('ACTIVE').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -187,8 +196,8 @@ export const feeStructures = pgTable('fee_structures', {
   gradeLevelId: uuid('grade_level_id')
     .notNull()
     .references(() => gradeLevels.id),
-  name: text('name').notNull(), // e.g. 'Grade 10 Standard Fees SY 2024-2025'
-  status: text('status').default('ACTIVE').notNull(), // DRAFT | ACTIVE | ARCHIVED
+  name: text('name').notNull(),
+  status: text('status').default('ACTIVE').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -201,7 +210,70 @@ export const feeStructureItems = pgTable('fee_structure_items', {
   feeCategoryId: uuid('fee_category_id')
     .notNull()
     .references(() => feeCategories.id),
-  name: text('name').notNull(), // e.g. 'Tuition Fee (Full Year)'
-  amountCentavos: integer('amount_centavos').notNull(), // Amount in centavos (₱12,000.00 = 1200000)
+  name: text('name').notNull(),
+  amountCentavos: integer('amount_centavos').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Assessment & Ledger Domain Tables (Phase 3)
+// ---------------------------------------------------------------------------
+
+export const studentAssessments = pgTable('student_assessments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  studentId: uuid('student_id')
+    .notNull()
+    .references(() => students.id, { onDelete: 'cascade' }),
+  schoolYearId: uuid('school_year_id')
+    .notNull()
+    .references(() => schoolYears.id),
+  feeStructureId: uuid('fee_structure_id')
+    .notNull()
+    .references(() => feeStructures.id),
+  totalAmountCentavos: integer('total_amount_centavos').notNull(),
+  status: text('status').default('POSTED').notNull(), // DRAFT | POSTED | CANCELLED
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const assessmentItems = pgTable('assessment_items', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  assessmentId: uuid('assessment_id')
+    .notNull()
+    .references(() => studentAssessments.id, { onDelete: 'cascade' }),
+  feeCategoryId: uuid('fee_category_id')
+    .notNull()
+    .references(() => feeCategories.id),
+  name: text('name').notNull(),
+  amountCentavos: integer('amount_centavos').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const adjustments = pgTable('adjustments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  assessmentId: uuid('assessment_id')
+    .notNull()
+    .references(() => studentAssessments.id),
+  studentId: uuid('student_id')
+    .notNull()
+    .references(() => students.id),
+  type: text('type').notNull(), // DEBIT | CREDIT
+  amountCentavos: integer('amount_centavos').notNull(),
+  reason: text('reason').notNull(),
+  approvedByUserId: text('approved_by_user_id').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const ledgerEntries = pgTable('ledger_entries', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  studentId: uuid('student_id')
+    .notNull()
+    .references(() => students.id, { onDelete: 'cascade' }),
+  assessmentId: uuid('assessment_id').references(() => studentAssessments.id),
+  entryType: text('entry_type').notNull(), // ASSESSMENT | PAYMENT | REVERSAL | DEBIT_ADJUSTMENT | CREDIT_ADJUSTMENT
+  debitCentavos: integer('debit_centavos').default(0).notNull(),
+  creditCentavos: integer('credit_centavos').default(0).notNull(),
+  balanceCentavos: integer('balance_centavos').notNull(),
+  description: text('description').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
