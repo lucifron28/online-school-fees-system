@@ -1,10 +1,10 @@
 # Agent Progress Log
 
 ## Current Status
-- **Current Branch:** `fix/00-foundation-demo-contract`
-- **Current Phase:** Phase 0 — Foundation and Demo Contract (COMPLETED)
-- **Last Successful Commit:** (Pending commit of fix/00-foundation-demo-contract)
-- **Next Action:** Commit Phase 0, merge `fix/00-foundation-demo-contract` into `main`, push `main`, and create `feat/01-auth-core-settings` for Phase 1.
+- **Current Branch:** `feat/01-auth-core-settings`
+- **Current Phase:** Phase 1 — Authentication, RBAC, and Core Settings (COMPLETED)
+- **Last Successful Commit:** (Pending commit of feat/01-auth-core-settings)
+- **Next Action:** Commit Phase 1, merge `feat/01-auth-core-settings` into `main`, push `main`, and create `feat/02-students-guardians-fees` for Phase 2.
 
 ---
 
@@ -13,8 +13,8 @@
 | Phase | Branch Name | Status | Gate Status |
 | --- | --- | --- | --- |
 | **0. Foundation & Demo Contract** | `fix/00-foundation-demo-contract` | Completed | PASSED |
-| **1. Auth, RBAC & Core Settings** | `feat/01-auth-core-settings` | In Progress | Pending |
-| **2. Students, Guardians & Fees** | `feat/02-students-guardians-fees` | Pending | Pending |
+| **1. Auth, RBAC & Core Settings** | `feat/01-auth-core-settings` | Completed | PASSED |
+| **2. Students, Guardians & Fees** | `feat/02-students-guardians-fees` | In Progress | Pending |
 | **3. Assessments & Ledger** | `feat/03-assessments-ledger` | Pending | Pending |
 | **4. OTC Payments & Receipts** | `feat/04-payments-receipts` | Pending | Pending |
 | **5. Parent & Student Portals** | `feat/05-parent-student-portals` | Pending | Pending |
@@ -25,26 +25,23 @@
 
 ---
 
-## Completed Acceptance Criteria (Phase 0)
-- [x] Remove accidental `'use me';` directives.
-- [x] Ensure `'use client';` is used only where required.
-- [x] Verify / configure TanStack Form compatibility.
-- [x] Configure ESLint direct execution & flat format (`eslint.config.mjs`).
-- [x] Add `packageManager` to `package.json` (`pnpm@11.17.0`).
-- [x] Implement safe `getDb()` server-only accessor with fallback build safety.
-- [x] Add feature flags (`NEXT_PUBLIC_ENABLE_DEMO_NAV`, `ENABLE_STUDENT_PORTAL`).
-- [x] Hide development role switcher when `NEXT_PUBLIC_ENABLE_DEMO_NAV=false`.
-- [x] Add `not-found`, `error`, `global-error`, `loading`, `loading-state`, and `empty-state` components.
-- [x] Update README with scaffold details, demo notice, limitations, and branch roadmap.
-- [x] Update GitHub Actions CI workflow to trigger on feature/fix branches.
-- [x] Add Playwright HTML reporter and artifact configuration.
-- [x] Pass complete Phase 0 gate (`format:check`, `lint`, `typecheck`, `test`, `build`, `test:e2e`).
+## Completed Acceptance Criteria (Phase 1)
+- [x] Better Auth tables (`users`, `sessions`, `accounts`, `verifications`) and domain schemas (`school_settings`, `school_years`, `grade_levels`, `sections`).
+- [x] Better Auth server initialization & client integration (`src/lib/auth/server.ts`, `src/lib/auth/client.ts`, `/api/auth/[...all]`).
+- [x] Server-side role guards (`requireAuth`, `requireAdmin`, `requireFinanceStaff`, `requireParent`, `requireStudent`) & Next.js middleware.
+- [x] Custom `/unauthorized` access denied page.
+- [x] Deterministic demo seed script (`db:seed`) for demo user accounts (`admin@demo.school`, `finance@demo.school`, `parent@demo.school`, `student@demo.school`).
+- [x] Admin institution settings (`/admin/settings`) and user management page (`/admin/users`).
+- [x] Unit tests for RBAC, role permissions, active/disabled account logic, and feature flags (`tests/unit/auth-rbac.test.ts`).
+- [x] Passed full Phase 1 gate (`format:check`, `lint`, `typecheck`, `test`, `build`, `test:e2e`).
 
 ---
 
 ## Database Migrations Applied
-- None yet (Phase 0)
+- Schema defined in `src/db/schema/index.ts`
 
 ## Environment Variables Introduced
-- `NEXT_PUBLIC_ENABLE_DEMO_NAV` (default: `true`)
-- `ENABLE_STUDENT_PORTAL` (default: `true`)
+- `BETTER_AUTH_SECRET`
+- `BETTER_AUTH_URL`
+- `NEXT_PUBLIC_ENABLE_DEMO_NAV`
+- `ENABLE_STUDENT_PORTAL`
