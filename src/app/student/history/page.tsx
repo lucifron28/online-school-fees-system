@@ -1,4 +1,3 @@
-'use me';
 'use client';
 
 import React from 'react';
@@ -6,22 +5,41 @@ import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
 import { Eye } from 'lucide-react';
 
 export default function StudentPaymentHistoryPage() {
   const history = [
-    { id: 'OR-2024-000123', date: 'May 30, 2024', amount: '₱14,000.00', method: 'GCash', status: 'Completed' },
-    { id: 'OR-2024-000100', date: 'Jan 15, 2024', amount: '₱12,000.00', method: 'Cash', status: 'Completed' },
+    {
+      id: 'OR-2024-000123',
+      date: 'May 30, 2024',
+      amount: '₱14,000.00',
+      method: 'GCash',
+      status: 'Completed',
+    },
+    {
+      id: 'OR-2024-000100',
+      date: 'Jan 15, 2024',
+      amount: '₱12,000.00',
+      method: 'Cash',
+      status: 'Completed',
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+        <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700">
           Screen #18 • STUDENT - PAYMENT HISTORY
         </Badge>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 mt-1">
+        <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
           Payment History
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -45,23 +63,34 @@ export default function StudentPaymentHistoryPage() {
             <TableBody>
               {history.map((tx) => (
                 <TableRow key={tx.id}>
-                  <TableCell className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{tx.id}</TableCell>
+                  <TableCell className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
+                    {tx.id}
+                  </TableCell>
                   <TableCell className="text-xs text-slate-500">{tx.date}</TableCell>
-                  <TableCell className="text-xs font-bold text-slate-900 dark:text-slate-100">{tx.amount}</TableCell>
+                  <TableCell className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                    {tx.amount}
+                  </TableCell>
                   <TableCell className="text-xs">
-                    <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-medium">
+                    <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                       {tx.method}
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
+                    <Badge
+                      variant="outline"
+                      className="border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
+                    >
                       {tx.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <Link href={`/student/receipts/${tx.id}`}>
-                      <Button variant="ghost" size="sm" className="h-8 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50">
-                        <Eye className="h-3.5 w-3.5 mr-1" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-purple-600 hover:bg-purple-50 hover:text-purple-700"
+                      >
+                        <Eye className="mr-1 h-3.5 w-3.5" />
                         <span>View Receipt</span>
                       </Button>
                     </Link>

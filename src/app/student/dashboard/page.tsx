@@ -1,4 +1,3 @@
-'use me';
 'use client';
 
 import React from 'react';
@@ -13,10 +12,10 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+        <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700">
           Screen #16 • STUDENT DASHBOARD
         </Badge>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 mt-1">
+        <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
           Welcome, Juan Dela Cruz Jr.!
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -32,13 +31,15 @@ export default function StudentDashboardPage() {
               <span className="text-xs font-semibold text-rose-800 dark:text-rose-300">
                 Outstanding Balance
               </span>
-              <div className="p-2 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-700">
+              <div className="rounded-xl bg-rose-100 p-2 text-rose-700 dark:bg-rose-900/60">
                 <CreditCard className="h-5 w-5" />
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">₱14,000.00</div>
-              <p className="text-xs text-slate-500 mt-1">Current pending fee balance</p>
+              <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">
+                ₱14,000.00
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Current pending fee balance</p>
             </div>
           </CardContent>
         </Card>
@@ -49,13 +50,15 @@ export default function StudentDashboardPage() {
               <span className="text-xs font-semibold text-purple-800 dark:text-purple-300">
                 Total Paid
               </span>
-              <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-700">
+              <div className="rounded-xl bg-purple-100 p-2 text-purple-700 dark:bg-purple-900/60">
                 <DollarSign className="h-5 w-5" />
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">₱12,000.00</div>
-              <p className="text-xs text-slate-500 mt-1">Total payments made this school year</p>
+              <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">
+                ₱12,000.00
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Total payments made this school year</p>
             </div>
           </CardContent>
         </Card>
@@ -67,19 +70,23 @@ export default function StudentDashboardPage() {
           <CardTitle className="text-base font-semibold">My Account Summary</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div className="flex items-center space-x-4">
               <ImagePlaceholder type="avatar" className="h-14 w-14 border-2 border-purple-500" />
               <div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">Juan Dela Cruz Jr.</h4>
-                <p className="text-xs text-slate-500 font-mono">Student ID: 2024-0001 • Grade 10 - A</p>
+                <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  Juan Dela Cruz Jr.
+                </h4>
+                <p className="font-mono text-xs text-slate-500">
+                  Student ID: 2024-0001 • Grade 10 - A
+                </p>
               </div>
             </div>
 
             <Link href="/student/account">
-              <Button variant="outline" className="text-xs h-9">
+              <Button variant="outline" className="h-9 text-xs">
                 <span>View Full Account Details</span>
-                <ChevronRight className="h-4 w-4 ml-1 text-slate-400" />
+                <ChevronRight className="ml-1 h-4 w-4 text-slate-400" />
               </Button>
             </Link>
           </div>

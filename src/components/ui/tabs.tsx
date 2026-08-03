@@ -14,7 +14,14 @@ export interface TabsProps extends React.HTMLAttributes<HTMLDivElement> {
   onValueChange?: (value: string) => void;
 }
 
-export function Tabs({ defaultValue, value, onValueChange, children, className, ...props }: TabsProps) {
+export function Tabs({
+  defaultValue,
+  value,
+  onValueChange,
+  children,
+  className,
+  ...props
+}: TabsProps) {
   const [selected, setSelected] = React.useState(defaultValue);
   const current = value !== undefined ? value : selected;
 
