@@ -67,7 +67,7 @@ export class MockPaymentGateway implements PaymentGateway {
       const existing = processedReferences.get(paymentReference)!;
       return {
         paymentReference,
-        status: existing.status as any,
+        status: existing.status as 'SUCCESS' | 'FAILED' | 'CANCELLED' | 'PENDING',
         amountCentavos: existing.amountCentavos,
         studentId: existing.studentId,
         paidAt: new Date(),
