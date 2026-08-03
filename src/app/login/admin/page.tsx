@@ -57,9 +57,13 @@ export default function AdminLoginPage() {
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Password
                 </label>
-                <a href="#" className="text-xs text-blue-600 hover:underline dark:text-blue-400">
+                <button
+                  type="button"
+                  onClick={() => alert('Password reset is managed by the School Administrator.')}
+                  className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+                >
                   Forgot Password?
-                </a>
+                </button>
               </div>
               <Input
                 type="password"
