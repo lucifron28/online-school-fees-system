@@ -43,6 +43,19 @@ export function formatCentavos(centavos: number): string {
 }
 
 /**
+ * Formats integer centavos for PDF output (using ASCII "PHP" prefix to avoid WinAnsi encoding issues).
+ * Example: 150050 -> "PHP 1,500.50"
+ */
+export function formatCentavosForPdf(centavos: number): string {
+  const pesos = centavosToPesos(centavos);
+  const formatted = new Intl.NumberFormat('en-PH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(pesos);
+  return `PHP ${formatted}`;
+}
+
+/**
  * Safe addition of centavos.
  */
 export function addCentavos(a: number, b: number): number {

@@ -26,6 +26,16 @@ export const ledgerEntryTypeEnum = pgEnum('ledger_entry_type', [
   'CREDIT_ADJUSTMENT',
 ]);
 
+export const paymentMethodEnum = pgEnum('payment_method', ['CASH', 'BANK_DEPOSIT', 'MOCK_ONLINE']);
+export const paymentStatusEnum = pgEnum('payment_status', [
+  'PENDING',
+  'POSTED',
+  'FAILED',
+  'CANCELLED',
+  'REVERSED',
+]);
+export const receiptStatusEnum = pgEnum('receipt_status', ['ACTIVE', 'VOIDED']);
+
 // ---------------------------------------------------------------------------
 // Better Auth Core Tables
 // ---------------------------------------------------------------------------
@@ -104,17 +114,17 @@ export const schoolSettings = pgTable('school_settings', {
 
 export const schoolYears = pgTable('school_years', {
   id: uuid('id').defaultRandom().primaryKey(),
-  name: text('name').notNull(), // e.g. 'SY 2024–2025'
+  name: text('name').notNull(),
   startDate: timestamp('start_date').notNull(),
   endDate: timestamp('end_date').notNull(),
-  status: text('status').default('ACTIVE').notNull(), // DRAFT | ACTIVE | ARCHIVED
+  status: text('status').default('ACTIVE').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const gradeLevels = pgTable('grade_levels', {
   id: uuid('id').defaultRandom().primaryKey(),
-  name: text('name').notNull(), // e.g. 'Grade 10'
-  code: text('code').notNull(), // e.g. 'G10'
+  name: text('name').notNull(),
+  code: text('code').notNull(),
   displayOrder: integer('display_order').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -127,8 +137,8 @@ export const sections = pgTable('sections', {
   schoolYearId: uuid('school_year_id')
     .notNull()
     .references(() => schoolYears.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(), // e.g. 'Section A'
-  code: text('code').notNull(), // e.g. 'G10-A'
+  name: text('name').notNull(),
+  code: text('code').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -138,14 +148,14 @@ export const sections = pgTable('sections', {
 
 export const students = pgTable('students', {
   id: uuid('id').defaultRandom().primaryKey(),
-  studentNumber: text('student_number').notNull().unique(), // e.g. 'S2026-0001'
+  studentNumber: text('student_number').notNull().unique(),
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
   email: text('email').notNull(),
   gradeLevelId: uuid('grade_level_id').references(() => gradeLevels.id),
   sectionId: uuid('section_id').references(() => sections.id),
   schoolYearId: uuid('school_year_id').references(() => schoolYears.id),
-  status: text('status').default('ACTIVE').notNull(), // ACTIVE | INACTIVE | WITHDRAWN | GRADUATED
+  status: text('status').default('ACTIVE').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -216,7 +226,7 @@ export const feeStructureItems = pgTable('fee_structure_items', {
 });
 
 // ---------------------------------------------------------------------------
-// Assessment & Ledger Domain Tables (Phase 3)
+// Assessment & Ledger Domain Tables
 // ---------------------------------------------------------------------------
 
 export const studentAssessments = pgTable('student_assessments', {
@@ -231,7 +241,7 @@ export const studentAssessments = pgTable('student_assessments', {
     .notNull()
     .references(() => feeStructures.id),
   totalAmountCentavos: integer('total_amount_centavos').notNull(),
-  status: text('status').default('POSTED').notNull(), // DRAFT | POSTED | CANCELLED
+  status: text('status').default('POSTED').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -257,7 +267,7 @@ export const adjustments = pgTable('adjustments', {
   studentId: uuid('student_id')
     .notNull()
     .references(() => students.id),
-  type: text('type').notNull(), // DEBIT | CREDIT
+  type: text('type').notNull(),
   amountCentavos: integer('amount_centavos').notNull(),
   reason: text('reason').notNull(),
   approvedByUserId: text('approved_by_user_id').references(() => users.id),
@@ -270,10 +280,78 @@ export const ledgerEntries = pgTable('ledger_entries', {
     .notNull()
     .references(() => students.id, { onDelete: 'cascade' }),
   assessmentId: uuid('assessment_id').references(() => studentAssessments.id),
-  entryType: text('entry_type').notNull(), // ASSESSMENT | PAYMENT | REVERSAL | DEBIT_ADJUSTMENT | CREDIT_ADJUSTMENT
+  entryType: text('entry_type').notNull(),
   debitCentavos: integer('debit_centavos').default(0).notNull(),
   creditCentavos: integer('credit_centavos').default(0).notNull(),
   balanceCentavos: integer('balance_centavos').notNull(),
   description: text('description').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Payment, Receipt, Reversal & Audit Domain Tables (Phase 4)
+// ---------------------------------------------------------------------------
+
+export const payments = pgTable('payments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  studentId: uuid('student_id')
+    .notNull()
+    .references(() => students.id, { onDelete: 'cascade' }),
+  assessmentId: uuid('assessment_id').references(() => studentAssessments.id),
+  amountCentavos: integer('amount_centavos').notNull(),
+  paymentMethod: text('payment_method').default('CASH').notNull(), // CASH | BANK_DEPOSIT | MOCK_ONLINE
+  referenceNumber: text('reference_number'),
+  status: text('status').default('POSTED').notNull(), // PENDING | POSTED | FAILED | CANCELLED | REVERSED
+  processedByUserId: text('processed_by_user_id').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const paymentAllocations = pgTable('payment_allocations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  paymentId: uuid('payment_id')
+    .notNull()
+    .references(() => payments.id, { onDelete: 'cascade' }),
+  assessmentItemId: uuid('assessment_item_id')
+    .notNull()
+    .references(() => assessmentItems.id),
+  amountCentavos: integer('amount_centavos').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const receipts = pgTable('receipts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  paymentId: uuid('payment_id')
+    .notNull()
+    .references(() => payments.id, { onDelete: 'cascade' }),
+  receiptNumber: text('receipt_number').notNull().unique(), // e.g. 'OSFS-2026-000001'
+  verificationIdentifier: text('verification_identifier').notNull(),
+  status: text('status').default('ACTIVE').notNull(), // ACTIVE | VOIDED
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const paymentReversals = pgTable('payment_reversals', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  paymentId: uuid('payment_id')
+    .notNull()
+    .references(() => payments.id),
+  receiptId: uuid('receipt_id')
+    .notNull()
+    .references(() => receipts.id),
+  reason: text('reason').notNull(),
+  reversedByUserId: text('reversed_by_user_id')
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const auditLogs = pgTable('audit_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: text('user_id').references(() => users.id),
+  action: text('action').notNull(), // e.g. 'PAYMENT_POSTED', 'PAYMENT_REVERSED'
+  entityType: text('entity_type').notNull(), // e.g. 'PAYMENT', 'RECEIPT'
+  entityId: text('entity_id').notNull(),
+  details: text('details'),
+  ipAddress: text('ip_address'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
