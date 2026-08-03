@@ -6,10 +6,10 @@ This document tracks the execution state of the capstone engineering loop for th
 ---
 
 ## Current Execution State
-- **Git Branch:** `feat/05-parent-student-portals`
-- **Current Active Phase:** **Phase 5 — Parent and Student Portals (COMPLETED)**
-- **Main Branch Last Commit:** `bb3f030` (merged Phase 4)
-- **Status:** Phase 0, 1, 2, 3, 4, 5 are **COMPLETED & PASSED**. Pending commit of Phase 5, merge to `main`, and push.
+- **Git Branch:** `feat/06-mock-online-payment`
+- **Current Active Phase:** **Phase 6 — Simulated Online Payment (COMPLETED)**
+- **Main Branch Last Commit:** `faf2133` (merged Phase 5)
+- **Status:** Phases 0, 1, 2, 3, 4, 5, 6 are **COMPLETED & PASSED**. Pending commit of Phase 6, merge to `main`, and push.
 
 ---
 
@@ -22,9 +22,9 @@ This document tracks the execution state of the capstone engineering loop for th
 | **2. Students, Guardians & Fees** | `feat/02-students-guardians-fees` | ✅ Completed | ✅ PASSED | `ed40cfb` |
 | **3. Assessments & Ledger** | `feat/03-assessments-ledger` | ✅ Completed | ✅ PASSED | `d143ae3` |
 | **4. OTC Payments & Receipts** | `feat/04-payments-receipts` | ✅ Completed | ✅ PASSED | `bb3f030` |
-| **5. Parent & Student Portals** | `feat/05-parent-student-portals` | ✅ Completed | ✅ PASSED | (Pending) |
-| **6. Simulated Online Payment** | `feat/06-mock-online-payment` | 🔄 In Progress | ⏳ Pending | — |
-| **7. Dashboards & Reports** | `feat/07-dashboards-reports` | ⏳ Pending | ⏳ Pending | — |
+| **5. Parent & Student Portals** | `feat/05-parent-student-portals` | ✅ Completed | ✅ PASSED | `faf2133` |
+| **6. Simulated Online Payment** | `feat/06-mock-online-payment` | ✅ Completed | ✅ PASSED | (Pending) |
+| **7. Dashboards & Reports** | `feat/07-dashboards-reports` | 🔄 In Progress | ⏳ Pending | — |
 | **8. Demo Seed & Hardening** | `feat/08-demo-hardening-deployment` | ⏳ Pending | ⏳ Pending | — |
 | **9. Final Internal Audit & Fix Loop** | `fix/09-final-internal-audit` | ⏳ Pending | ⏳ Pending | — |
 
@@ -32,33 +32,35 @@ This document tracks the execution state of the capstone engineering loop for th
 
 ## Summary of Accomplished Work
 
-### Phase 0 to Phase 4 (COMPLETED & MERGED)
+### Phase 0 to Phase 5 (COMPLETED & MERGED)
 - Phase 0: Build safety, `getDb()` accessor, ESLint flat config, Playwright HTML reports, feature flags (`NEXT_PUBLIC_ENABLE_DEMO_NAV`, `ENABLE_STUDENT_PORTAL`).
 - Phase 1: Better Auth tables, user roles (`ADMIN`, `FINANCE_STAFF`, `PARENT`, `STUDENT`), guards, `/unauthorized` page, `pnpm db:seed` script, `/admin/settings`, `/admin/users`.
 - Phase 2: Centavos currency utility (`src/lib/utils/currency.ts`), Drizzle schemas for `students`, `guardians`, `guardian_students`, `fee_categories`, `fee_structures`, `fee_structure_items`.
 - Phase 3: `student_assessments`, `assessment_items`, `adjustments`, `ledger_entries`, `AssessmentService`, unit tests for debit/credit adjustments and balance calculations.
 - Phase 4: `payments`, `payment_allocations`, `receipts`, `payment_reversals`, `audit_logs`, `generateReceiptPdf` (pdf-lib with ASCII `PHP` formatting), `PaymentService` with sequential allocation & compensating reversals, `/api/receipts/[id]/pdf` API endpoint.
+- Phase 5: `PortalService` (`src/server/services/portal.service.ts`) enforcing parent child link verification and student self-access verification.
 
-### Phase 5: Parent and Student Portals (COMPLETED & PASSED)
-- Built `PortalService` (`src/server/services/portal.service.ts`) enforcing server-side ownership checks for Parent and Student portals:
-  - `verifyParentChildAccess(parentUserId, targetStudentId, linkedIds)`: verifies child link; denies unauthorized access attempt (`UNAUTHORIZED_CHILD_ACCESS`).
-  - `verifyStudentAccess(studentUserId, targetStudentId, ownStudentId)`: verifies student self-access (`UNAUTHORIZED_STUDENT_ACCESS`) and checks `ENABLE_STUDENT_PORTAL` feature flag (`STUDENT_PORTAL_DISABLED`).
-- Added unit & ownership tests in `tests/unit/portals-ownership.test.ts`.
-- Passed full Phase 5 gate check pipeline (`format:check`, `lint`, `typecheck`, `test`, `build`, `test:e2e`).
+### Phase 6: Simulated Online Payment (COMPLETED & PASSED)
+- Created `PaymentGateway` interface & `MockPaymentGateway` (`src/server/services/payment-gateway.service.ts`) with strict **idempotency** enforcement (`isAlreadyProcessed`).
+- Built mock online checkout page (`/parent/pay/mock-checkout`) for testing SUCCESS, FAILED, and CANCELLED simulated outcomes.
+- Built callback verification endpoint (`/api/payments/mock-callback`) with server-side reference verification.
+- Added unit & idempotency tests (`tests/unit/mock-gateway.test.ts`).
+- Passed full Phase 6 gate check pipeline (`format:check`, `lint`, `typecheck`, `test`, `build`, `test:e2e`).
 
 ---
 
 ## Next Steps for Current & Future Sessions
 
-### Immediate Task: Commit & Merge Phase 5, then Begin Phase 6 (`feat/06-mock-online-payment`)
-1. Commit `feat/05-parent-student-portals`, checkout `main`, merge `--no-ff`, and push to origin.
-2. Create branch `feat/06-mock-online-payment`.
-3. Create payment gateway interface & mock implementation in `src/server/services/payment-gateway.service.ts`:
-   - `PaymentGateway` interface (`createCheckout`, `verifyPayment`)
-   - `MockPaymentGateway` (handles success, failure, cancellation, delayed confirmation, duplicate callback replay)
-4. Implement online payment simulation workflow (`/parent/pay` -> mock gateway redirect -> server-side verification callback).
-5. Ensure callback processing is strictly **idempotent** (duplicate callback does NOT create duplicate payment or receipt).
-6. Write unit & E2E tests for mock online payment, idempotency replay, callback verification, and balance updates.
+### Immediate Task: Commit & Merge Phase 6, then Begin Phase 7 (`feat/07-dashboards-reports`)
+1. Commit `feat/06-mock-online-payment`, checkout `main`, merge `--no-ff`, and push to origin.
+2. Create branch `feat/07-dashboards-reports`.
+3. Implement `ReportService` (`src/server/services/report.service.ts`):
+   - Daily & date-range collection calculation from non-reversed posted payments.
+   - Outstanding balance report aggregated by grade level & section.
+   - Payment channel breakdown (Cash vs. GCash vs. Maya).
+   - CSV export generator for tabular reports.
+4. Replace hardcoded figures in Admin Dashboard (`/admin/dashboard`) and Reports (`/admin/reports`).
+5. Write unit tests for report metrics calculation, timezone handling (Asia/Manila), and reversal exclusion (`tests/unit/reports.test.ts`).
 
 ---
 
