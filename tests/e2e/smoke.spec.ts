@@ -20,13 +20,12 @@ test.describe('Foundation Application Smoke Test', () => {
     // 2. Confirm project name is visible
     await expect(
       page.getByRole('heading', {
-        name: 'Online School Fees Monitoring and Payment Information System',
+        name: 'Online School Fees Monitoring & Payment System',
       })
     ).toBeVisible();
 
     // 3. Confirm foundation status is visible
-    await expect(page.getByText('System Foundation Ready')).toBeVisible();
-
+    await expect(page.getByText(/20 \/ 20 Reference Screens Scaffolded/i)).toBeVisible();
     // 4. Confirm no major browser console errors occurred
     expect(consoleErrors).toEqual([]);
 
@@ -37,7 +36,7 @@ test.describe('Foundation Application Smoke Test', () => {
     const healthData = await healthResponse.json();
     expect(healthData).toEqual({
       status: 'ok',
-      service: 'mpps-school-fees-system',
+      service: 'online-school-fees-system',
     });
   });
 });

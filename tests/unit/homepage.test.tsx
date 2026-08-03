@@ -3,14 +3,13 @@ import { describe, it, expect } from 'vitest';
 import HomePage from '@/app/page';
 
 describe('HomePage Foundation Component', () => {
-  it('renders project title and foundation ready status', () => {
+  it('renders project title and 20-screen reference hub', () => {
     render(<HomePage />);
 
     expect(
-      screen.getByText('Online School Fees Monitoring and Payment Information System')
+      screen.getByText('Online School Fees Monitoring & Payment System')
     ).toBeInTheDocument();
 
-    expect(screen.getByText('System Foundation Ready')).toBeInTheDocument();
-    expect(screen.getByText(/Mother Perpetua Parochial School/i)).toBeInTheDocument();
+    expect(screen.getByText(/20 \/ 20 Reference Screens Scaffolded/i)).toBeInTheDocument();
   });
 });

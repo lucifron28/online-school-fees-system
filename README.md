@@ -1,16 +1,14 @@
 # Online School Fees Monitoring and Payment Information System
 
-**Institution:** Mother Perpetua Parochial School  
 **Branch Baseline:** `chore/project-foundation`
 
 ---
 
 ## Project Overview
 
-The **Online School Fees Monitoring and Payment Information System** is a modern web application designed for **Mother Perpetua Parochial School**. It provides student fee assessment tracking, over-the-counter and simulated online payments, digital receipts, parent ledger access, cashier dashboards, and financial audit logs.
+The **Online School Fees Monitoring and Payment Information System** is a modern web application designed for educational institutions. It provides student fee assessment tracking, over-the-counter and simulated online payments, digital receipts, parent ledger access, cashier dashboards, and financial audit logs.
 
 This repository baseline (`chore/project-foundation`) contains the **technical foundation only**. Business domain features (authentication, student records, fee assessments, payments) will be built in subsequent feature branches.
-
 ---
 
 ## Tech Stack Baseline
@@ -42,8 +40,8 @@ This repository baseline (`chore/project-foundation`) contains the **technical f
 1. **Clone the repository:**
 
    ```bash
-   git clone <repository-url>
-   cd Online-School-Fees
+   git clone https://github.com/lucifron28/online-school-fees-system.git
+   cd online-school-fees-system
    ```
 
 2. **Install dependencies:**

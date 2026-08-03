@@ -25,7 +25,6 @@ export default function RootLayout({
                 </div>
                 <div>
                   <h1 className="text-sm font-semibold leading-none tracking-tight text-slate-900 dark:text-slate-100">
-                    Mother Perpetua Parochial School
                   </h1>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Online School Fees System
@@ -42,8 +41,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
             <div className="mx-auto max-w-6xl px-4 sm:px-6">
-              Online School Fees Monitoring and Payment Information System — Mother Perpetua
-              Parochial School
+              Online School Fees Monitoring and Payment Information System
             </div>
           </footer>
         </QueryProvider>

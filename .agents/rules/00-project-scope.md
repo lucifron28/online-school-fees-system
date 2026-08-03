@@ -3,7 +3,7 @@
 ## System Identity
 
 - **Project Name:** Online School Fees Monitoring and Payment Information System
-- **Institution:** Mother Perpetua Parochial School
+- **Scope:** Generalized Online School Fees System for Educational Institutions
 - **Baseline Document:** Academic Project Proposal Baseline
 
 ## Target Roles & Core Modules

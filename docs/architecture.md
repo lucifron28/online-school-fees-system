@@ -2,7 +2,7 @@
 
 ## Project Architecture
 
-The **Online School Fees Monitoring and Payment Information System** for **Mother Perpetua Parochial School** is structured as a unified Next.js App Router application written in TypeScript.
+The **Online School Fees Monitoring and Payment Information System** is structured as a unified Next.js App Router application written in TypeScript.
 
 ```
 src/

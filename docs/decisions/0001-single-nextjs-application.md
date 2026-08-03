@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-The Online School Fees System for Mother Perpetua Parochial School requires an administrative web application, cashier interface, parent portal, and financial reporting engine.
+The Online School Fees System requires an administrative web application, cashier interface, parent portal, and financial reporting engine.
 
 ## Decision
 

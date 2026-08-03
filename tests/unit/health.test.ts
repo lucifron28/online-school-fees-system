@@ -9,7 +9,7 @@ describe('GET /api/health', () => {
     const body = await response.json();
     expect(body).toEqual({
       status: 'ok',
-      service: 'mpps-school-fees-system',
+      service: 'online-school-fees-system',
     });
   });
 });
