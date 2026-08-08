@@ -23,6 +23,20 @@ The previous internal-audit document is superseded. Its passing status described
 
 | AUD-019 | Reproducible demo workflow | The repository lacked a populated, deterministic fixture and a clean-database authenticated walkthrough spanning setup, payment, ownership, callback replay, reversal, reporting, and unauthorized access. | Resolved in Phase 10 hosted PostgreSQL integration and Playwright verification; fictional Vercel/Neon preview evidence remains pending |
 
+## Phase 11 findings
+
+| ID      | Severity               | Finding                                                                                                                          | Resolution                                                                                                                                                                                     |
+| ------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AUD-020 | HIGH                   | Concurrent payments with different idempotency keys could read the same student balance before either transaction committed.     | Resolved in Phase 11 with a PostgreSQL student-row lock in payment and reversal transactions; the clean-database integration test proves one of two competing over-limit payments is rejected. |
+| AUD-021 | HIGH                   | A late failed/cancelled mock callback could overwrite a succeeded checkout state while leaving the payment persisted.            | Resolved in Phase 11 by locking the checkout row and rejecting terminal-success downgrades; the clean-database integration test covers the conflict.                                           |
+| AUD-022 | MEDIUM / demo-critical | Hub and role-switcher links used fabricated student/receipt/transaction IDs, and the sidebar exposed unimplemented destinations. | Resolved in Phase 11 by routing to implemented persisted list/history screens and removing dead destinations; official-receipt wording is absent from application UI.                          |
+| AUD-023 | LOW                    | The reports verifier used `Math.random()` for a temporary fixture suffix.                                                        | Resolved in Phase 11 with `crypto.randomUUID()`; no production financial identifiers used `Math.random()`.                                                                                     |
+| AUD-024 | EXTERNAL BLOCKER       | The repository cannot prove a fictional Vercel/Neon preview without the required external credentials.                           | Code and clean PostgreSQL CI are complete; deployment evidence remains an environment prerequisite, not an unresolved application defect.                                                      |
+
+## Phase 11 audit disposition
+
+No unresolved application blocker, high-severity defect, or demo-critical medium finding remains. Accepted low-scope limitations are the intentionally public health endpoint, the intentionally public simulated gateway callback boundary, and the local integration contract being skipped when `TEST_DATABASE_URL` is absent; Foundation CI exercises the isolated PostgreSQL path.
+
 ## Audit rule
 
 No phase may be marked complete solely because formatting, lint, type checking, mocked unit tests, or a production build passes. Completion requires the acceptance evidence in `docs/goal-progress.md`.

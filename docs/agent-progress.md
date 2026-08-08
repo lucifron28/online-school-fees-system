@@ -5,11 +5,11 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 ## Current execution state
 
 - Branch: `main`
-- Phase: Phase 11 external-audit preparation starting after Phase 10 merge
-- Phase 10 main start: `960f107`; current main: `1433cdc4d117340e600ae18d0bb3bfd9e4b2dc7e`
+- Phase: Phase 11 external-audit preparation merged; external deployment evidence remains
+- Phase 10 main start: `960f107`; current main: `407cb8f18c207f648ca57c7f88c2c78d8f0728cf`
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 through Phase 10 are merged as PRs #1 through #11. Phase 10 merge commit is `1433cdc4d117340e600ae18d0bb3bfd9e4b2dc7e`; hosted Foundation CI run #68 passed all database, build, and Playwright evidence. Phase 11 external-audit preparation is next.
+- Current status: Phase 0 through Phase 11 are merged as PRs #1 through #12. Phase 11 merge commit is `407cb8f18c207f648ca57c7f88c2c78d8f0728cf`; hosted Foundation CI run #72 passed migrations, safe reset/seed, formatting, lint, typecheck, 44 unit tests, database integration tests, production build, and Playwright. External Vercel/Neon preview evidence still requires fictional credentials.
 
 ## Historical branches
 

@@ -3,10 +3,10 @@
 ## Current phase
 
 - Phase: 11 - External-audit preparation
-- Branch: `main` (Phase 10 merged; Phase 11 branch is next)
+- Branch: `main` (Phase 11 merged; external deployment evidence remains)
 - Phase 10 starting main commit: `960f107`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 0 through Phase 10 are merged into `main`; Phase 11 external-audit preparation is next.
+- Current state: Phase 0 through Phase 11 are merged into `main`; external Vercel/Neon preview evidence requires fictional deployment credentials.
 
 ## Completed phases
 
@@ -160,7 +160,7 @@ Phase 5 was implemented on `feat/15-assessments-ledger` in commits `e274f9b`, `e
 
 ## Remaining work
 
-- Complete Phase 10 demo hardening and Phase 11 external-audit preparation in the requested branch/PR/merge sequence.
+- Supply fictional Neon/Vercel deployment credentials and capture the external preview smoke-test evidence.
 
 ## Phase 7 implementation
 
@@ -276,3 +276,39 @@ Phase 9 was implemented on `feat/19-notifications` in commits `901ac5a`, `39f688
 ## Phase 10 pull request evidence
 
 Phase 10 was implemented on `test/20-demo-hardening` from main commit `960f107` in commits `0cc0108`, `f17c1f0`, `4f9d05b`, `9d93b56`, `d529d36`, `44bbde5`, and `6b66617`. It was self-reviewed in PR [#11](https://github.com/lucifron28/online-school-fees-system/pull/11) with no inline review threads or blocking findings, CI-verified by Foundation run [#68](https://github.com/lucifron28/online-school-fees-system/actions/runs/31274402661), and merged with regular merge commit `1433cdc4d117340e600ae18d0bb3bfd9e4b2dc7e`. Vercel/Neon preview deployment remains pending fictional external credentials.
+
+## Phase 11 implementation
+
+- Audited the full auth, authorization, session, schema, migration, financial, ownership, notification, reporting, reset/seed, error-handling, accessibility, responsive, documentation, and CI surface with CodeGraph and targeted static checks.
+- Repaired fabricated hub/role-switcher student, receipt, and transaction links; removed parent/student sidebar destinations without implemented pages; and kept acknowledgment-receipt wording fictional and non-official.
+- Replaced the reports verifier's temporary `Math.random()` suffix with `crypto.randomUUID()`.
+- Added PostgreSQL row locks for payment/reversal student mutations and mock-checkout callback locking with terminal-success downgrade protection.
+- Added clean-database integration coverage for concurrent payment serialization, overpayment rejection, and conflicting callback state.
+
+## Phase 11 audit findings and disposition
+
+| Finding                                                             | Severity               | Result                                                                                                    |
+| ------------------------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------- |
+| Concurrent payments could read one balance before commit            | HIGH                   | Fixed with a student-row lock; CI integration test passed with exactly one competing payment accepted.    |
+| Late failed/cancelled callback could downgrade a succeeded checkout | HIGH                   | Fixed with checkout-row locking and terminal-state protection; CI integration test passed.                |
+| Fabricated IDs, dead navigation, and stale official-receipt wording | MEDIUM / demo-critical | Fixed; static audit found no remaining fabricated IDs or dead sidebar destinations.                       |
+| Temporary verifier used `Math.random()`                             | LOW                    | Fixed with `crypto.randomUUID()`; no production financial identifier used `Math.random()`.                |
+| Vercel/Neon preview credentials unavailable                         | External blocker       | Application and CI evidence complete; external deployment remains pending required fictional credentials. |
+
+## Phase 11 commands and actual results
+
+| Command / check                                                                                           | Result | Notes                                                                                                                                                                                         |
+| --------------------------------------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `codegraph.cmd explore` audit queries                                                                     | Passed | Traced parent ownership, payment checkout/callback, authentication, schema constraints, and report blast radius before source review.                                                         |
+| Targeted static audit searches                                                                            | Passed | No application `simulated-001`, `Math.random()` financial ID, fabricated route ID, `href="#"`, unauthenticated application route, `@ts-ignore`, `.only`, `TODO`, or `FIXME` finding remained. |
+| `pnpm.cmd typecheck`                                                                                      | Passed | Strict TypeScript passed after row-lock, callback, navigation, and integration-test changes.                                                                                                  |
+| `pnpm.cmd lint`                                                                                           | Passed | ESLint completed with exit code 0.                                                                                                                                                            |
+| `pnpm.cmd test`                                                                                           | Passed | 14 unit/component files and 44 tests passed.                                                                                                                                                  |
+| Focused Prettier check                                                                                    | Passed | All seven Phase 11 changed files passed the repository formatter.                                                                                                                             |
+| `pnpm.cmd test:integration`                                                                               | Passed | Local reset-safety tests passed; the four PostgreSQL workflow tests are skipped locally without `TEST_DATABASE_URL`.                                                                          |
+| `pnpm.cmd build`                                                                                          | Passed | Next.js production build completed locally; CI supplied the configured auth environment.                                                                                                      |
+| Foundation CI run [#72](https://github.com/lucifron28/online-school-fees-system/actions/runs/31275665685) | Passed | Fresh PostgreSQL migrations, seed, safe reset/seed, formatting, lint, typecheck, 44 unit tests, database integration tests, production build, and all Playwright smoke tests passed.          |
+
+## Phase 11 pull request evidence
+
+Phase 11 was implemented on `fix/21-external-audit-preparation` in commit `719df07b1a8f6e41643ee8c06dbb2868ce9a08e5`, self-reviewed in PR [#12](https://github.com/lucifron28/online-school-fees-system/pull/12) with review ID `4889598638` and no inline review threads, CI-verified by Foundation run [#72](https://github.com/lucifron28/online-school-fees-system/actions/runs/31275665685), and merged with regular merge commit `407cb8f18c207f648ca57c7f88c2c78d8f0728cf`. External Vercel/Neon preview evidence remains the only outstanding environment prerequisite.
