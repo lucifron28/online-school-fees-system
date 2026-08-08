@@ -1,43 +1,53 @@
 # Architecture Overview
 
-## Project Architecture
+## Current repository shape
 
-The **Online School Fees Monitoring and Payment Information System** is structured as a unified Next.js App Router application written in TypeScript.
+This is a single Next.js App Router monolith written in strict TypeScript.
 
-```
+```text
 src/
-├── app/                  # Next.js App Router pages, layouts, and API routes
-│   ├── api/
-│   │   └── health/      # Health check Route Handler
-│   ├── globals.css      # Tailwind CSS root tokens
-│   ├── layout.tsx       # Root layout with QueryProvider
-│   └── page.tsx         # Neutral foundation homepage
-├── components/           # UI Components
-│   ├── ui/              # Primitive shadcn UI components (Button, Card, Badge, Separator)
-│   └── shared/          # Shared layout & visual elements
-├── db/                   # Database layer
-│   ├── schema/          # Drizzle ORM table definitions
-│   ├── scripts/         # Connection check script
-│   └── index.ts         # Lazy Drizzle client initialization
-├── features/             # Business feature modules (Auth, Fees, Ledger, Payments)
-├── lib/                  # Shared utilities & helpers
-│   ├── env/             # Zod environment variable validation
-│   ├── query/           # TanStack Query client & provider
-│   └── utils/           # Utility functions (cn)
-├── server/               # Server-side business logic
-│   ├── errors/          # Application error hierarchy
-│   └── services/        # Service layer entrypoints
-└── types/                # Global TypeScript definitions
+├── app/                 # pages, layouts, and Route Handlers
+├── components/          # shared layout and UI primitives
+├── db/                  # Drizzle schema, client, and scripts
+├── lib/                 # auth, env, query, PDF, and utility modules
+├── server/              # server-only guards, errors, and domain services
+└── types/               # shared TypeScript types
 ```
 
-## Layered Data Flow
+The repository does not currently contain the `features/` or `components/shared/` directories described by an older architecture draft. That draft has been corrected rather than treated as implementation evidence.
 
-All feature requests follow a clean unidirectional flow:
+## Target request flow
 
-`Route Handler / Server Action` -> `Zod Input Validation` -> `Authorization Check` -> `Server Service` -> `Drizzle ORM Query` -> `PostgreSQL`
+Every state-changing request must follow this boundary:
 
-## Key Architectural Decisions
+`Route Handler or Server Action`
+→ `Zod validation`
+→ `Better Auth session lookup`
+→ `server-side role and ownership authorization`
+→ `domain service`
+→ `Drizzle query or transaction`
+→ `typed result`
 
-1. **Monolithic Next.js Application:** Single repository containing both UI and API handlers. No microservices or separate backend service.
-2. **Server-Side Render Preference:** React Server Components are used by default to fetch data directly from services, avoiding client-side fetching overhead where interactive state is unnecessary.
-3. **Strict State Ownership Boundaries:** Client state is cleanly separated between Query, Form, Table, URL, and React local state.
+Client Components must not import server-only services. Financial rules must remain in services, never in React components. Browser-supplied balances, roles, ownership lists, receipt numbers, statuses, and processor IDs are untrusted.
+
+## Current implementation boundary
+
+- The App Router pages and layouts are primarily visual prototype screens.
+- Better Auth is configured with a Drizzle adapter, but the login pages are not yet connected to real sign-in and server layout protection.
+- The database schema describes users, academic records, students, guardians, fees, assessments, ledger entries, payments, receipts, reversals, and audit logs.
+- No committed migration set currently exists.
+- Assessment, payment, portal, and report services include simulated or hardcoded results and must be replaced with PostgreSQL-backed implementations in later phases.
+- The mock payment gateway is allowed by scope, but its checkout records, callback events, and idempotency state must become database-backed.
+
+## State ownership
+
+- Authentication and sessions: Better Auth
+- Persistent data: PostgreSQL
+- Database access: Drizzle ORM
+- Initial server-readable data: Server Components
+- Interactive server state: TanStack Query
+- Form state: TanStack Form v1
+- Validation: Zod
+- Complex tables: TanStack Table
+- Shareable filters, sorting, and pagination: URL search parameters
+- Small temporary UI state: React local state
