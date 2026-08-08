@@ -4,12 +4,12 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 
 ## Current execution state
 
-- Branch: `test/20-demo-hardening`
-- Phase: Phase 10 demo hardening starting after Phase 9 merge
-- Main at start: `d4e2d20` (`origin/main` matched locally)
+- Branch: `main`
+- Phase: Phase 11 external-audit preparation starting after Phase 10 merge
+- Phase 10 main start: `960f107`; current main: `1433cdc4d117340e600ae18d0bb3bfd9e4b2dc7e`
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 through Phase 9 are merged as PRs #1 through #10. Phase 9 merge commit is `d4e2d20f7c35ead9299efc4610f5f9a1dd63fb51`; hosted Foundation CI run #61 passed after a documentation-formatting fix. Phase 10 demo hardening is now starting on `test/20-demo-hardening`.
+- Current status: Phase 0 through Phase 10 are merged as PRs #1 through #11. Phase 10 merge commit is `1433cdc4d117340e600ae18d0bb3bfd9e4b2dc7e`; hosted Foundation CI run #68 passed all database, build, and Playwright evidence. Phase 11 external-audit preparation is next.
 
 ## Historical branches
 

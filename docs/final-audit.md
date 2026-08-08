@@ -21,6 +21,8 @@ The previous internal-audit document is superseded. Its passing status described
 | AUD-017 | Assessment and ledger persistence         | Assessment generation returned simulated identifiers and ignored authoritative fee-structure data; balances and adjustments were not persisted or audited.                                                               | Resolved in Phase 5 local database verification and hosted Foundation CI; payment allocation is covered by Phase 6; deployment evidence pending             |
 | AUD-018 | Notifications                             | Notification tables existed without event dispatch, provider fallback, delivery outcome tracking, or duplicate-event verification.                                                                                       | Resolved in Phase 9 local PostgreSQL, unit, integration, build, clean-server Playwright, and hosted Foundation CI verification; deployment evidence pending |
 
+| AUD-019 | Reproducible demo workflow | The repository lacked a populated, deterministic fixture and a clean-database authenticated walkthrough spanning setup, payment, ownership, callback replay, reversal, reporting, and unauthorized access. | Resolved in Phase 10 hosted PostgreSQL integration and Playwright verification; fictional Vercel/Neon preview evidence remains pending |
+
 ## Audit rule
 
 No phase may be marked complete solely because formatting, lint, type checking, mocked unit tests, or a production build passes. Completion requires the acceptance evidence in `docs/goal-progress.md`.

@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: 10 - Demo hardening
-- Branch: `test/20-demo-hardening`
-- Starting main commit for this phase: `d4e2d20`
+- Phase: 11 - External-audit preparation
+- Branch: `main` (Phase 10 merged; Phase 11 branch is next)
+- Phase 10 starting main commit: `960f107`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 0 through Phase 9 are merged into `main`; Phase 10 demo hardening is next.
+- Current state: Phase 0 through Phase 10 are merged into `main`; Phase 11 external-audit preparation is next.
 
 ## Completed phases
 
@@ -20,6 +20,7 @@
 - Phase 7 - Parent/Student Portals and Online Payment - merged as PR [#8](https://github.com/lucifron28/online-school-fees-system/pull/8), merge commit `8984c6f5babc4387833ce53906f688b485172d3b`.
 - Phase 8 - Reports and Reconciliation - merged as PR [#9](https://github.com/lucifron28/online-school-fees-system/pull/9), merge commit `1781c11360774c60640b241f5d3b4bb41cb0f479`.
 - Phase 9 - Notifications - merged as PR [#10](https://github.com/lucifron28/online-school-fees-system/pull/10), merge commit `d4e2d20f7c35ead9299efc4610f5f9a1dd63fb51`.
+- Phase 10 - Demo hardening - merged as PR [#11](https://github.com/lucifron28/online-school-fees-system/pull/11), merge commit `1433cdc4d117340e600ae18d0bb3bfd9e4b2dc7e`.
 
 ## Phase 2 implementation
 
@@ -251,3 +252,27 @@ Phase 6 was implemented on `feat/16-payments-receipts-audit` in commits `2d474ec
 ## Phase 9 pull request evidence
 
 Phase 9 was implemented on `feat/19-notifications` in commits `901ac5a`, `39f6886`, `22ebf4a`, `373f7de`, and `4c4ac23`, with CI-formatting fix `d29044c`. It was self-reviewed in PR [#10](https://github.com/lucifron28/online-school-fees-system/pull/10); initial Foundation run [#59](https://github.com/lucifron28/online-school-fees-system/actions/runs/31272071975) identified only Markdown formatting in two modified evidence files, and rerun [#61](https://github.com/lucifron28/online-school-fees-system/actions/runs/31272154634) passed formatting, lint, typecheck, unit tests, production build, and Playwright E2E. The PR was merged with regular merge commit `d4e2d20f7c35ead9299efc4610f5f9a1dd63fb51` and `main` was synchronized.
+
+## Phase 10 implementation
+
+- Replaced the minimal seed with deterministic fictional data: one active school year, six grades, twelve sections, four role accounts, 20 students, 10 guardians, persisted guardian/student and student/user links, fee categories and structures, posted assessments, unpaid/partial/fully-paid states, cash/bank/mock-online payments, one reversal, receipts, audit rows, notifications/deliveries, and succeeded/failed/cancelled checkout fixtures.
+- Made seed reruns converge on stable demo identifiers, business keys, payment idempotency keys, receipt numbers, and notification event keys.
+- Added PostgreSQL integration coverage for authentication, settings, academic/student/guardian/fee persistence, assessment duplicate protection, ledger balances, payment allocations, receipt/reversal state, portal ownership, checkout states, notifications, and report totals.
+- Added the authenticated admin/finance/parent/student Playwright workflow, including setup, partial cash payment, parent ownership, mock callback replay, student isolation, reversal/voided receipt, report/PDF checks, and unauthorized API checks.
+- Added dedicated PostgreSQL application/test databases to Foundation CI, migration and seed steps, safe test reset/seed, integration execution, and the existing build/E2E stages.
+
+## Phase 10 commands and actual results
+
+| Command / check                                                                                           | Result      | Notes                                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm.cmd lint`                                                                                           | Passed      | ESLint completed with exit code 0 after the final E2E contract fix.                                                                                                          |
+| `pnpm.cmd typecheck`                                                                                      | Passed      | Strict TypeScript completed with exit code 0 after the final E2E contract fix.                                                                                               |
+| `pnpm.cmd test`                                                                                           | Passed      | 14 unit/component files and 44 tests passed locally.                                                                                                                         |
+| `pnpm.cmd test:integration`                                                                               | Passed      | Reset-safety tests passed locally; the database contract is skipped without local `TEST_DATABASE_URL`.                                                                       |
+| `pnpm.cmd build`                                                                                          | Passed      | Next.js production build generated 51 routes locally.                                                                                                                        |
+| `pnpm.cmd test:e2e`                                                                                       | Hosted only | The local Windows checkout lacks the Playwright CLI; Foundation CI provided the browser evidence.                                                                            |
+| Foundation CI run [#68](https://github.com/lucifron28/online-school-fees-system/actions/runs/31274402661) | Passed      | Migrations, fictional seed, safe reset/seed, formatting, lint, typecheck, 44/44 unit tests, database integration tests, production build, and all 5 Playwright tests passed. |
+
+## Phase 10 pull request evidence
+
+Phase 10 was implemented on `test/20-demo-hardening` from main commit `960f107` in commits `0cc0108`, `f17c1f0`, `4f9d05b`, `9d93b56`, `d529d36`, `44bbde5`, and `6b66617`. It was self-reviewed in PR [#11](https://github.com/lucifron28/online-school-fees-system/pull/11) with no inline review threads or blocking findings, CI-verified by Foundation run [#68](https://github.com/lucifron28/online-school-fees-system/actions/runs/31274402661), and merged with regular merge commit `1433cdc4d117340e600ae18d0bb3bfd9e4b2dc7e`. Vercel/Neon preview deployment remains pending fictional external credentials.
