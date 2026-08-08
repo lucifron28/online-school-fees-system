@@ -1,191 +1,244 @@
 'use client';
 
-import React from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { requestJson, getClientErrorMessage } from '@/lib/client-api';
+import { formatCentavos } from '@/lib/utils/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Table,
-  TableHeader,
   TableBody,
-  TableRow,
-  TableHead,
   TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
-import { Search, Filter, Eye, Download, FileText } from 'lucide-react';
+import { Eye, Filter, RefreshCw, Search } from 'lucide-react';
+
+type PaymentListItem = {
+  id: string;
+  amountCentavos: number;
+  paymentMethod: string;
+  referenceNumber: string | null;
+  status: string;
+  createdAt: string;
+  studentNumber: string;
+  studentFirstName: string;
+  studentLastName: string;
+  receiptNumber: string | null;
+  receiptStatus: string | null;
+};
+
+type PaymentListResponse = {
+  items: PaymentListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  pageCount: number;
+};
+
+function statusClass(status: string) {
+  if (status === 'POSTED') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (status === 'REVERSED') return 'border-rose-200 bg-rose-50 text-rose-700';
+  return 'border-slate-200 bg-slate-100 text-slate-600';
+}
 
 export default function AdminTransactionsPage() {
-  const transactions = [
-    {
-      id: 'OR-2024-000123',
-      date: 'May 30, 2024',
-      student: 'Juan Dela Cruz',
-      amount: '₱14,000.00',
-      method: 'GCash',
-      status: 'Completed',
-    },
-    {
-      id: 'OR-2024-000122',
-      date: 'May 30, 2024',
-      student: 'Maria Santos',
-      amount: '₱12,000.00',
-      method: 'GCash',
-      status: 'Completed',
-    },
-    {
-      id: 'OR-2024-000121',
-      date: 'May 29, 2024',
-      student: 'Pedro Reyes',
-      amount: '₱13,500.00',
-      method: 'Cash',
-      status: 'Completed',
-    },
-    {
-      id: 'OR-2024-000120',
-      date: 'May 29, 2024',
-      student: 'Ana Garcia',
-      amount: '₱12,000.00',
-      method: 'Maya',
-      status: 'Completed',
-    },
-    {
-      id: 'OR-2024-000119',
-      date: 'May 28, 2024',
-      student: 'Liam Johnson',
-      amount: '₱15,000.00',
-      method: 'GCash',
-      status: 'Completed',
-    },
-  ];
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeSearch = searchParams.get('search') ?? '';
+  const activeStatus = searchParams.get('status') ?? '';
+  const activePage = Number(searchParams.get('page') ?? '1');
+  const [search, setSearch] = useState(activeSearch);
 
+  const paymentsQuery = useQuery({
+    queryKey: ['admin-payments', activeSearch, activeStatus, activePage],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        page: String(activePage),
+        pageSize: '20',
+      });
+      if (activeSearch) params.set('search', activeSearch);
+      if (activeStatus) params.set('status', activeStatus);
+      return requestJson<PaymentListResponse>(`/api/admin/payments?${params.toString()}`);
+    },
+  });
+
+  function updateFilters(next: { search?: string; status?: string; page?: number }) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next.search !== undefined) {
+      if (next.search) params.set('search', next.search);
+      else params.delete('search');
+    }
+    if (next.status !== undefined) {
+      if (next.status) params.set('status', next.status);
+      else params.delete('status');
+    }
+    if (next.page !== undefined) {
+      if (next.page > 1) params.set('page', String(next.page));
+      else params.delete('page');
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  }
+
+  const data = paymentsQuery.data;
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
-            Screen #6 • ADMIN - TRANSACTIONS
+            Finance · transactions
           </Badge>
           <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Financial Transactions Log
+            Financial transactions log
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Review and filter all over-the-counter and simulated online payments
+            Review persisted cash and bank-deposit payments and their acknowledgment receipts.
           </p>
         </div>
-
-        <Button variant="outline" className="h-9 text-xs">
-          <Download className="mr-1.5 h-4 w-4" />
-          <span>Export CSV</span>
-        </Button>
+        <Link href="/admin/payments/manual">
+          <Button className="bg-blue-600 text-xs text-white hover:bg-blue-700">Post payment</Button>
+        </Link>
       </div>
 
       <Card className="border-slate-200 shadow-sm dark:border-slate-800">
         <CardHeader className="pb-4">
-          <div className="grid gap-3 sm:grid-cols-4">
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-slate-500">
-                Date From
-              </label>
-              <Input type="date" defaultValue="2024-05-01" className="h-9 text-xs" />
+          <form
+            className="grid gap-3 sm:grid-cols-[1fr_180px_auto]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              updateFilters({ search, page: 1 });
+            }}
+          >
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search student, receipt, or reference"
+                className="h-9 pl-8 text-xs"
+              />
             </div>
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-slate-500">Date To</label>
-              <Input type="date" defaultValue="2024-05-31" className="h-9 text-xs" />
-            </div>
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-slate-500">
-                Search Student / OR
-              </label>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                <Input placeholder="OR No. or Name..." className="h-9 pl-8 text-xs" />
-              </div>
-            </div>
-            <div className="flex items-end">
-              <Button className="h-9 w-full bg-blue-600 text-xs text-white hover:bg-blue-700">
-                <Filter className="mr-1 h-3.5 w-3.5" />
-                <span>Apply Filters</span>
-              </Button>
-            </div>
-          </div>
+            <select
+              value={activeStatus}
+              onChange={(event) => updateFilters({ status: event.target.value, page: 1 })}
+              className="h-9 rounded-md border border-slate-200 bg-white px-3 text-xs dark:border-slate-800 dark:bg-slate-950"
+            >
+              <option value="">All statuses</option>
+              <option value="POSTED">Posted</option>
+              <option value="REVERSED">Reversed</option>
+            </select>
+            <Button type="submit" className="h-9 bg-blue-600 text-xs text-white hover:bg-blue-700">
+              <Filter className="mr-1 h-3.5 w-3.5" /> Apply filters
+            </Button>
+          </form>
         </CardHeader>
 
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>OR No.</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Student Name</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Payment Method</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.map((tx) => (
-                <TableRow key={tx.id}>
-                  <TableCell className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
-                    {tx.id}
-                  </TableCell>
-                  <TableCell className="text-xs text-slate-500">{tx.date}</TableCell>
-                  <TableCell className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                    {tx.student}
-                  </TableCell>
-                  <TableCell className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                    {tx.amount}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      {tx.method}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className="border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
-                    >
-                      {tx.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link href={`/admin/transactions/${tx.id}`}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                      >
-                        <Eye className="mr-1 h-3.5 w-3.5" />
-                        <span>View Details</span>
-                      </Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-slate-800">
-            <span>Showing 1 to 5 of 2,350 transactions</span>
-            <div className="flex items-center space-x-1">
-              <Button variant="outline" size="sm" className="h-7 text-xs" disabled>
-                Previous
-              </Button>
-              <Button variant="outline" size="sm" className="h-7 bg-blue-600 text-xs text-white">
-                1
-              </Button>
-              <Button variant="outline" size="sm" className="h-7 text-xs">
-                2
-              </Button>
-              <Button variant="outline" size="sm" className="h-7 text-xs">
-                Next
+          {paymentsQuery.isLoading && (
+            <p className="p-6 text-sm text-slate-500">Loading transactions…</p>
+          )}
+          {paymentsQuery.isError && (
+            <div className="p-6">
+              <p className="text-sm text-red-600">{getClientErrorMessage(paymentsQuery.error)}</p>
+              <Button
+                className="mt-4"
+                variant="outline"
+                onClick={() => void paymentsQuery.refetch()}
+              >
+                <RefreshCw className="mr-1 h-3.5 w-3.5" /> Retry
               </Button>
             </div>
-          </div>
+          )}
+          {data && data.items.length === 0 && (
+            <p className="p-6 text-sm text-slate-500">No persisted payments match these filters.</p>
+          )}
+          {data && data.items.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Receipt</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Student</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.items.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell className="font-mono text-xs font-bold">
+                      {payment.receiptNumber ?? 'Receipt pending'}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-xs text-slate-500">
+                      {new Date(payment.createdAt).toLocaleDateString('en-PH')}
+                    </TableCell>
+                    <TableCell className="text-xs font-semibold">
+                      <div>
+                        {payment.studentFirstName} {payment.studentLastName}
+                      </div>
+                      <div className="font-mono text-[10px] text-slate-500">
+                        {payment.studentNumber}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs font-bold">
+                      {formatCentavos(payment.amountCentavos)}
+                    </TableCell>
+                    <TableCell className="text-xs">{payment.paymentMethod}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${statusClass(payment.status)}`}
+                      >
+                        {payment.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link href={`/admin/transactions/${payment.id}`}>
+                        <Button variant="ghost" size="sm" className="h-8 text-xs text-blue-600">
+                          <Eye className="mr-1 h-3.5 w-3.5" /> View
+                        </Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          {data && data.pageCount > 1 && (
+            <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-slate-800">
+              <span>
+                Showing page {data.page} of {data.pageCount} ({data.total} payments)
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={data.page <= 1}
+                  onClick={() => updateFilters({ page: data.page - 1 })}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={data.page >= data.pageCount}
+                  onClick={() => updateFilters({ page: data.page + 1 })}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
