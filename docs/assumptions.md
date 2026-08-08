@@ -78,6 +78,15 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - A student may have one assessment per school year and period. Duplicate generation is rejected by the service and database uniqueness constraint.
 - Ledger balances are the sum of persisted debits minus persisted credits. Credit adjustments cannot make the balance negative, and all adjustments require a reason and approving user.
 
-## 13. Current prototype boundary
+## 13. OTC payments, receipts, and reversals
 
-Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, and Phase 5 assessment/ledger posting are implemented and verified on isolated local PostgreSQL databases. Payment transactions, portal ownership queries, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
+- CASH and BANK_DEPOSIT payments are posted only by `ADMIN` or `FINANCE_STAFF` users.
+- The server calculates the current ledger balance and allocates a payment to the oldest outstanding assessment items; browser-supplied balances and allocation values are ignored.
+- A payment, its allocations, payment ledger entry, receipt, and audit events are committed in one transaction. The database-generated payment UUID is the source for receipt and verification identifiers.
+- The idempotency key is required and unique. Replayed or concurrent duplicate submissions return the original persisted payment rather than creating another financial record.
+- Overpayments are rejected. Reversals preserve the original payment, create a compensating debit, void the linked receipt, and record the reversal reason and actor; double reversal is rejected.
+- Receipt PDFs are generated from stored payment, allocation, receipt, student, institution, and status data. A reversed receipt is visibly marked voided.
+
+## 14. Current prototype boundary
+
+Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, Phase 5 assessment/ledger posting, and Phase 6 OTC payment/receipt/reversal transactions are implemented and verified on isolated local PostgreSQL databases. Portal ownership queries, mock online-payment persistence, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.

@@ -2,9 +2,9 @@
 
 ## Current phase
 
-- Phase: 6 - Payments, Receipts, and Audit (next)
-- Branch: `main`
-- Starting main commit for this phase: `ecb68ed`
+- Phase: 6 - Payments, Receipts, and Audit (in progress)
+- Branch: `feat/16-payments-receipts-audit`
+- Starting main commit for this phase: `0729c5a`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
 - Current state: Phase 0 through Phase 5 are merged into `main`; Phase 5 adds persisted assessment snapshots, authoritative ledger balances, audited adjustments, and student-profile financial views.
 
@@ -130,9 +130,32 @@ Phase 4 was implemented on `feat/14-students-guardians-fees` in commit `496ee86d
 
 Phase 5 was implemented on `feat/15-assessments-ledger` in commits `e274f9b`, `ee7b048`, and `b781b59`, self-reviewed in PR [#6](https://github.com/lucifron28/online-school-fees-system/pull/6), CI-verified by run [#43](https://github.com/lucifron28/online-school-fees-system/actions/runs/31264884903), and merged with regular merge commit `ecb68edb8355fe2115a57a9e41bc51dadf0e005e`. Hosted Foundation CI passed formatting, lint, typecheck, 43 unit tests, production build, and Playwright E2E.
 
+## Phase 6 implementation
+
+- Replaced the simulated OTC payment service with a PostgreSQL-backed transaction for CASH and BANK_DEPOSIT payments.
+- Added authoritative oldest-assessment-item allocation, server-side overpayment rejection, database UUID payment identifiers, unique idempotency handling, persisted allocations, ledger entries, receipts, and audit events.
+- Added persisted payment detail/list APIs, receipt PDF generation from stored receipt/allocation data, and compensating reversals that preserve the original payment, void the receipt, and restore the balance.
+- Connected the manual-payment, transaction-list, and transaction-detail screens to the new Route Handlers with loading, error, success, receipt, and reversal states.
+- Added `payments-receipts:verify`, covering partial payments, allocation order, duplicate and concurrent submissions, overpayment rejection, reversal, receipt PDF status, transaction status, audit events, and cleanup.
+
+## Phase 6 commands and actual results
+
+| Command / check                                    | Result | Notes                                                                                                                                                                                                                                      |
+| -------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm typecheck`                                   | Passed | Strict TypeScript passed for payment schemas, service, APIs, UI, PDF route, and verifier.                                                                                                                                                  |
+| `pnpm lint`                                        | Passed | ESLint completed with exit code 0.                                                                                                                                                                                                         |
+| Focused Prettier check                             | Passed | All Phase 6 implementation and verifier files use repository formatting.                                                                                                                                                                   |
+| `vitest run`                                       | Passed | 13 unit/component files and 43 tests passed.                                                                                                                                                                                               |
+| `vitest run --config vitest.integration.config.ts` | Passed | 1 integration file and 3 reset-safety tests passed.                                                                                                                                                                                        |
+| PostgreSQL prerequisite verifiers                  | Passed | Migration, auth, students/fees, and assessments/ledger verifiers passed against isolated `osfs_phase4`.                                                                                                                                    |
+| `pnpm payments-receipts:verify`                    | Passed | Isolated PostgreSQL verified partial cash allocation, bank-deposit persistence, idempotency under concurrent duplicate requests, authoritative overpayment rejection, reversal restoration, voided receipt PDF data, and audit visibility. |
+| `pnpm build`                                       | Passed | Next.js 15.5.21 production build generated 38 routes; only the temporary low-entropy verification secret warning appeared.                                                                                                                 |
+| HTTP authorization/payment matrix                  | Passed | Unauthenticated admin payment and receipt requests returned `401`; admin sign-in and payment listing returned `200`; parent sign-in returned `200` but admin payment access returned `403`.                                                |
+| `playwright test`                                  | Passed | 4 Chromium smoke tests passed against the current production server.                                                                                                                                                                       |
+
 ## Remaining work
 
-- Complete Phases 6-10 in the requested branch/PR/merge sequence.
+- Complete Phases 7-10 in the requested branch/PR/merge sequence.
 - Complete Phase 11 external audit preparation and final evidence report.
 
 ## Known blockers
