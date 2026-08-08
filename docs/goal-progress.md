@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: 3 - Core Administration (merged; Phase 4 next)
-- Branch: `main`
-- Starting main commit for this phase: `6af307fd3a0db8750774085c5dadaf12fac0bbb4`
+- Phase: 4 - Students, Guardians, and Fees (implemented; PR and merge pending)
+- Branch: `feat/14-students-guardians-fees`
+- Starting main commit for this phase: `bdada46`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 0 through Phase 3 are merged into `main`; Phase 3 adds persisted core administration, administrator-only management APIs, and hosted CI verification at merge commit `e1bfd3d969c80dac552e6a39d7f4ee83c7b833db`.
+- Current state: Phase 0 through Phase 3 are merged into `main`; Phase 4 adds persisted student, guardian, account-link, fee-category, and fee-structure management and is ready for PR review.
 
 ## Completed phases
 
@@ -78,12 +78,41 @@ Phase 2 was implemented on `feat/12-auth-rbac` in commits `8c03bb2`, `8cc1e9f`, 
 
 Phase 3 was implemented on `feat/13-core-administration` in commits `f1ef27e` and `9232c58`, reviewed in PR [#4](https://github.com/lucifron28/online-school-fees-system/pull/4), CI-verified by run [#33](https://github.com/lucifron28/online-school-fees-system/actions/runs/31261327418), and merged with regular merge commit `e1bfd3d969c80dac552e6a39d7f4ee83c7b833db`. Hosted CI passed formatting, lint, typecheck, 45 unit tests, production build, and Playwright E2E.
 
+## Phase 4 implementation
+
+- Replaced hardcoded student, guardian, fee-category, and fee-structure arrays with PostgreSQL-backed services and guarded Route Handlers.
+- Added student lifecycle management, duplicate student-number protection, optional `STUDENT` account links, guardian records, optional `PARENT` account links, primary guardian handling, and duplicate-link protection.
+- Added fee-category lifecycle management and draft/active/archived fee structures with item validation, active-school-year/category checks, and archive-only mutation after a posted assessment exists.
+- Added TanStack Form + shared Zod validation, TanStack Table, TanStack Query, loading/empty/error/retry/confirmation/success states, URL search/filter/sort/direction/pagination controls, and a live student detail screen.
+- Added the `students-fees:verify` isolated-database contract verifier and unit coverage for normalization, required fee items, update validation, and guardian-link defaults.
+
+## Phase 4 commands and actual results
+
+| Command / check             | Result | Notes                                                                                                                                                                            |
+| --------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`            | Passed | Strict TypeScript passed for the Phase 4 services, Route Handlers, pages, forms, tables, verifier, and tests.                                                                    |
+| `pnpm lint`                 | Passed | ESLint completed with exit code 0 and no warnings.                                                                                                                               |
+| `pnpm test`                 | Passed | 13 unit/component files and 43 tests passed.                                                                                                                                     |
+| `pnpm test:integration`     | Passed | Reset-safety integration suite passed: 1 file and 3 tests.                                                                                                                       |
+| `pnpm db:migrate`           | Passed | Applied the committed migrations to isolated local PostgreSQL database `osfs_phase4`.                                                                                            |
+| `pnpm db:seed`              | Passed | Seeded the isolated database with reference academic data and four Better Auth demo accounts.                                                                                    |
+| `pnpm db:verify:migrations` | Passed | Verified 27 tables, 10 unique indexes, 10 checks, and financial delete protection.                                                                                               |
+| `pnpm auth:verify`          | Passed | Re-verified demo sign-in, invalid credentials, disabled users, sessions, logout, and public sign-up rejection on `osfs_phase4`.                                                  |
+| `pnpm students-fees:verify` | Passed | Verified persistence, account-role links, duplicate student numbers/guardian links, draft-active lifecycle, posted-assessment edit lock, safe archive, and cleanup.              |
+| HTTP authorization matrix   | Passed | Unauthenticated access returned `401`; parent/student enumeration and mutation returned `403`; admin and finance-staff reads returned `200`; sort/filter queries returned `200`. |
+| `pnpm build`                | Passed | Next.js 15.5.21 production build compiled the Phase 4 routes and pages.                                                                                                          |
+| `pnpm test:e2e`             | Passed | 4 Playwright smoke tests passed against the local production server.                                                                                                             |
+
+## Phase 4 pull request evidence
+
+PR, hosted CI, self-review, and merge evidence will be appended after the branch is pushed and reviewed.
+
 ## Remaining work
 
-- Complete Phases 4-10 in the requested branch/PR/merge sequence.
+- Complete Phases 5-10 in the requested branch/PR/merge sequence.
 - Complete Phase 11 external audit preparation and final evidence report.
 
 ## Known blockers
 
 - The local `gh` CLI token remains invalid; the connected GitHub app is required for PR creation, review, and merge.
-- A real fictional Neon/test PostgreSQL URL is still required for remote deployment verification; isolated local PostgreSQL covers Phases 1-3 runtime acceptance.
+- A real fictional Neon/test PostgreSQL URL is still required for remote deployment verification; isolated local PostgreSQL covers local runtime acceptance through Phase 4.

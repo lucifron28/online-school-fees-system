@@ -40,6 +40,7 @@ export function Sidebar({
   const adminNav = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Students', href: '/admin/students', icon: Users },
+    { name: 'Guardians', href: '/admin/guardians', icon: UserCheck },
     { name: 'Fees Management', href: '/admin/fees', icon: CreditCard },
     { name: 'Payments (OTC)', href: '/admin/payments/manual', icon: Wallet },
     { name: 'Transactions', href: '/admin/transactions', icon: Receipt },

@@ -32,7 +32,7 @@ Client Components must not import server-only services. Financial rules must rem
 
 ## Current implementation boundary
 
-- The App Router pages still contain visual prototype data in later financial screens, but the portal layouts now require authenticated stored roles.
+- The App Router pages still contain visual prototype data in later financial screens, but the student, guardian, and fee-management screens now load persisted records and the portal layouts require authenticated stored roles.
 - Better Auth uses a Drizzle adapter with public sign-up disabled, server-only role/active fields, disabled-user rejection, and a reusable TanStack Form login flow. Admin/finance report and receipt Route Handlers require server-side authorization.
 - Core administration uses `src/server/services/administration.service.ts` behind administrator-only Route Handlers. Institution settings use a singleton key, school-year activation is transactional, and grade levels, sections, and user accounts are loaded from PostgreSQL rather than fixed page state.
 - The database schema describes users, academic records, students, guardians, fees, assessment periods, assessments, ledger entries, payments, receipts, reversals, audit logs, persisted mock checkouts/callbacks, and notification delivery.
@@ -66,3 +66,16 @@ The administration service owns the following invariants:
 - sections reference existing grade levels and non-archived school years;
 - user role and active status changes preserve at least one active administrator and cannot disable or demote the acting administrator;
 - new accounts are created through the supported Better Auth server flow, not by accepting browser-controlled role fields.
+
+## Student, guardian, and fee-management boundary
+
+`src/server/services/students-fees.service.ts` owns student lifecycle, guardian links, fee categories, fee structures, and fee items. The corresponding `/api/admin/*` Route Handlers accept only `ADMIN` and `FINANCE_STAFF` sessions; parent and student portal users cannot enumerate or mutate these records.
+
+The Phase 4 service enforces the following invariants:
+
+- student numbers, guardian/student links, and account links are unique;
+- student section assignments match their selected grade level and school year;
+- linked student accounts have role `STUDENT`, and linked guardian accounts have role `PARENT`;
+- active fee structures reference active school years and active fee categories;
+- a fee structure with a `POSTED` student assessment cannot have its definition or items changed and can only be archived;
+- all client forms use shared Zod schemas, while authorization and mutation rules remain server-side.

@@ -4,12 +4,12 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 
 ## Current execution state
 
-- Branch: `main`
-- Phase: Phase 3 - core administration merged; Phase 4 next
-- Main at start: `e1bfd3d` (`origin/main` matched locally)
+- Branch: `feat/14-students-guardians-fees`
+- Phase: Phase 4 - students, guardians, and fees implemented; PR pending
+- Main at start: `bdada46` (`origin/main` matched locally)
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 through Phase 3 are merged as PRs #1 through #4. Phase 3 merge commit is `e1bfd3d969c80dac552e6a39d7f4ee83c7b833db`; hosted Foundation CI run #33 passed.
+- Current status: Phase 0 through Phase 3 are merged as PRs #1 through #4. Phase 4 local database, HTTP, unit, build, and Playwright gates passed; the branch is ready for PR review.
 
 ## Historical branches
 
