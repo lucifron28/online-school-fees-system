@@ -236,17 +236,17 @@ Phase 6 was implemented on `feat/16-payments-receipts-audit` in commits `2d474ec
 
 ## Phase 9 commands and actual results
 
-| Command / check | Result | Notes |
-| --- | --- | --- |
-| `pnpm typecheck` | Passed | Strict TypeScript passed after notification service, provider, API, UI, payment, assessment, gateway, and verifier changes. |
-| `pnpm lint` | Passed | ESLint completed with exit code 0. |
-| `pnpm test` | Passed | 14 unit/component files and 44 tests passed, including provider selection and notification schema coverage. |
-| `pnpm test:integration` | Passed | 1 integration file and 3 reset-safety tests passed. |
-| `pnpm notifications:verify` | Passed | Isolated PostgreSQL verified persisted event history, recipient dedupe, console fallback, provider failures/retries, financial success despite delivery failure, reversal notifications, duplicate payments, duplicate callbacks, and cleanup. |
-| `pnpm build` | Passed | Next.js 15.5.21 production build generated 51 routes, including notification history and retry APIs/pages. |
-| `pnpm test:e2e` | Passed | 4 Chromium smoke tests passed after restarting a repository-owned stale Next.js server; the clean-server rerun exited 0. |
-| Focused Prettier check | Passed | All Phase 9 source, tests, verifier, package script, and documentation files were formatted with the repository's local Prettier binary. |
-| Repository-wide `pnpm format:check` | Known legacy failure | 126 pre-existing legacy files are reported by the local Windows checkout; Phase 9 files pass focused formatting and no unrelated legacy files were reformatted. |
+| Command / check                     | Result               | Notes                                                                                                                                                                                                                                          |
+| ----------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                    | Passed               | Strict TypeScript passed after notification service, provider, API, UI, payment, assessment, gateway, and verifier changes.                                                                                                                    |
+| `pnpm lint`                         | Passed               | ESLint completed with exit code 0.                                                                                                                                                                                                             |
+| `pnpm test`                         | Passed               | 14 unit/component files and 44 tests passed, including provider selection and notification schema coverage.                                                                                                                                    |
+| `pnpm test:integration`             | Passed               | 1 integration file and 3 reset-safety tests passed.                                                                                                                                                                                            |
+| `pnpm notifications:verify`         | Passed               | Isolated PostgreSQL verified persisted event history, recipient dedupe, console fallback, provider failures/retries, financial success despite delivery failure, reversal notifications, duplicate payments, duplicate callbacks, and cleanup. |
+| `pnpm build`                        | Passed               | Next.js 15.5.21 production build generated 51 routes, including notification history and retry APIs/pages.                                                                                                                                     |
+| `pnpm test:e2e`                     | Passed               | 4 Chromium smoke tests passed after restarting a repository-owned stale Next.js server; the clean-server rerun exited 0.                                                                                                                       |
+| Focused Prettier check              | Passed for code      | All Phase 9 source, tests, verifier, and package-script files pass the repository's local Prettier binary; legacy documentation newline formatting remains covered by the repository-wide limitation below.                                    |
+| Repository-wide `pnpm format:check` | Known legacy failure | 126 pre-existing legacy files are reported by the local Windows checkout; Phase 9 files pass focused formatting and no unrelated legacy files were reformatted.                                                                                |
 
 ## Phase 9 pull request evidence
 

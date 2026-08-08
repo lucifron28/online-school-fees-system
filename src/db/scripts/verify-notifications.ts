@@ -62,7 +62,6 @@ async function main() {
   const createdStructureIds: string[] = [];
   const createdAssessmentIds: string[] = [];
   const createdPaymentIds: string[] = [];
-  const createdReceiptIds: string[] = [];
   const createdCheckoutIds: string[] = [];
   const notificationEntityIds = new Set<string>();
 
@@ -187,7 +186,6 @@ async function main() {
     createdPaymentIds.push(payment.id);
     assert(payment.status === 'POSTED', 'Payment did not succeed when the provider failed.');
     assert(payment.receipt?.id, 'Successful payment did not create a receipt.');
-    createdReceiptIds.push(payment.receipt.id);
     notificationEntityIds.add(payment.id);
     notificationEntityIds.add(payment.receipt.id);
 
@@ -264,7 +262,6 @@ async function main() {
     createdPaymentIds.push(callback.paymentId);
     const onlinePayment = await getPayment(callback.paymentId, db);
     assert(onlinePayment.receipt?.id, 'Successful mock callback did not create a receipt.');
-    createdReceiptIds.push(onlinePayment.receipt.id);
     notificationEntityIds.add(callback.paymentId);
     notificationEntityIds.add(onlinePayment.receipt.id);
     const onlineNotificationCount =
