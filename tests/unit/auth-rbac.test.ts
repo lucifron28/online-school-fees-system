@@ -30,8 +30,8 @@ describe('Auth & RBAC Logic Tests', () => {
   it('enforces RBAC role permissions hierarchy', () => {
     const canAccessAdmin = (role: UserRole) => role === 'ADMIN';
     const canAccessFinance = (role: UserRole) => role === 'ADMIN' || role === 'FINANCE_STAFF';
-    const canAccessParent = (role: UserRole) => role === 'ADMIN' || role === 'PARENT';
-    const canAccessStudent = (role: UserRole) => role === 'ADMIN' || role === 'STUDENT';
+    const canAccessParent = (role: UserRole) => role === 'PARENT';
+    const canAccessStudent = (role: UserRole) => role === 'STUDENT';
 
     expect(canAccessAdmin('ADMIN')).toBe(true);
     expect(canAccessAdmin('FINANCE_STAFF')).toBe(false);
@@ -43,9 +43,11 @@ describe('Auth & RBAC Logic Tests', () => {
     expect(canAccessFinance('PARENT')).toBe(false);
 
     expect(canAccessParent('PARENT')).toBe(true);
+    expect(canAccessParent('ADMIN')).toBe(false);
     expect(canAccessParent('STUDENT')).toBe(false);
 
     expect(canAccessStudent('STUDENT')).toBe(true);
+    expect(canAccessStudent('ADMIN')).toBe(false);
     expect(canAccessStudent('PARENT')).toBe(false);
   });
 });

@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { ReportService, CollectionReportItem } from '@/server/services/report.service';
+import { authErrorResponse, requireRequestAuth } from '@/server/auth/guards';
 
-export async function GET() {
+export async function GET(request: Request) {
+  try {
+    await requireRequestAuth(request, ['ADMIN', 'FINANCE_STAFF']);
+  } catch (error) {
+    return authErrorResponse(error);
+  }
+
   const sampleItems: CollectionReportItem[] = [
     {
       id: '1',

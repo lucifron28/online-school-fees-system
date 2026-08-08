@@ -1,12 +1,14 @@
 import React from 'react';
 import { Bell, Search, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { LogoutButton } from '@/components/auth/logout-button';
 
 interface HeaderProps {
   title?: string;
   subtitle?: string;
   userName?: string;
   userRole?: string;
+  logoutPath?: string;
 }
 
 export function Header({
@@ -14,6 +16,7 @@ export function Header({
   subtitle,
   userName = 'Administrator',
   userRole = 'Administrator',
+  logoutPath = '/login/admin',
 }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/90 px-6 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
@@ -53,6 +56,11 @@ export function Header({
             <p className="text-[10px] text-slate-500 dark:text-slate-400">{userRole}</p>
           </div>
         </div>
+
+        <LogoutButton
+          logoutPath={logoutPath}
+          className="hidden p-2 text-slate-500 hover:bg-slate-100 hover:text-red-600 dark:text-slate-400 dark:hover:bg-slate-800 sm:flex"
+        />
       </div>
     </header>
   );
