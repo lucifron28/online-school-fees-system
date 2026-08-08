@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
 export const otcPaymentMethodSchema = z.enum(['CASH', 'BANK_DEPOSIT']);
+export const paymentMethodSchema = z.enum(['CASH', 'BANK_DEPOSIT', 'MOCK_ONLINE']);
 export const paymentStatusSchema = z.enum(['PENDING', 'POSTED', 'FAILED', 'CANCELLED', 'REVERSED']);
 
 export const paymentPostInputSchema = z.object({
   studentId: z.string().uuid(),
   amountCentavos: z.number().int().positive().max(2_147_483_647),
-  paymentMethod: otcPaymentMethodSchema,
+  paymentMethod: paymentMethodSchema,
   referenceNumber: z
     .string()
     .trim()
@@ -14,6 +15,10 @@ export const paymentPostInputSchema = z.object({
     .optional()
     .transform((value) => value || undefined),
   idempotencyKey: z.string().trim().min(8).max(160),
+});
+
+export const otcPaymentPostInputSchema = paymentPostInputSchema.extend({
+  paymentMethod: otcPaymentMethodSchema,
 });
 
 export const paymentListInputSchema = z.object({

@@ -17,6 +17,10 @@ export interface OtcPaymentInput extends PaymentPostInput {
   processedByUserId: string;
 }
 
+export interface OnlinePaymentInput extends PaymentPostInput {
+  processedByUserId?: string | null;
+}
+
 export interface ReversalInput extends ReversalPostInput {
   reversedByUserId: string;
 }
@@ -368,10 +372,13 @@ export async function getReceiptPdfData(receiptIdentifier: string, db: DatabaseI
 }
 
 export class PaymentService {
-  static async recordPayment(input: OtcPaymentInput, db: DatabaseInstance = getDb()) {
+  static async recordPayment(
+    input: OtcPaymentInput | OnlinePaymentInput,
+    db: DatabaseInstance = getDb()
+  ) {
     const values = paymentPostInputSchema.parse(input);
     const processedByUserId = input.processedByUserId;
-    if (!processedByUserId) {
+    if (values.paymentMethod !== 'MOCK_ONLINE' && !processedByUserId) {
       throw new ValidationError('An authenticated finance user is required to post a payment.');
     }
 
@@ -428,7 +435,7 @@ export class PaymentService {
             referenceNumber: values.referenceNumber ?? null,
             idempotencyKey: values.idempotencyKey,
             status: 'POSTED',
-            processedByUserId,
+            processedByUserId: processedByUserId ?? null,
           })
           .returning();
         if (!payment) throw new AppError('The payment could not be created.');

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
-import { paymentPostInputSchema } from '@/lib/payments';
+import { otcPaymentPostInputSchema } from '@/lib/payments';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
 import { formatCentavos, parseMoneyInput } from '@/lib/utils/currency';
 import { Badge } from '@/components/ui/badge';
@@ -94,7 +94,7 @@ export function ManualPaymentForm() {
         return;
       }
 
-      const parsed = paymentPostInputSchema.safeParse({
+      const parsed = otcPaymentPostInputSchema.safeParse({
         studentId: value.studentId,
         amountCentavos,
         paymentMethod: value.paymentMethod,
