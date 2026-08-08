@@ -4,12 +4,12 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 
 ## Current execution state
 
-- Branch: `feat/18-reports-reconciliation`
-- Phase: Phase 8 in progress; Phases 0-7 merged
-- Main at start: `b3fae78` (`origin/main` matched locally)
+- Branch: `main`
+- Phase: Phase 8 merged; Phase 9 next
+- Main at start: `1781c11` (`origin/main` matched locally)
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 through Phase 7 are merged as PRs #1 through #8. Phase 7 merge commit is `8984c6f5babc4387833ce53906f688b485172d3b`; hosted Foundation CI run #51 passed. Phase 8 is implemented locally with PostgreSQL verifier, HTTP, build, and Playwright acceptance checks passed; PR and hosted CI evidence are pending.
+- Current status: Phase 0 through Phase 8 are merged as PRs #1 through #9. Phase 8 merge commit is `1781c11360774c60640b241f5d3b4bb41cb0f479`; hosted Foundation CI run #55 passed; local PostgreSQL verifier, HTTP, build, and Playwright acceptance checks passed. Phase 9 is the next implementation branch.
 
 ## Historical branches
 
