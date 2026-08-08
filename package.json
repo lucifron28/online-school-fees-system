@@ -21,6 +21,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:check": "tsx src/db/scripts/check-db.ts",
+    "db:verify:migrations": "tsx src/db/scripts/verify-migrations.ts",
     "db:seed": "tsx src/db/scripts/seed.ts",
     "db:reset": "tsx src/db/scripts/reset-demo.ts --demo",
     "db:test:reset": "tsx src/db/scripts/reset-demo.ts --test"
@@ -43,6 +44,7 @@
     "lucide-react": "^0.479.0",
     "next": "^15.2.0",
     "pdf-lib": "^1.17.1",
+    "pg": "^8.22.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.0",
@@ -60,6 +62,7 @@
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.0",
     "@types/node": "^22.13.0",
+    "@types/pg": "^8.20.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",

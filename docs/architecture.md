@@ -34,10 +34,12 @@ Client Components must not import server-only services. Financial rules must rem
 
 - The App Router pages and layouts are primarily visual prototype screens.
 - Better Auth is configured with a Drizzle adapter, but the login pages are not yet connected to real sign-in and server layout protection.
-- The database schema describes users, academic records, students, guardians, fees, assessments, ledger entries, payments, receipts, reversals, and audit logs.
-- No committed migration set currently exists.
+- The database schema describes users, academic records, students, guardians, fees, assessment periods, assessments, ledger entries, payments, receipts, reversals, audit logs, persisted mock checkouts/callbacks, and notification delivery.
+- `src/db/migrations/0000_good_ghost_rider.sql` is the committed initial migration and has been verified on a blank isolated PostgreSQL database.
+- Financial event timestamps use PostgreSQL `timestamp with time zone`; monetary values use integer centavos with database checks.
+- Localhost PostgreSQL URLs use node-postgres for seed/reset/integration tooling, while remote deployment URLs continue to use Neon.
 - Assessment, payment, portal, and report services include simulated or hardcoded results and must be replaced with PostgreSQL-backed implementations in later phases.
-- The mock payment gateway is allowed by scope, but its checkout records, callback events, and idempotency state must become database-backed.
+- The mock payment gateway is allowed by scope; its checkout records, callback events, and idempotency state now have database tables, while the gateway behavior remains a later vertical-slice implementation.
 
 ## State ownership
 

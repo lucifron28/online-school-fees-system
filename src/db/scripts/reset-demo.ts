@@ -36,6 +36,10 @@ export function resolveResetTarget(mode: ResetMode, env: NodeJS.ProcessEnv): str
 }
 
 export async function clearDemoData(database: DatabaseInstance, includeAuthTables: boolean) {
+  await database.delete(schema.mockPaymentCallbackEvents);
+  await database.delete(schema.mockPaymentCheckouts);
+  await database.delete(schema.notificationDeliveries);
+  await database.delete(schema.notifications);
   await database.delete(schema.auditLogs);
   await database.delete(schema.paymentReversals);
   await database.delete(schema.receipts);

@@ -4,13 +4,13 @@
 
 ## Current status
 
-The repository currently contains a polished Next.js App Router UI, a Drizzle/PostgreSQL schema draft, Better Auth configuration, server-side business-rule prototypes, and unit tests. The visual screens are not evidence of a complete connected workflow yet.
+The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, Better Auth configuration, server-side business-rule prototypes, and unit tests. The visual screens are not evidence of a complete connected workflow yet.
 
 The following items remain intentionally incomplete at this stage:
 
 - Login pages currently demonstrate the portal UI and redirect without completing Better Auth sign-in.
 - Assessment, payment, reversal, portal, and report services still contain simulated or hardcoded results.
-- No committed Drizzle migration set exists yet, so a clean database cannot currently be created from the repository alone.
+- The Phase 1 Drizzle migration set creates a clean database and is verified against isolated PostgreSQL; later authenticated and persisted workflows remain incomplete.
 - The online payment flow is a mock demonstration only; it is not a GCash, Maya, card, banking, or payment-provider integration.
 - No production-readiness, accounting, security-certification, or tax-receipt claim is made.
 
@@ -65,7 +65,7 @@ $env:TEST_DB_RESET_CONFIRMATION = 'RESET_TEST_DATABASE'
 pnpm db:test:reset
 ```
 
-The reset commands refuse production mode, missing confirmations, and unsafe database-target combinations. A clean migration workflow is being implemented in the database phase before these commands can be used against a blank database.
+The reset commands refuse production mode, missing confirmations, and unsafe database-target combinations. Run `pnpm db:verify:migrations` after `pnpm db:migrate` to verify the committed contract on a configured test database. Localhost PostgreSQL URLs use the node-postgres adapter; remote demo URLs continue to use Neon.
 
 ## Available scripts
 
@@ -79,6 +79,7 @@ The reset commands refuse production mode, missing confirmations, and unsafe dat
 - `pnpm test:e2e` - run Playwright browser tests
 - `pnpm db:generate` - generate Drizzle migrations
 - `pnpm db:migrate` - apply committed Drizzle migrations
+- `pnpm db:verify:migrations` - verify tables, constraints, enums, timestamps, and financial delete protection
 - `pnpm db:seed` - seed fictional demo data
 - `pnpm db:reset` - reset the demo database after explicit confirmation
 - `pnpm db:test:reset` - reset only the separately configured test database

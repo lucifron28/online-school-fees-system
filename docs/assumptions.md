@@ -32,6 +32,17 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - `pnpm db:test:reset` refuses to run without `TEST_DATABASE_URL`, exact target equality, a different application URL, and `TEST_DB_RESET_CONFIRMATION=RESET_TEST_DATABASE`.
 - `pnpm db:reset` refuses production mode, test-database targets, and missing `DEMO_DB_RESET_CONFIRMATION=RESET_DEMO`.
 
-## 7. Current prototype boundary
+## 7. Assessment periods
 
-The current branch is correcting earlier completion claims. The schema and service interfaces exist, but migrations, authenticated workflows, and database-backed financial transactions are not yet complete. These assumptions must not be presented as already implemented until verified by integration and browser tests.
+- The default assessment period is **ANNUAL**.
+- The database also supports `SEMESTER`, `TRIMESTER`, and `MONTHLY` periods for future fee structures.
+- Assessment scope is unique per student, school year, and assessment period.
+
+## 8. Database driver boundary
+
+- Remote application URLs continue to use Neon through `@neondatabase/serverless`.
+- Localhost PostgreSQL URLs use the node-postgres adapter so migration, seed, reset, and integration verification can run without a remote secret.
+
+## 9. Current prototype boundary
+
+Phase 1 migrations and database-contract checks are implemented and verified on isolated local PostgreSQL databases. Authenticated workflows, administration, database-backed financial transactions, ownership queries, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.

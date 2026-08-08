@@ -1,14 +1,35 @@
 import { neon, NeonQueryFunction } from '@neondatabase/serverless';
+import { Pool } from 'pg';
 import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
+import { drizzle as drizzleNodePg } from 'drizzle-orm/node-postgres';
 import * as schema from './schema/index';
 
 export type DatabaseInstance = NeonHttpDatabase<typeof schema>;
 
 let _dbInstance: DatabaseInstance | null = null;
+const localPoolInstances = new Map<string, Pool>();
+
+function shouldUseLocalPostgres(databaseUrl: string): boolean {
+  if (process.env.DATABASE_DRIVER === 'pg') return true;
+
+  try {
+    const hostname = new URL(databaseUrl).hostname;
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  } catch {
+    return false;
+  }
+}
 
 export function createDb(databaseUrl: string): DatabaseInstance {
   if (!databaseUrl) {
     throw new Error('A database URL is required to create a database client.');
+  }
+
+  if (shouldUseLocalPostgres(databaseUrl)) {
+    const pool = localPoolInstances.get(databaseUrl) ?? new Pool({ connectionString: databaseUrl });
+    localPoolInstances.set(databaseUrl, pool);
+    // The Drizzle APIs used by the application are shared by both PostgreSQL drivers.
+    return drizzleNodePg(pool, { schema }) as unknown as DatabaseInstance;
   }
 
   const sql: NeonQueryFunction<boolean, boolean> = neon(databaseUrl);

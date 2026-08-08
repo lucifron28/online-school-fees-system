@@ -132,7 +132,7 @@ export async function seedDemoData(db: DatabaseInstance = getDb()) {
       email: 'student@demo.school',
       role: 'STUDENT',
     },
-  ];
+  ] as const;
 
   for (const u of demoUsers) {
     const existingU = await db
