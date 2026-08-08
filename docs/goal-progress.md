@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: 4 - Students, Guardians, and Fees (implemented; PR and merge pending)
-- Branch: `feat/14-students-guardians-fees`
-- Starting main commit for this phase: `bdada46`
+- Phase: 5 - Assessments and Ledger (next)
+- Branch: `main`
+- Starting main commit for this phase: `c03bb8f`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 0 through Phase 3 are merged into `main`; Phase 4 adds persisted student, guardian, account-link, fee-category, and fee-structure management and is ready for PR review.
+- Current state: Phase 0 through Phase 4 are merged into `main`; Phase 4 adds persisted student, guardian, account-link, fee-category, and fee-structure management with hosted CI verification.
 
 ## Completed phases
 
@@ -14,6 +14,7 @@
 - Phase 1 - Database Contract and Migrations - merged as PR [#2](https://github.com/lucifron28/online-school-fees-system/pull/2), merge commit `fc83f5ee6ea304abe1511a2c63f82c6eb591970b`.
 - Phase 2 - Authentication and RBAC - merged as PR [#3](https://github.com/lucifron28/online-school-fees-system/pull/3), merge commit `a21124ca5486d57881bf07cc22f0fb2f35a1ae29`.
 - Phase 3 - Core Administration - merged as PR [#4](https://github.com/lucifron28/online-school-fees-system/pull/4), merge commit `e1bfd3d969c80dac552e6a39d7f4ee83c7b833db`.
+- Phase 4 - Students, Guardians, and Fees - merged as PR [#5](https://github.com/lucifron28/online-school-fees-system/pull/5), merge commit `c03bb8fe9513e218ec02cba459f4eee49d4d0457`.
 
 ## Phase 2 implementation
 
@@ -105,7 +106,7 @@ Phase 3 was implemented on `feat/13-core-administration` in commits `f1ef27e` an
 
 ## Phase 4 pull request evidence
 
-PR, hosted CI, self-review, and merge evidence will be appended after the branch is pushed and reviewed.
+Phase 4 was implemented on `feat/14-students-guardians-fees` in commit `496ee86d384011f65ff5e607f5627b11ae9202d7`, reviewed in PR [#5](https://github.com/lucifron28/online-school-fees-system/pull/5), self-reviewed with no blocking findings, CI-verified by run [#37](https://github.com/lucifron28/online-school-fees-system/actions/runs/31263570390), and merged with regular merge commit `c03bb8fe9513e218ec02cba459f4eee49d4d0457`. Hosted Foundation CI passed formatting, lint, typecheck, 43 unit tests, production build, and Playwright E2E.
 
 ## Remaining work
 
