@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: 9 - Notifications (implementation in progress)
-- Branch: `feat/19-notifications`
-- Starting main commit for this phase: `1781c11`
+- Phase: 10 - Demo hardening
+- Branch: `test/20-demo-hardening`
+- Starting main commit for this phase: `d4e2d20`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 0 through Phase 8 are merged into `main`; Phase 9 notification implementation and local verification are complete on this branch, pending PR review and merge.
+- Current state: Phase 0 through Phase 9 are merged into `main`; Phase 10 demo hardening is next.
 
 ## Completed phases
 
@@ -19,6 +19,7 @@
 - Phase 6 - Payments, Receipts, and Audit - merged as PR [#7](https://github.com/lucifron28/online-school-fees-system/pull/7), merge commit `61efc21afd1924716c74481bd10fd3acab559fc2`.
 - Phase 7 - Parent/Student Portals and Online Payment - merged as PR [#8](https://github.com/lucifron28/online-school-fees-system/pull/8), merge commit `8984c6f5babc4387833ce53906f688b485172d3b`.
 - Phase 8 - Reports and Reconciliation - merged as PR [#9](https://github.com/lucifron28/online-school-fees-system/pull/9), merge commit `1781c11360774c60640b241f5d3b4bb41cb0f479`.
+- Phase 9 - Notifications - merged as PR [#10](https://github.com/lucifron28/online-school-fees-system/pull/10), merge commit `d4e2d20f7c35ead9299efc4610f5f9a1dd63fb51`.
 
 ## Phase 2 implementation
 
@@ -158,8 +159,7 @@ Phase 5 was implemented on `feat/15-assessments-ledger` in commits `e274f9b`, `e
 
 ## Remaining work
 
-- Complete the Phase 9 PR review, merge, and main synchronization.
-- Complete Phases 10-11 in the requested branch/PR/merge sequence.
+- Complete Phase 10 demo hardening and Phase 11 external-audit preparation in the requested branch/PR/merge sequence.
 
 ## Phase 7 implementation
 
@@ -236,18 +236,18 @@ Phase 6 was implemented on `feat/16-payments-receipts-audit` in commits `2d474ec
 
 ## Phase 9 commands and actual results
 
-| Command / check                     | Result               | Notes                                                                                                                                                                                                                                          |
-| ----------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm typecheck`                    | Passed               | Strict TypeScript passed after notification service, provider, API, UI, payment, assessment, gateway, and verifier changes.                                                                                                                    |
-| `pnpm lint`                         | Passed               | ESLint completed with exit code 0.                                                                                                                                                                                                             |
-| `pnpm test`                         | Passed               | 14 unit/component files and 44 tests passed, including provider selection and notification schema coverage.                                                                                                                                    |
-| `pnpm test:integration`             | Passed               | 1 integration file and 3 reset-safety tests passed.                                                                                                                                                                                            |
-| `pnpm notifications:verify`         | Passed               | Isolated PostgreSQL verified persisted event history, recipient dedupe, console fallback, provider failures/retries, financial success despite delivery failure, reversal notifications, duplicate payments, duplicate callbacks, and cleanup. |
-| `pnpm build`                        | Passed               | Next.js 15.5.21 production build generated 51 routes, including notification history and retry APIs/pages.                                                                                                                                     |
-| `pnpm test:e2e`                     | Passed               | 4 Chromium smoke tests passed after restarting a repository-owned stale Next.js server; the clean-server rerun exited 0.                                                                                                                       |
-| Focused Prettier check              | Passed for code      | All Phase 9 source, tests, verifier, and package-script files pass the repository's local Prettier binary; legacy documentation newline formatting remains covered by the repository-wide limitation below.                                    |
-| Repository-wide `pnpm format:check` | Known legacy failure | 126 pre-existing legacy files are reported by the local Windows checkout; Phase 9 files pass focused formatting and no unrelated legacy files were reformatted.                                                                                |
+| Command / check                     | Result              | Notes                                                                                                                                                                                                                                          |
+| ----------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                    | Passed              | Strict TypeScript passed after notification service, provider, API, UI, payment, assessment, gateway, and verifier changes.                                                                                                                    |
+| `pnpm lint`                         | Passed              | ESLint completed with exit code 0.                                                                                                                                                                                                             |
+| `pnpm test`                         | Passed              | 14 unit/component files and 44 tests passed, including provider selection and notification schema coverage.                                                                                                                                    |
+| `pnpm test:integration`             | Passed              | 1 integration file and 3 reset-safety tests passed.                                                                                                                                                                                            |
+| `pnpm notifications:verify`         | Passed              | Isolated PostgreSQL verified persisted event history, recipient dedupe, console fallback, provider failures/retries, financial success despite delivery failure, reversal notifications, duplicate payments, duplicate callbacks, and cleanup. |
+| `pnpm build`                        | Passed              | Next.js 15.5.21 production build generated 51 routes, including notification history and retry APIs/pages.                                                                                                                                     |
+| `pnpm test:e2e`                     | Passed              | 4 Chromium smoke tests passed after restarting a repository-owned stale Next.js server; the clean-server rerun exited 0.                                                                                                                       |
+| Focused Prettier check              | Passed              | All Phase 9 source, tests, verifier, package-script, and modified documentation files pass the repository's local Prettier binary.                                                                                                             |
+| Repository-wide `pnpm format:check` | Passed in hosted CI | Hosted Foundation CI run #61 passed the full repository formatter; the local Windows checkout still reports legacy newline differences in 126 unrelated files.                                                                                 |
 
 ## Phase 9 pull request evidence
 
-Pending branch commits, GitHub self-review, hosted CI, PR merge, and main synchronization.
+Phase 9 was implemented on `feat/19-notifications` in commits `901ac5a`, `39f6886`, `22ebf4a`, `373f7de`, and `4c4ac23`, with CI-formatting fix `d29044c`. It was self-reviewed in PR [#10](https://github.com/lucifron28/online-school-fees-system/pull/10); initial Foundation run [#59](https://github.com/lucifron28/online-school-fees-system/actions/runs/31272071975) identified only Markdown formatting in two modified evidence files, and rerun [#61](https://github.com/lucifron28/online-school-fees-system/actions/runs/31272154634) passed formatting, lint, typecheck, unit tests, production build, and Playwright E2E. The PR was merged with regular merge commit `d4e2d20f7c35ead9299efc4610f5f9a1dd63fb51` and `main` was synchronized.
