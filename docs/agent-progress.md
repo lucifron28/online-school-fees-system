@@ -1,15 +1,15 @@
 # Agent Progress Log
 
-This file is a historical handoff, not a completion certificate. Earlier phase notes claimed a complete system even though the current repository still contains simulated services, prototype login redirects, and hardcoded report data. Those claims are recorded and corrected in [docs/goal-findings.md](goal-findings.md). Phase 1 now includes a committed migration contract verified on isolated PostgreSQL.
+This file is a historical handoff, not a completion certificate. Earlier phase notes claimed a complete system even though the current repository still contains simulated services, later-phase ownership gaps, and hardcoded report data. Those claims are recorded and corrected in [docs/goal-findings.md](goal-findings.md). Phases 1 and 2 now include committed database and authentication contracts verified on isolated PostgreSQL.
 
 ## Current execution state
 
-- Branch: `feat/12-auth-rbac`
-- Phase: Phase 2 - authentication and RBAC
-- Main at start: `fc83f5e` (`origin/main` matched locally)
+- Branch: `main`
+- Phase: Phase 2 - authentication and RBAC complete; Phase 3 next
+- Main at start: `a21124c` (`origin/main` matched locally)
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 and Phase 1 are merged as PRs #1 and #2; Phase 2 Better Auth/RBAC implementation and local acceptance checks are complete pending PR publication
+- Current status: Phase 0, Phase 1, and Phase 2 are merged as PRs #1, #2, and #3. Phase 2 merge commit is `a21124ca5486d57881bf07cc22f0fb2f35a1ae29`; hosted Foundation CI run #27 passed.
 
 ## Historical branches
 
