@@ -2,113 +2,129 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Card, CardContent } from '@/components/ui/card';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, Building2, Download, RefreshCw } from 'lucide-react';
+import { getClientErrorMessage, requestJson } from '@/lib/client-api';
+import type { PortalPayment } from '@/lib/portal-types';
+import { formatCentavos } from '@/lib/utils/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table';
-import { ArrowLeft, Download, Building2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
-export default function StudentReceiptPage({ params }: { params: Promise<{ id?: string }> }) {
-  const resolvedParams = React.use(params);
-  const receiptId = resolvedParams?.id || 'OR-2024-000123';
+export default function StudentReceiptPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = React.use(params);
+  const paymentsQuery = useQuery({
+    queryKey: ['student-payments'],
+    queryFn: () => requestJson<PortalPayment[]>('/api/portal/student/payments'),
+  });
+  const payment = paymentsQuery.data?.find(
+    (candidate) => candidate.receiptId === id || candidate.receiptNumber === id
+  );
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Link href="/student/dashboard">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link href="/student/history">
             <Button variant="outline" size="sm" className="h-9 px-3 text-xs">
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              <span>Dashboard</span>
+              <ArrowLeft className="mr-1 h-4 w-4" /> History
             </Button>
           </Link>
           <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700">
-            Screen #19 • STUDENT - PAYMENT RECEIPT (VIEW)
+            Payment acknowledgment receipt
           </Badge>
         </div>
-
-        <Button className="h-9 bg-purple-600 text-xs text-white shadow-sm hover:bg-purple-700">
-          <Download className="mr-1.5 h-4 w-4" />
-          <span>Download Receipt (PDF)</span>
-        </Button>
+        <a
+          href={`/api/portal/receipts/${encodeURIComponent(id)}/pdf`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Button className="h-9 bg-purple-600 text-xs text-white hover:bg-purple-700">
+            <Download className="mr-1.5 h-4 w-4" /> Download PDF
+          </Button>
+        </a>
       </div>
 
-      <Card className="border border-slate-300 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900">
-        <CardContent className="space-y-6 p-8">
-          <div className="border-b border-slate-200 pb-6 text-center dark:border-slate-800">
-            <div className="mb-2 flex justify-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-600 font-bold text-white">
-                <Building2 className="h-6 w-6" />
+      {paymentsQuery.isLoading && <p className="text-sm text-slate-500">Loading stored receipt…</p>}
+      {paymentsQuery.isError && (
+        <Card>
+          <CardContent className="space-y-3 p-6">
+            <p className="text-sm text-rose-600">{getClientErrorMessage(paymentsQuery.error)}</p>
+            <Button variant="outline" onClick={() => void paymentsQuery.refetch()}>
+              <RefreshCw className="mr-1.5 h-4 w-4" /> Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+      {paymentsQuery.data && !payment && (
+        <Card>
+          <CardContent className="p-8 text-center text-sm text-slate-500">
+            This receipt is not linked to your student account.
+          </CardContent>
+        </Card>
+      )}
+      {payment && (
+        <Card className="border border-slate-300 bg-white shadow-lg">
+          <CardContent className="space-y-6 p-8">
+            <div className="border-b pb-6 text-center">
+              <div className="mb-2 flex justify-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-600 text-white">
+                  <Building2 className="h-6 w-6" />
+                </div>
+              </div>
+              <h2 className="text-lg font-bold uppercase tracking-wider">
+                Payment acknowledgment receipt
+              </h2>
+              <p className="text-xs text-slate-500">Online School Fees Monitoring System</p>
+              <Badge variant="outline" className="mt-2">
+                {payment.receiptStatus ?? 'ACTIVE'}
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div>
+                <span className="text-slate-400">Receipt no.</span>
+                <p className="font-mono font-bold">{payment.receiptNumber}</p>
+              </div>
+              <div>
+                <span className="text-slate-400">Date</span>
+                <p className="font-semibold">
+                  {new Date(payment.createdAt).toLocaleString('en-PH')}
+                </p>
+              </div>
+              <div>
+                <span className="text-slate-400">Student</span>
+                <p className="font-semibold">{payment.studentName}</p>
+              </div>
+              <div>
+                <span className="text-slate-400">Payment method</span>
+                <p className="font-semibold">{payment.paymentMethod}</p>
+              </div>
+              <div>
+                <span className="text-slate-400">Reference</span>
+                <p className="font-mono font-semibold">{payment.referenceNumber ?? '—'}</p>
+              </div>
+              <div>
+                <span className="text-slate-400">Transaction status</span>
+                <p className="font-semibold">{payment.status}</p>
               </div>
             </div>
-            <h2 className="text-lg font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
-              OFFICIAL RECEIPT
-            </h2>
-            <p className="text-xs text-slate-500">School Fees Monitoring and Payment System</p>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4 text-xs">
-            <div>
-              <span className="font-mono text-slate-400">OR No:</span>
-              <p className="font-mono font-bold text-slate-900 dark:text-slate-100">{receiptId}</p>
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between text-sm font-bold">
+                <span>Amount received</span>
+                <span className="text-lg text-purple-700">
+                  {formatCentavos(payment.amountCentavos)}
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="text-slate-400">Date:</span>
-              <p className="font-semibold text-slate-900 dark:text-slate-100">May 30, 2024</p>
-            </div>
-            <div>
-              <span className="text-slate-400">Student Name:</span>
-              <p className="font-semibold text-slate-900 dark:text-slate-100">Juan Dela Cruz Jr.</p>
-            </div>
-            <div>
-              <span className="text-slate-400">Grade & Section:</span>
-              <p className="font-semibold text-slate-900 dark:text-slate-100">Grade 10 - A</p>
-            </div>
-          </div>
 
-          <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50 dark:bg-slate-800">
-                  <TableHead className="text-xs font-semibold text-slate-700">
-                    Description
-                  </TableHead>
-                  <TableHead className="text-right text-xs font-semibold text-slate-700">
-                    Amount
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="text-xs font-medium">Tuition Fee (Partial)</TableCell>
-                  <TableCell className="text-right font-mono text-xs font-bold">
-                    ₱12,000.00
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="text-xs font-medium">Miscellaneous Fee</TableCell>
-                  <TableCell className="text-right font-mono text-xs font-bold">
-                    ₱2,000.00
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-            <div className="flex items-center justify-between border-t border-slate-200 bg-slate-100 p-4 text-sm font-bold dark:border-slate-800 dark:bg-slate-800/80">
-              <span>Total Amount Paid:</span>
-              <span className="font-mono text-lg text-purple-700 dark:text-purple-400">
-                ₱14,000.00
-              </span>
+            <div className="border-t pt-4 text-center text-[10px] text-slate-400">
+              This fictional demonstration receipt is generated from persisted payment data.
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -1,157 +1,216 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { ArrowLeft, ArrowRight, CreditCard, RefreshCw, Smartphone, Wallet } from 'lucide-react';
+import { getClientErrorMessage, requestJson } from '@/lib/client-api';
+import { portalCheckoutInputSchema } from '@/lib/portal';
+import type { MockCheckoutResult, PortalChild } from '@/lib/portal-types';
+import { formatCentavos, parseMoneyInput } from '@/lib/utils/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { CreditCard, Wallet, Smartphone, ArrowLeft, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function ParentPayPage() {
   const router = useRouter();
-  const [selectedMethod, setSelectedMethod] = useState<'gcash' | 'maya' | 'card'>('gcash');
+  const searchParams = useSearchParams();
+  const [selectedStudentId, setSelectedStudentId] = useState(searchParams.get('studentId') ?? '');
+  const [paymentChannel, setPaymentChannel] = useState<'GCash' | 'Maya' | 'CreditCard'>('GCash');
+  const [amount, setAmount] = useState('');
+  const [formError, setFormError] = useState('');
 
-  const handleProceed = (e: React.FormEvent) => {
-    e.preventDefault();
-    router.push('/parent/receipts/OR-2024-000123');
+  const childrenQuery = useQuery({
+    queryKey: ['parent-children'],
+    queryFn: () => requestJson<PortalChild[]>('/api/portal/parent/children'),
+  });
+  const children = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
+  const selectedChild = children.find((child) => child.studentId === selectedStudentId);
+
+  useEffect(() => {
+    if (!selectedStudentId && children[0]) setSelectedStudentId(children[0].studentId);
+  }, [children, selectedStudentId]);
+
+  const checkoutMutation = useMutation({
+    mutationFn: (input: unknown) =>
+      requestJson<MockCheckoutResult>('/api/portal/parent/checkouts', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: (result) => router.push(result.redirectUrl),
+  });
+
+  const handleProceed = (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError('');
+    if (!selectedChild) {
+      setFormError('Select a linked child.');
+      return;
+    }
+    try {
+      const parsed = portalCheckoutInputSchema.parse({
+        studentId: selectedChild.studentId,
+        amountCentavos: parseMoneyInput(amount),
+        paymentChannel,
+        idempotencyKey: globalThis.crypto.randomUUID(),
+      });
+      checkoutMutation.mutate(parsed);
+    } catch (error) {
+      setFormError(getClientErrorMessage(error));
+    }
   };
 
   return (
     <div className="max-w-4xl space-y-6">
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center gap-3">
         <Link href="/parent/dashboard">
           <Button variant="outline" size="sm" className="h-9 px-3 text-xs">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            <span>Dashboard</span>
+            <ArrowLeft className="mr-1 h-4 w-4" /> Dashboard
           </Button>
         </Link>
         <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
-          Screen #12 • PARENT - MAKE PAYMENT (ONLINE)
+          Mock online payment
         </Badge>
       </div>
 
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          Simulated Online Fee Payment
-        </h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Choose a payment channel to pay outstanding tuition and school fees
+        <h2 className="text-2xl font-bold tracking-tight">Start a mock online payment</h2>
+        <p className="text-xs text-slate-500">
+          The checkout is persisted server-side; only the simulated gateway callback can complete
+          it.
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Payment Form */}
-        <Card className="border-slate-200 shadow-sm dark:border-slate-800 md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">
-              1. Select Student & Payment Method
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Select Child
-              </label>
-              <select className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
-                <option>Juan Dela Cruz Jr. (Grade 10 - A)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-3 block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Payment Channel Option
-              </label>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('gcash')}
-                  className={`flex flex-col items-center justify-center rounded-xl border p-4 text-center transition-all ${
-                    selectedMethod === 'gcash'
-                      ? 'border-blue-600 bg-blue-50/50 font-bold text-blue-700 ring-2 ring-blue-500/20'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <Smartphone className="mb-2 h-6 w-6 text-blue-600" />
-                  <span className="text-xs font-semibold">GCash</span>
-                  <span className="text-[10px] text-slate-400">E-Wallet</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('maya')}
-                  className={`flex flex-col items-center justify-center rounded-xl border p-4 text-center transition-all ${
-                    selectedMethod === 'maya'
-                      ? 'border-emerald-600 bg-emerald-50/50 font-bold text-emerald-700 ring-2 ring-emerald-500/20'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <Wallet className="mb-2 h-6 w-6 text-emerald-600" />
-                  <span className="text-xs font-semibold">Maya</span>
-                  <span className="text-[10px] text-slate-400">Digital Wallet</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('card')}
-                  className={`flex flex-col items-center justify-center rounded-xl border p-4 text-center transition-all ${
-                    selectedMethod === 'card'
-                      ? 'border-purple-600 bg-purple-50/50 font-bold text-purple-700 ring-2 ring-purple-500/20'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <CreditCard className="mb-2 h-6 w-6 text-purple-600" />
-                  <span className="text-xs font-semibold">Credit / Debit</span>
-                  <span className="text-[10px] text-slate-400">Visa / Mastercard</span>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Payment Amount (₱)
-              </label>
-              <Input type="number" defaultValue="14000" className="h-10 text-sm font-bold" />
-            </div>
+      {childrenQuery.isLoading && (
+        <p className="text-sm text-slate-500">Loading linked children…</p>
+      )}
+      {childrenQuery.isError && (
+        <Card>
+          <CardContent className="space-y-3 p-6">
+            <p className="text-sm text-rose-600">{getClientErrorMessage(childrenQuery.error)}</p>
+            <Button variant="outline" onClick={() => void childrenQuery.refetch()}>
+              <RefreshCw className="mr-1.5 h-4 w-4" /> Retry
+            </Button>
           </CardContent>
         </Card>
+      )}
 
-        {/* Payment Summary */}
-        <Card className="flex flex-col justify-between border-slate-200 shadow-sm dark:border-slate-800">
-          <div>
-            <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-              <CardTitle className="text-base font-semibold">Payment Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 p-4">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">Total Outstanding:</span>
-                <span className="font-bold text-rose-600">₱14,000.00</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">Channel Fee:</span>
-                <span className="font-mono font-medium text-slate-700">₱0.00 (Waived)</span>
-              </div>
-            </CardContent>
-          </div>
-
-          <div className="space-y-4 rounded-b-xl border-t border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold">Amount to Pay:</span>
-              <span className="text-xl font-extrabold text-emerald-600">₱14,000.00</span>
-            </div>
-
-            <Button
-              onClick={handleProceed}
-              className="h-10 w-full bg-emerald-600 text-xs font-semibold text-white shadow-md hover:bg-emerald-700"
-            >
-              <span>Proceed to Pay</span>
-              <ArrowRight className="ml-1.5 h-4 w-4" />
-            </Button>
-          </div>
+      {childrenQuery.data && children.length === 0 && (
+        <Card>
+          <CardContent className="p-8 text-center text-sm text-slate-500">
+            No linked children are available for payment.
+          </CardContent>
         </Card>
-      </div>
+      )}
+
+      {children.length > 0 && (
+        <form onSubmit={handleProceed} className="grid gap-6 md:grid-cols-3">
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">Payment details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <label className="block text-xs font-semibold">
+                Linked child
+                <select
+                  className="mt-1 flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                  value={selectedStudentId}
+                  onChange={(event) => setSelectedStudentId(event.target.value)}
+                >
+                  {children.map((child) => (
+                    <option key={child.studentId} value={child.studentId}>
+                      {child.firstName} {child.lastName} ({child.studentNumber})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div>
+                <p className="mb-3 text-xs font-semibold">Payment channel</p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {(
+                    [
+                      ['GCash', Smartphone, 'text-blue-600'],
+                      ['Maya', Wallet, 'text-emerald-600'],
+                      ['CreditCard', CreditCard, 'text-purple-600'],
+                    ] as const
+                  ).map(([channel, Icon, iconClass]) => (
+                    <button
+                      key={channel}
+                      type="button"
+                      onClick={() => setPaymentChannel(channel)}
+                      className={`flex flex-col items-center justify-center rounded-xl border p-4 text-center ${
+                        paymentChannel === channel
+                          ? 'border-emerald-600 bg-emerald-50 font-bold ring-2 ring-emerald-500/20'
+                          : 'border-slate-200 bg-white text-slate-700'
+                      }`}
+                    >
+                      <Icon className={`mb-2 h-6 w-6 ${iconClass}`} />
+                      <span className="text-xs font-semibold">
+                        {channel === 'CreditCard' ? 'Credit / Debit card' : channel}
+                      </span>
+                      <span className="text-[10px] text-slate-400">Simulation only</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="block text-xs font-semibold">
+                Amount to pay (PHP)
+                <Input
+                  className="mt-1 h-10"
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                  placeholder={
+                    selectedChild
+                      ? formatCentavos(selectedChild.outstandingBalanceCentavos)
+                      : '0.00'
+                  }
+                  inputMode="decimal"
+                />
+              </label>
+              {formError && <p className="text-xs text-rose-600">{formError}</p>}
+              {checkoutMutation.isError && (
+                <p className="text-xs text-rose-600">
+                  {getClientErrorMessage(checkoutMutation.error)}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col justify-between">
+            <div>
+              <CardHeader className="border-b">
+                <CardTitle className="text-base">Server checkout</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 p-4 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Current balance</span>
+                  <span className="font-bold text-rose-600">
+                    {formatCentavos(selectedChild?.outstandingBalanceCentavos ?? 0)}
+                  </span>
+                </div>
+                <p className="text-slate-500">
+                  The server rechecks ownership, amount, assessment balance, and idempotency before
+                  creating the checkout.
+                </p>
+              </CardContent>
+            </div>
+            <div className="rounded-b-xl border-t bg-slate-50 p-4">
+              <Button
+                type="submit"
+                disabled={checkoutMutation.isPending}
+                className="h-10 w-full bg-emerald-600 text-xs text-white hover:bg-emerald-700"
+              >
+                {checkoutMutation.isPending ? 'Creating checkout…' : 'Proceed to simulated gateway'}
+                {!checkoutMutation.isPending && <ArrowRight className="ml-1.5 h-4 w-4" />}
+              </Button>
+            </div>
+          </Card>
+        </form>
+      )}
     </div>
   );
 }
