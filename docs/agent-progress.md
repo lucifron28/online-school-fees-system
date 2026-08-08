@@ -4,12 +4,12 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 
 ## Current execution state
 
-- Branch: `feat/16-payments-receipts-audit`
-- Phase: Phase 6 in progress; Phases 0–5 merged
-- Main at start: `0729c5a` (`origin/main` matched locally)
+- Branch: `main`
+- Phase: Phase 6 merged; Phase 7 next
+- Main at start: `61efc21` (`origin/main` matched locally)
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 through Phase 5 are merged as PRs #1 through #6. Phase 5 merge commit is `ecb68edb8355fe2115a57a9e41bc51dadf0e005e`; main evidence commit `0729c5a` is pushed; hosted Foundation CI run #43 passed. Phase 6 implementation and local acceptance checks are complete on this branch; PR/hosted CI/merge evidence is pending.
+- Current status: Phase 0 through Phase 6 are merged as PRs #1 through #7. Phase 6 merge commit is `61efc21afd1924716c74481bd10fd3acab559fc2`; hosted Foundation CI run #47 passed; local PostgreSQL and authenticated HTTP acceptance checks passed. Phase 7 is the next implementation branch.
 
 ## Historical branches
 

@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: 6 - Payments, Receipts, and Audit (in progress)
-- Branch: `feat/16-payments-receipts-audit`
-- Starting main commit for this phase: `0729c5a`
+- Phase: 7 - Parent/Student Portals and Online Payment (next)
+- Branch: `main`
+- Starting main commit for this phase: `61efc21`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 0 through Phase 5 are merged into `main`; Phase 5 adds persisted assessment snapshots, authoritative ledger balances, audited adjustments, and student-profile financial views.
+- Current state: Phase 0 through Phase 6 are merged into `main`; Phase 6 adds persisted OTC payments, oldest-item allocation, idempotency, receipts, reversals, and audit events.
 
 ## Completed phases
 
@@ -16,6 +16,7 @@
 - Phase 3 - Core Administration - merged as PR [#4](https://github.com/lucifron28/online-school-fees-system/pull/4), merge commit `e1bfd3d969c80dac552e6a39d7f4ee83c7b833db`.
 - Phase 4 - Students, Guardians, and Fees - merged as PR [#5](https://github.com/lucifron28/online-school-fees-system/pull/5), merge commit `c03bb8fe9513e218ec02cba459f4eee49d4d0457`.
 - Phase 5 - Assessments and Ledger - merged as PR [#6](https://github.com/lucifron28/online-school-fees-system/pull/6), merge commit `ecb68edb8355fe2115a57a9e41bc51dadf0e005e`.
+- Phase 6 - Payments, Receipts, and Audit - merged as PR [#7](https://github.com/lucifron28/online-school-fees-system/pull/7), merge commit `61efc21afd1924716c74481bd10fd3acab559fc2`.
 
 ## Phase 2 implementation
 
@@ -158,7 +159,11 @@ Phase 5 was implemented on `feat/15-assessments-ledger` in commits `e274f9b`, `e
 - Complete Phases 7-10 in the requested branch/PR/merge sequence.
 - Complete Phase 11 external audit preparation and final evidence report.
 
+## Phase 6 pull request evidence
+
+Phase 6 was implemented on `feat/16-payments-receipts-audit` in commits `2d474ec`, `7994726`, `1b70655`, and `b3186f5`, self-reviewed in PR [#7](https://github.com/lucifron28/online-school-fees-system/pull/7), CI-verified by run [#47](https://github.com/lucifron28/online-school-fees-system/actions/runs/31266704319), and merged with regular merge commit `61efc21afd1924716c74481bd10fd3acab559fc2`. Hosted Foundation CI passed formatting, lint, typecheck, 43 unit tests, production build, and Playwright E2E. The required isolated PostgreSQL payment verifier and authenticated HTTP matrix also passed locally.
+
 ## Known blockers
 
 - The local `gh` CLI token remains invalid; the connected GitHub app is required for PR creation, review, and merge.
-- A real fictional Neon/test PostgreSQL URL is still required for remote deployment verification; isolated local PostgreSQL covers local runtime acceptance through Phase 5.
+- A real fictional Neon/test PostgreSQL URL is still required for remote deployment verification; isolated local PostgreSQL covers local runtime acceptance through Phase 6.
