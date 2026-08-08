@@ -4,12 +4,12 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 
 ## Current execution state
 
-- Branch: `feat/11-database-contract`
-- Phase: Phase 1 - database contract and migrations
-- Main at start: `8bfcbb2` (`origin/main` matched locally)
+- Branch: `feat/12-auth-rbac`
+- Phase: Phase 2 - authentication and RBAC
+- Main at start: `fc83f5e` (`origin/main` matched locally)
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 is merged as PR #1; Phase 1 schema, migration, seed, reset, and contract verification are complete pending PR publication
+- Current status: Phase 0 and Phase 1 are merged as PRs #1 and #2; Phase 2 Better Auth/RBAC implementation and local acceptance checks are complete pending PR publication
 
 ## Historical branches
 

@@ -43,6 +43,15 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - Remote application URLs continue to use Neon through `@neondatabase/serverless`.
 - Localhost PostgreSQL URLs use the node-postgres adapter so migration, seed, reset, and integration verification can run without a remote secret.
 
-## 9. Current prototype boundary
+## 9. Authentication and authorization
 
-Phase 1 migrations and database-contract checks are implemented and verified on isolated local PostgreSQL databases. Authenticated workflows, administration, database-backed financial transactions, ownership queries, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
+- Better Auth email/password sign-up is disabled for public callers.
+- `role` and `active` are server-controlled user fields; browser input cannot assign them.
+- Portal redirects are fixed mappings from the stored role and never accept a caller-controlled callback URL.
+- Admin and finance layouts accept `ADMIN` or `FINANCE_STAFF`; parent and student layouts require their exact role.
+- Disabled users, unauthenticated requests, and wrong-role requests are rejected by server guards. Student access also respects `ENABLE_STUDENT_PORTAL`.
+- Demo seed accounts use Better Auth's sign-up/password utilities and all use `DemoPass123!`.
+
+## 10. Current prototype boundary
+
+Phase 1 migrations and database-contract checks plus Phase 2 authentication/RBAC checks are implemented and verified on isolated local PostgreSQL databases. Administration, database-backed financial transactions, ownership queries, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.

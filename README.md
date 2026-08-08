@@ -4,13 +4,13 @@
 
 ## Current status
 
-The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, Better Auth configuration, server-side business-rule prototypes, and unit tests. The visual screens are not evidence of a complete connected workflow yet.
+The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, server-side business-rule prototypes, and unit tests. Financial and payment workflows remain intentionally staged for later phases.
 
 The following items remain intentionally incomplete at this stage:
 
-- Login pages currently demonstrate the portal UI and redirect without completing Better Auth sign-in.
+- Better Auth email/password sign-in, role-derived redirects, session logout, disabled-user rejection, protected layouts, and protected financial Route Handlers are implemented and verified against isolated PostgreSQL.
 - Assessment, payment, reversal, portal, and report services still contain simulated or hardcoded results.
-- The Phase 1 Drizzle migration set creates a clean database and is verified against isolated PostgreSQL; later authenticated and persisted workflows remain incomplete.
+- The Phase 1 Drizzle migration set creates a clean database and is verified against isolated PostgreSQL; later persisted financial workflows remain incomplete.
 - The online payment flow is a mock demonstration only; it is not a GCash, Maya, card, banking, or payment-provider integration.
 - No production-readiness, accounting, security-certification, or tax-receipt claim is made.
 
@@ -34,7 +34,7 @@ The receipt label is **Payment Acknowledgment Receipt**. The application must no
 - Admin and finance UI: `/admin/*`
 - Parent UI: `/parent/*`
 - Student UI: `/student/*`
-- Login prototypes: `/login/admin`, `/login/parent`, `/login/student`
+- Login portals: `/login/admin`, `/login/parent`, `/login/student`
 - Better Auth route handler: `/api/auth/*`
 - Health check: `/api/health`
 - Mock callback prototype: `/api/payments/mock-callback`
@@ -80,13 +80,14 @@ The reset commands refuse production mode, missing confirmations, and unsafe dat
 - `pnpm db:generate` - generate Drizzle migrations
 - `pnpm db:migrate` - apply committed Drizzle migrations
 - `pnpm db:verify:migrations` - verify tables, constraints, enums, timestamps, and financial delete protection
+- `pnpm auth:verify` - verify Better Auth demo sign-in, sessions, logout, disabled users, and public sign-up rejection
 - `pnpm db:seed` - seed fictional demo data
 - `pnpm db:reset` - reset the demo database after explicit confirmation
 - `pnpm db:test:reset` - reset only the separately configured test database
 
 ## Demo accounts
 
-The intended fictional seed accounts are `admin@demo.school`, `finance@demo.school`, `parent@demo.school`, and `student@demo.school`. Until the authentication phase is complete, these values are seed targets and not a claim that the current login screens authenticate successfully.
+The fictional seed accounts are `admin@demo.school`, `finance@demo.school`, `parent@demo.school`, and `student@demo.school`; all use `DemoPass123!`. Public registration is disabled, and each account is routed by its stored role after sign-in.
 
 ## Architecture
 

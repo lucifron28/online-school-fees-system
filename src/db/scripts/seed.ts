@@ -2,16 +2,13 @@ import { DatabaseInstance, getDb } from '../index';
 import * as schema from '../schema';
 import dotenv from 'dotenv';
 import path from 'path';
-import { eq } from 'drizzle-orm';
-import crypto from 'crypto';
+import { and, eq } from 'drizzle-orm';
+import { createAuth } from '../../lib/auth/server';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-function hashPassword(password: string): string {
-  const salt = 'osfs-demo-salt-2026';
-  return crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-}
+const DEMO_PASSWORD = 'DemoPass123!';
 
 export async function seedDemoData(db: DatabaseInstance = getDb()) {
   console.log('🌱 Seeding demo database...');
@@ -109,55 +106,94 @@ export async function seedDemoData(db: DatabaseInstance = getDb()) {
   // 5. Demo Accounts
   const demoUsers = [
     {
-      id: 'usr-admin-demo',
       name: 'System Administrator',
       email: 'admin@demo.school',
       role: 'ADMIN',
     },
     {
-      id: 'usr-finance-demo',
       name: 'Finance Staff',
       email: 'finance@demo.school',
       role: 'FINANCE_STAFF',
     },
     {
-      id: 'usr-parent-demo',
       name: 'Juan Dela Cruz Sr.',
       email: 'parent@demo.school',
       role: 'PARENT',
     },
     {
-      id: 'usr-student-demo',
       name: 'Juan Dela Cruz Jr.',
       email: 'student@demo.school',
       role: 'STUDENT',
     },
   ] as const;
 
-  for (const u of demoUsers) {
-    const existingU = await db
+  // The public auth instance keeps sign-up disabled. This seed-only instance uses
+  // Better Auth's own sign-up and password hashing utilities and is never routed.
+  const seedAuth = createAuth({ allowSignUp: true, database: db });
+  const authContext = await seedAuth.$context;
+
+  for (const demoUser of demoUsers) {
+    const existingUsers = await db
       .select()
       .from(schema.users)
-      .where(eq(schema.users.email, u.email))
+      .where(eq(schema.users.email, demoUser.email))
       .limit(1);
-    if (existingU.length === 0) {
-      await db.insert(schema.users).values({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        role: u.role,
-        active: true,
+
+    if (existingUsers.length === 0) {
+      const result = await seedAuth.api.signUpEmail({
+        body: {
+          name: demoUser.name,
+          email: demoUser.email,
+          password: DEMO_PASSWORD,
+          rememberMe: false,
+        },
       });
 
-      await db.insert(schema.accounts).values({
-        id: `acc-${u.id}`,
-        userId: u.id,
-        accountId: u.email,
-        providerId: 'credential',
-        password: hashPassword('DemoPass123!'),
-      });
-      console.log(`  ✔ Seeded Account: ${u.email} (${u.role})`);
+      await db
+        .update(schema.users)
+        .set({ role: demoUser.role, active: true, emailVerified: true })
+        .where(eq(schema.users.id, result.user.id));
+      console.log(`  ✔ Seeded Account: ${demoUser.email} (${demoUser.role})`);
+      continue;
     }
+
+    const existingUser = existingUsers[0];
+    const passwordHash = await authContext.password.hash(DEMO_PASSWORD);
+    const credentialAccounts = await db
+      .select({ id: schema.accounts.id })
+      .from(schema.accounts)
+      .where(
+        and(
+          eq(schema.accounts.userId, existingUser.id),
+          eq(schema.accounts.providerId, 'credential')
+        )
+      )
+      .limit(1);
+
+    if (credentialAccounts.length === 0) {
+      await authContext.internalAdapter.linkAccount({
+        userId: existingUser.id,
+        providerId: 'credential',
+        accountId: existingUser.id,
+        password: passwordHash,
+      });
+    } else {
+      await db
+        .update(schema.accounts)
+        .set({ password: passwordHash })
+        .where(eq(schema.accounts.id, credentialAccounts[0].id));
+    }
+
+    await db
+      .update(schema.users)
+      .set({
+        name: demoUser.name,
+        role: demoUser.role,
+        active: true,
+        emailVerified: true,
+      })
+      .where(eq(schema.users.id, existingUser.id));
+    console.log(`  ✔ Updated Account: ${demoUser.email} (${demoUser.role})`);
   }
 
   console.log('✅ Demo seeding completed successfully!');
