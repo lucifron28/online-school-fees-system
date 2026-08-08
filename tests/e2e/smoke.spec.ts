@@ -18,24 +18,30 @@ test.describe('Foundation Application & Scaffold Navigation Smoke Tests', () => 
     expect(consoleErrors).toEqual([]);
   });
 
-  test('verifies representative portal routes render cleanly', async ({ page }) => {
+  test('verifies representative protected routes redirect to their login portals', async ({
+    page,
+  }) => {
     const routes = [
-      '/login/admin',
-      '/admin/dashboard',
-      '/admin/students',
-      '/admin/fees',
-      '/admin/payments/manual',
-      '/admin/transactions',
-      '/admin/reports',
-      '/login/parent',
-      '/parent/dashboard',
-      '/parent/pay',
-      '/login/student',
-      '/student/dashboard',
+      { path: '/admin/dashboard', loginPath: '/login/admin' },
+      { path: '/admin/students', loginPath: '/login/admin' },
+      { path: '/admin/fees', loginPath: '/login/admin' },
+      { path: '/admin/payments/manual', loginPath: '/login/admin' },
+      { path: '/admin/transactions', loginPath: '/login/admin' },
+      { path: '/admin/reports', loginPath: '/login/admin' },
+      { path: '/parent/dashboard', loginPath: '/login/parent' },
+      { path: '/parent/pay', loginPath: '/login/parent' },
+      { path: '/student/dashboard', loginPath: '/login/student' },
     ];
 
-    for (const route of routes) {
-      await page.goto(route);
+    for (const { path, loginPath } of routes) {
+      try {
+        await page.goto(path, { waitUntil: 'domcontentloaded' });
+      } catch (error) {
+        // Next.js can abort the original document navigation after a Server Component redirect.
+        expect(String(error)).toContain('ERR_ABORTED');
+      }
+
+      await expect(page).toHaveURL(new RegExp(`${loginPath}$`));
       await expect(page.locator('body')).toBeVisible();
     }
   });

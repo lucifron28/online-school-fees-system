@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { LogoutButton } from '@/components/auth/logout-button';
 import {
   LayoutDashboard,
   Users,
@@ -11,7 +12,6 @@ import {
   Receipt,
   FileText,
   Settings,
-  LogOut,
   UserCheck,
   Building2,
   ChevronRight,
@@ -26,9 +26,15 @@ export type Role = 'admin' | 'parent' | 'student';
 
 interface SidebarProps {
   role: Role;
+  userName?: string;
+  logoutPath?: string;
 }
 
-export function Sidebar({ role }: SidebarProps) {
+export function Sidebar({
+  role,
+  userName = 'Authenticated user',
+  logoutPath = '/login/admin',
+}: SidebarProps) {
   const pathname = usePathname();
 
   const adminNav = [
@@ -140,25 +146,13 @@ export function Sidebar({ role }: SidebarProps) {
               {role === 'admin' ? 'A' : role === 'parent' ? 'P' : 'S'}
             </div>
             <div>
-              <p className="max-w-[110px] truncate font-medium text-slate-200">
-                {role === 'admin'
-                  ? 'Administrator'
-                  : role === 'parent'
-                    ? 'Juan Dela Cruz Sr.'
-                    : 'Juan Dela Cruz Jr.'}
-              </p>
+              <p className="max-w-[110px] truncate font-medium text-slate-200">{userName}</p>
               <p className="text-[10px] capitalize text-slate-400">{role}</p>
             </div>
           </div>
         </div>
 
-        <Link
-          href={`/login/${role}`}
-          className="flex items-center space-x-3 rounded-lg px-3.5 py-2 text-sm text-slate-400 transition-colors hover:bg-red-950/40 hover:text-red-400"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Logout</span>
-        </Link>
+        <LogoutButton logoutPath={logoutPath} />
       </div>
     </aside>
   );

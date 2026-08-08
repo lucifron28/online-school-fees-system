@@ -3,9 +3,6 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const sessionToken =
-    request.cookies.get('better-auth.session_token')?.value ||
-    request.cookies.get('__Secure-better-auth.session_token')?.value;
 
   // Protected route prefixes
   const isAdminRoute = pathname.startsWith('/admin');
@@ -23,8 +20,8 @@ export function middleware(request: NextRequest) {
     );
   }
 
-  // In demo environment without database connection, pass through to preserve UI presentation
-  // Detailed server-side role validation is enforced in server guards / actions
+  // Authentication and role checks run in the server layouts. This middleware only
+  // handles the feature flag because it is safe to evaluate at the edge.
   return NextResponse.next();
 }
 

@@ -32,8 +32,8 @@ Client Components must not import server-only services. Financial rules must rem
 
 ## Current implementation boundary
 
-- The App Router pages and layouts are primarily visual prototype screens.
-- Better Auth is configured with a Drizzle adapter, but the login pages are not yet connected to real sign-in and server layout protection.
+- The App Router pages still contain visual prototype data in later financial screens, but the portal layouts now require authenticated stored roles.
+- Better Auth uses a Drizzle adapter with public sign-up disabled, server-only role/active fields, disabled-user rejection, and a reusable TanStack Form login flow. Admin/finance report and receipt Route Handlers require server-side authorization.
 - The database schema describes users, academic records, students, guardians, fees, assessment periods, assessments, ledger entries, payments, receipts, reversals, audit logs, persisted mock checkouts/callbacks, and notification delivery.
 - `src/db/migrations/0000_good_ghost_rider.sql` is the committed initial migration and has been verified on a blank isolated PostgreSQL database.
 - Financial event timestamps use PostgreSQL `timestamp with time zone`; monetary values use integer centavos with database checks.

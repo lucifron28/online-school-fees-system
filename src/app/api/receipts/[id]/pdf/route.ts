@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { generateReceiptPdf } from '@/lib/pdf/receipt-generator';
+import { authErrorResponse, requireRequestAuth } from '@/server/auth/guards';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id?: string }> }) {
+  try {
+    await requireRequestAuth(request, ['ADMIN', 'FINANCE_STAFF']);
+  } catch (error) {
+    return authErrorResponse(error);
+  }
+
   const resolvedParams = await params;
   const receiptId = resolvedParams?.id || 'OSFS-2026-000123';
 

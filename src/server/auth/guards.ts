@@ -1,8 +1,11 @@
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth/server';
 import { getServerEnv } from '@/lib/env';
+import { getRoleLoginPath, parseUserRole, type UserRole } from '@/lib/auth/roles';
+import { NextResponse } from 'next/server';
 
-export type UserRole = 'ADMIN' | 'FINANCE_STAFF' | 'PARENT' | 'STUDENT';
+export type { UserRole } from '@/lib/auth/roles';
 
 export interface AuthenticatedUser {
   id: string;
@@ -12,9 +15,11 @@ export interface AuthenticatedUser {
   active: boolean;
 }
 
-export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
+export async function getCurrentUser(
+  requestHeaders?: HeadersInit
+): Promise<AuthenticatedUser | null> {
   try {
-    const reqHeaders = await headers();
+    const reqHeaders = requestHeaders ? new Headers(requestHeaders) : await headers();
     const session = await auth.api.getSession({
       headers: reqHeaders,
     });
@@ -24,16 +29,19 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
     }
 
     const user = session.user as Record<string, unknown>;
-    const active = user.active !== false;
+    const active = user.active === true;
     if (!active) {
       return null;
     }
+
+    const role = parseUserRole(user.role);
+    if (!role) return null;
 
     return {
       id: String(user.id),
       name: String(user.name || ''),
       email: String(user.email || ''),
-      role: (user.role as UserRole) || 'STUDENT',
+      role,
       active,
     };
   } catch (error) {
@@ -41,8 +49,11 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
   }
 }
 
-export async function requireAuth(allowedRoles?: UserRole[]): Promise<AuthenticatedUser> {
-  const user = await getCurrentUser();
+export async function requireAuth(
+  allowedRoles?: UserRole[],
+  requestHeaders?: HeadersInit
+): Promise<AuthenticatedUser> {
+  const user = await getCurrentUser(requestHeaders);
   if (!user) {
     throw new Error('UNAUTHENTICATED');
   }
@@ -72,9 +83,46 @@ export async function requireFinanceStaff(): Promise<AuthenticatedUser> {
 }
 
 export async function requireParent(): Promise<AuthenticatedUser> {
-  return requireAuth(['PARENT', 'ADMIN']);
+  return requireAuth(['PARENT']);
 }
 
 export async function requireStudent(): Promise<AuthenticatedUser> {
-  return requireAuth(['STUDENT', 'ADMIN']);
+  return requireAuth(['STUDENT']);
+}
+
+export async function requirePortalUser(
+  allowedRoles: UserRole[],
+  loginPath: string
+): Promise<AuthenticatedUser> {
+  try {
+    return await requireAuth(allowedRoles);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'UNAUTHENTICATED') {
+      redirect(loginPath);
+    }
+    redirect('/unauthorized');
+  }
+}
+
+export async function requireRequestAuth(
+  request: Request,
+  allowedRoles?: UserRole[]
+): Promise<AuthenticatedUser> {
+  return requireAuth(allowedRoles, request.headers);
+}
+
+export function authErrorResponse(error: unknown): NextResponse {
+  const code = error instanceof Error ? error.message : 'UNAUTHENTICATED';
+  const status = code === 'UNAUTHENTICATED' ? 401 : 403;
+  return NextResponse.json(
+    {
+      error: code === 'UNAUTHENTICATED' ? 'Authentication required' : 'Forbidden',
+      code,
+    },
+    { status }
+  );
+}
+
+export function getLoginPathForUser(user: AuthenticatedUser): string {
+  return getRoleLoginPath(user.role);
 }

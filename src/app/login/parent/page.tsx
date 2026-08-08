@@ -2,23 +2,13 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ImagePlaceholder } from '@/components/ui/image-placeholder';
-import { Users, Shield, GraduationCap, ArrowRight } from 'lucide-react';
+import { LoginForm } from '@/components/auth/login-form';
+import { Users, Shield, GraduationCap } from 'lucide-react';
 
 export default function ParentLoginPage() {
-  const router = useRouter();
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    router.push('/parent/dashboard');
-  };
-
   return (
     <div className="flex min-h-[calc(100vh-2.5rem)] bg-slate-50 dark:bg-slate-950">
-      {/* Form Section */}
       <div className="flex flex-1 flex-col justify-center border-r border-slate-200 bg-white px-6 py-12 dark:border-slate-800 dark:bg-slate-900 lg:px-12 xl:px-16">
         <div className="mx-auto w-full max-w-sm">
           <div className="flex flex-col items-center text-center">
@@ -36,62 +26,14 @@ export default function ParentLoginPage() {
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="mt-8 space-y-4">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Parent Email / Account ID
-              </label>
-              <Input
-                type="email"
-                placeholder="parent@example.com"
-                defaultValue="juan.delacruz@example.com"
-                className="h-10 text-sm"
-                required
-              />
-            </div>
-
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Password
-                </label>
-                <button
-                  type="button"
-                  onClick={() => alert('Password reset is managed by the School Administrator.')}
-                  className="text-xs text-emerald-600 hover:underline dark:text-emerald-400"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-              <Input
-                type="password"
-                placeholder="Enter password"
-                defaultValue="••••••••"
-                className="h-10 text-sm"
-                required
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="remember"
-                defaultChecked
-                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-              />
-              <label htmlFor="remember" className="text-xs text-slate-600 dark:text-slate-400">
-                Remember me
-              </label>
-            </div>
-
-            <Button
-              type="submit"
-              className="h-10 w-full bg-emerald-600 text-sm font-medium text-white shadow-md hover:bg-emerald-700"
-            >
-              <span>Sign In as Parent</span>
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </form>
+          <LoginForm
+            portal="parent"
+            defaultEmail="parent@demo.school"
+            buttonLabel="Sign In as Parent"
+            accentClass="bg-emerald-600 hover:bg-emerald-700"
+            linkClass="text-emerald-600 dark:text-emerald-400"
+            focusClass="dark:focus-visible:ring-emerald-500"
+          />
 
           <div className="mt-8 border-t border-slate-200 pt-6 dark:border-slate-800">
             <p className="mb-3 text-center text-xs font-medium text-slate-500">
@@ -117,7 +59,6 @@ export default function ParentLoginPage() {
         </div>
       </div>
 
-      {/* Hero Image Section */}
       <div className="hidden flex-1 items-center justify-center bg-slate-100 p-8 dark:bg-slate-950 lg:flex">
         <ImagePlaceholder type="family" className="h-full max-h-[700px] w-full" />
       </div>
