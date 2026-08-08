@@ -7,7 +7,9 @@ async function login(page: Page, portal: 'admin' | 'parent' | 'student', email: 
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(PASSWORD);
   await page.getByRole('button', { name: /sign in/i }).click();
-  await expect(page).toHaveURL(new RegExp(`/${portal === 'admin' ? 'admin' : portal}/dashboard$`));
+  await expect(page).toHaveURL(new RegExp(`/${portal === 'admin' ? 'admin' : portal}/dashboard$`), {
+    timeout: 15_000,
+  });
 }
 
 async function jsonResponse<T>(response: APIResponse) {
@@ -84,15 +86,22 @@ test.describe('authenticated financial workflow', () => {
         })
       );
 
-      const parentGuardians = await jsonResponse<Array<{ id: string }>>(
+      const parentGuardians = await jsonResponse<Array<{ id: string; email: string }>>(
         await admin.request.get('/api/admin/guardians?search=parent@demo.school')
       );
-      expect(parentGuardians.length).toBeGreaterThan(0);
+      const parentGuardian = parentGuardians.find(
+        (guardian) => guardian.email === 'parent@demo.school'
+      );
+      expect(parentGuardian).toBeDefined();
       await jsonResponse(
         await admin.request.post(`/api/admin/students/${createdStudent.id}/guardians`, {
-          data: { guardianId: parentGuardians[0].id, isPrimary: false },
+          data: { guardianId: parentGuardian!.id, isPrimary: false },
         })
       );
+      const linkedStudents = await jsonResponse<Array<{ id: string }>>(
+        await admin.request.get(`/api/admin/guardians/${parentGuardian!.id}/students`)
+      );
+      expect(linkedStudents.some((student) => student.id === createdStudent.id)).toBe(true);
 
       const structures = await jsonResponse<
         Array<{ id: string; gradeLevelId: string; status: string; items: unknown[] }>
@@ -136,7 +145,10 @@ test.describe('authenticated financial workflow', () => {
       const children = await jsonResponse<Array<{ id: string; studentNumber: string }>>(
         await parent.request.get('/api/portal/parent/children')
       );
-      expect(children.some((child) => child.id === createdStudent.id)).toBe(true);
+      expect(
+        children.some((child) => child.id === createdStudent.id),
+        `Parent children: ${children.map((child) => child.studentNumber).join(', ')}`
+      ).toBe(true);
       const parentPaymentsBeforeOnline = await jsonResponse<Array<{ id: string }>>(
         await parent.request.get('/api/portal/parent/payments')
       );
