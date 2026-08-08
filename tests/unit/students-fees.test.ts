@@ -1,43 +1,70 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  pesosToCentavos,
-  centavosToPesos,
-  formatCentavos,
-  addCentavos,
-  subtractCentavos,
-  parseMoneyInput,
-} from '@/lib/utils/currency';
+  feeStructureCreateInputSchema,
+  feeStructureUpdateInputSchema,
+  guardianStudentLinkInputSchema,
+  studentCreateInputSchema,
+} from '@/lib/students-fees';
 
-describe('Currency Utility (Integer Centavos)', () => {
-  it('converts pesos to centavos correctly', () => {
-    expect(pesosToCentavos(1500.5)).toBe(150050);
-    expect(pesosToCentavos('12000.00')).toBe(1200000);
-    expect(pesosToCentavos(0)).toBe(0);
+const ids = {
+  student: '00000000-0000-4000-8000-000000000001',
+  guardian: '00000000-0000-4000-8000-000000000002',
+  schoolYear: '00000000-0000-4000-8000-000000000003',
+  gradeLevel: '00000000-0000-4000-8000-000000000004',
+  category: '00000000-0000-4000-8000-000000000005',
+};
+
+describe('students, guardians, and fee validation', () => {
+  it('normalizes student numbers and emails before persistence', () => {
+    const value = studentCreateInputSchema.parse({
+      studentNumber: ' 2026-ab-01 ',
+      firstName: 'Rina',
+      lastName: 'Santos',
+      email: 'RINA@EXAMPLE.COM',
+      userId: null,
+      gradeLevelId: null,
+      sectionId: null,
+      schoolYearId: null,
+      status: 'ACTIVE',
+    });
+
+    expect(value.studentNumber).toBe('2026-AB-01');
+    expect(value.email).toBe('rina@example.com');
   });
 
-  it('converts centavos back to pesos correctly', () => {
-    expect(centavosToPesos(150050)).toBe(1500.5);
-    expect(centavosToPesos(1200000)).toBe(12000);
+  it('requires positive fee items and at least one item in a structure', () => {
+    expect(() =>
+      feeStructureCreateInputSchema.parse({
+        schoolYearId: ids.schoolYear,
+        gradeLevelId: ids.gradeLevel,
+        assessmentPeriod: 'ANNUAL',
+        name: 'Annual fees',
+        status: 'DRAFT',
+        items: [],
+      })
+    ).toThrow();
+
+    expect(() =>
+      feeStructureCreateInputSchema.parse({
+        schoolYearId: ids.schoolYear,
+        gradeLevelId: ids.gradeLevel,
+        assessmentPeriod: 'ANNUAL',
+        name: 'Annual fees',
+        status: 'DRAFT',
+        items: [{ feeCategoryId: ids.category, name: 'Tuition', amountCentavos: 0 }],
+      })
+    ).toThrow();
   });
 
-  it('formats centavos as Philippine Pesos (PHP ₱)', () => {
-    const formatted = formatCentavos(1200000);
-    expect(formatted).toContain('12,000.00');
+  it('rejects empty fee-structure updates', () => {
+    expect(() => feeStructureUpdateInputSchema.parse({})).toThrow(
+      'Provide at least one fee-structure field to update.'
+    );
   });
 
-  it('adds and subtracts centavos safely', () => {
-    expect(addCentavos(1200000, 200000)).toBe(1400000);
-    expect(subtractCentavos(1400000, 1000000)).toBe(400000);
-  });
-
-  it('parses valid user money input string into centavos', () => {
-    expect(parseMoneyInput('14000')).toBe(1400000);
-    expect(parseMoneyInput('₱14,000.00')).toBe(1400000);
-    expect(parseMoneyInput('1500.50')).toBe(150050);
-  });
-
-  it('throws error for invalid or negative monetary inputs', () => {
-    expect(() => parseMoneyInput('-100')).toThrow();
-    expect(() => parseMoneyInput('invalid')).toThrow();
+  it('defaults a guardian link to non-primary when omitted', () => {
+    expect(
+      guardianStudentLinkInputSchema.parse({ guardianId: ids.guardian, studentId: ids.student })
+    ).toEqual({ guardianId: ids.guardian, studentId: ids.student, isPrimary: false });
   });
 });

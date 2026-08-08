@@ -60,6 +60,16 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - Only `ADMIN` may manage institution settings, academic structure, and user roles/status. At least one active administrator must remain.
 - User creation uses the server-side Better Auth sign-up utility with public sign-up still disabled.
 
-## 11. Current prototype boundary
+## 11. Student, guardian, and fee-management rules
 
-Phase 1 migrations, Phase 2 authentication/RBAC, and Phase 3 core administration are implemented and verified on isolated local PostgreSQL databases. Database-backed financial transactions, ownership queries, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
+- `ADMIN` and `FINANCE_STAFF` may manage student, guardian, and fee records; parent and student accounts cannot enumerate these administrative records.
+- Student numbers are case-normalized uppercase identifiers and must be unique.
+- A student account link must reference a `STUDENT` user; a guardian account link must reference a `PARENT` user.
+- A guardian/student pair may be linked once. A primary link is unique per student by transactionally clearing prior primary flags.
+- Fee structures start as `DRAFT`, may become `ACTIVE` only for an active school year, and are archived instead of deleted.
+- Fee categories used by a fee structure must be active at the time of assignment.
+- Once a student assessment is `POSTED`, the fee structure definition and items are immutable; archiving remains allowed.
+
+## 12. Current prototype boundary
+
+Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, and Phase 4 student/guardian/fee administration are implemented and verified on isolated local PostgreSQL databases. Database-backed financial transactions, ownership queries, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
