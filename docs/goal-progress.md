@@ -117,12 +117,12 @@ Phase 4 was implemented on `feat/14-students-guardians-fees` in commit `496ee86d
 
 ## Phase 5 commands and actual results
 
-| Command / check | Result | Notes |
-| --- | --- | --- |
-| `pnpm typecheck` | Passed | Strict TypeScript passed with the database service, Route Handlers, profile component, and verifier. |
-| `pnpm lint` | Passed | ESLint completed with exit code 0. |
-| Focused Prettier check | Passed | All Phase 5 files use repository Prettier formatting; the repository-wide local check still reports 82 pre-existing files. |
-| `vitest run` | Passed | 13 unit/component files and 43 tests passed with elevated read access required by the local sandbox. |
+| Command / check                  | Result | Notes                                                                                                                                                                                       |
+| -------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                 | Passed | Strict TypeScript passed with the database service, Route Handlers, profile component, and verifier.                                                                                        |
+| `pnpm lint`                      | Passed | ESLint completed with exit code 0.                                                                                                                                                          |
+| Focused Prettier check           | Passed | All Phase 5 files use repository Prettier formatting; the repository-wide local check still reports 82 pre-existing files.                                                                  |
+| `vitest run`                     | Passed | 13 unit/component files and 43 tests passed with elevated read access required by the local sandbox.                                                                                        |
 | `pnpm assessments-ledger:verify` | Passed | Isolated `osfs_phase4` PostgreSQL verified authoritative posting, immutable snapshots, duplicate prevention, adjustments, audit rows, and full rollback; generated records were cleaned up. |
 
 ## Phase 5 pull request evidence
