@@ -28,21 +28,21 @@
 
 ## Commands and actual results
 
-| Command                             | Result | Notes                                                                                                                                                                                                 |
-| ----------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm format:check`                 | Passed | Prettier passed locally and in hosted Foundation CI.                                                                                                                                                   |
-| `pnpm typecheck`                    | Passed | Strict TypeScript passed after auth, layout, seed, test, and E2E changes.                                                                                                                             |
-| `pnpm lint`                         | Passed | ESLint completed with exit code 0 locally and in hosted Foundation CI.                                                                                                                                 |
-| `pnpm test`                         | Passed | 12 unit/component files and 41 tests passed; Phase 2 adds fixed role-routing coverage.                                                                                                                |
-| `pnpm test:integration`             | Passed | 1 integration file and 3 reset-safety tests passed.                                                                                                                                                    |
-| `pnpm test:e2e`                     | Passed | 4 Playwright smoke tests passed locally and in hosted Foundation CI after protected-route expectations were updated.                                                                                  |
-| `pnpm build`                        | Passed | Next.js 15.5.21 compiled all 26 routes locally and in hosted Foundation CI with the production auth environment configured.                                                                            |
-| `pnpm db:migrate`                   | Passed | Applied the committed migration to isolated `osfs_auth_phase2` PostgreSQL.                                                                                                                            |
-| `pnpm db:seed`                      | Passed | Created and idempotently updated all four demo accounts using Better Auth-compatible password hashing.                                                                                                 |
-| `pnpm auth:verify`                  | Passed | Verified four demo sign-ins, stored roles, invalid credentials, disabled-user rejection, session persistence, logout, and public sign-up rejection.                                                    |
-| HTTP role/route matrix              | Passed | All four accounts signed in; admin/finance report access returned `200`; parent/student cross-role report access returned `403`; unauthenticated report access returned `401`.                        |
-| HTTP logout and feature flag        | Passed | Logout removed report access; disabling the student portal redirected both public and authenticated student routes to the fixed unauthorized page.                                                    |
-| Hosted Foundation CI run [#27](https://github.com/lucifron28/online-school-fees-system/actions/runs/31259066634) | Passed | Formatting, lint, typecheck, unit tests, production build, and Playwright E2E all passed on Phase 2 head `95845d6cbba1732891852acc439768a3580a7283`. |
+| Command                                                                                                          | Result | Notes                                                                                                                                                                          |
+| ---------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm format:check`                                                                                              | Passed | Prettier passed locally and in hosted Foundation CI.                                                                                                                           |
+| `pnpm typecheck`                                                                                                 | Passed | Strict TypeScript passed after auth, layout, seed, test, and E2E changes.                                                                                                      |
+| `pnpm lint`                                                                                                      | Passed | ESLint completed with exit code 0 locally and in hosted Foundation CI.                                                                                                         |
+| `pnpm test`                                                                                                      | Passed | 12 unit/component files and 41 tests passed; Phase 2 adds fixed role-routing coverage.                                                                                         |
+| `pnpm test:integration`                                                                                          | Passed | 1 integration file and 3 reset-safety tests passed.                                                                                                                            |
+| `pnpm test:e2e`                                                                                                  | Passed | 4 Playwright smoke tests passed locally and in hosted Foundation CI after protected-route expectations were updated.                                                           |
+| `pnpm build`                                                                                                     | Passed | Next.js 15.5.21 compiled all 26 routes locally and in hosted Foundation CI with the production auth environment configured.                                                    |
+| `pnpm db:migrate`                                                                                                | Passed | Applied the committed migration to isolated `osfs_auth_phase2` PostgreSQL.                                                                                                     |
+| `pnpm db:seed`                                                                                                   | Passed | Created and idempotently updated all four demo accounts using Better Auth-compatible password hashing.                                                                         |
+| `pnpm auth:verify`                                                                                               | Passed | Verified four demo sign-ins, stored roles, invalid credentials, disabled-user rejection, session persistence, logout, and public sign-up rejection.                            |
+| HTTP role/route matrix                                                                                           | Passed | All four accounts signed in; admin/finance report access returned `200`; parent/student cross-role report access returned `403`; unauthenticated report access returned `401`. |
+| HTTP logout and feature flag                                                                                     | Passed | Logout removed report access; disabling the student portal redirected both public and authenticated student routes to the fixed unauthorized page.                             |
+| Hosted Foundation CI run [#27](https://github.com/lucifron28/online-school-fees-system/actions/runs/31259066634) | Passed | Formatting, lint, typecheck, unit tests, production build, and Playwright E2E all passed on Phase 2 head `95845d6cbba1732891852acc439768a3580a7283`.                           |
 
 ## Pull request evidence
 
@@ -58,20 +58,20 @@ Phase 2 was implemented on `feat/12-auth-rbac` in commits `8c03bb2`, `8cc1e9f`, 
 
 ## Phase 3 commands and actual results
 
-| Command | Result | Notes |
-| --- | --- | --- |
-| `pnpm db:generate` | Passed | Generated `src/db/migrations/0001_clean_rictor.sql` and snapshot metadata for singleton settings, school-year uniqueness, and date validation. |
-| `pnpm db:migrate` | Passed | Applied to isolated local PostgreSQL database `osfs_admin_phase3`. |
-| `pnpm db:verify:migrations` | Passed | Verified 27 tables, 10 unique indexes, 10 checks, and financial delete protection. |
-| `pnpm db:seed` | Passed | Seeded the isolated database with the demo institution, active school year, academic structure, and four Better Auth accounts. |
-| `pnpm admin:verify` | Passed | Verified settings persistence, student-portal flag persistence, school-year lifecycle, academic structure constraints, account roles, and disabled-account sign-in rejection; generated records were cleaned up and original seed state restored. |
-| `pnpm typecheck` | Passed | Strict TypeScript passed for all Phase 3 routes, services, components, scripts, and tests. |
-| `pnpm lint` | Passed | ESLint completed with exit code 0. |
-| `pnpm test` | Passed | 13 unit/component files and 45 tests passed. |
-| `pnpm test:integration` | Passed | 1 integration file and 3 reset-safety tests passed. |
-| `pnpm build` | Passed | Next.js 15.5.21 production build generated 31 routes. |
-| HTTP admin role matrix | Passed | Unauthenticated settings access returned `401`; administrator sign-in/settings access returned `200`; finance-staff settings access returned `403`. |
-| `pnpm test:e2e` | Passed | 4 Playwright smoke tests passed locally after removing a stale port-3000 process. |
+| Command                     | Result | Notes                                                                                                                                                                                                                                             |
+| --------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm db:generate`          | Passed | Generated `src/db/migrations/0001_clean_rictor.sql` and snapshot metadata for singleton settings, school-year uniqueness, and date validation.                                                                                                    |
+| `pnpm db:migrate`           | Passed | Applied to isolated local PostgreSQL database `osfs_admin_phase3`.                                                                                                                                                                                |
+| `pnpm db:verify:migrations` | Passed | Verified 27 tables, 10 unique indexes, 10 checks, and financial delete protection.                                                                                                                                                                |
+| `pnpm db:seed`              | Passed | Seeded the isolated database with the demo institution, active school year, academic structure, and four Better Auth accounts.                                                                                                                    |
+| `pnpm admin:verify`         | Passed | Verified settings persistence, student-portal flag persistence, school-year lifecycle, academic structure constraints, account roles, and disabled-account sign-in rejection; generated records were cleaned up and original seed state restored. |
+| `pnpm typecheck`            | Passed | Strict TypeScript passed for all Phase 3 routes, services, components, scripts, and tests.                                                                                                                                                        |
+| `pnpm lint`                 | Passed | ESLint completed with exit code 0.                                                                                                                                                                                                                |
+| `pnpm test`                 | Passed | 13 unit/component files and 45 tests passed.                                                                                                                                                                                                      |
+| `pnpm test:integration`     | Passed | 1 integration file and 3 reset-safety tests passed.                                                                                                                                                                                               |
+| `pnpm build`                | Passed | Next.js 15.5.21 production build generated 31 routes.                                                                                                                                                                                             |
+| HTTP admin role matrix      | Passed | Unauthenticated settings access returned `401`; administrator sign-in/settings access returned `200`; finance-staff settings access returned `403`.                                                                                               |
+| `pnpm test:e2e`             | Passed | 4 Playwright smoke tests passed locally after removing a stale port-3000 process.                                                                                                                                                                 |
 
 ## Remaining work
 
