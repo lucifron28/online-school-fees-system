@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { use } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { requestJson, getClientErrorMessage } from '@/lib/client-api';
+import { StudentAssessments } from '@/components/admin/student-assessments';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,9 @@ type StudentDetail = {
   lastName: string;
   email: string;
   userId: string | null;
+  gradeLevelId: string | null;
+  sectionId: string | null;
+  schoolYearId: string | null;
   gradeLevelName: string | null;
   sectionName: string | null;
   schoolYearName: string | null;
@@ -177,10 +181,7 @@ export default function AdminStudentProfilePage({ params }: { params: Promise<{ 
         </Card>
       </div>
 
-      <Card className="border-slate-200 p-6 text-sm text-slate-500 shadow-sm dark:border-slate-800">
-        Assessments, payments, and ledger entries will appear here as those phase services are
-        connected to this student record.
-      </Card>
+      <StudentAssessments student={student} />
     </div>
   );
 }

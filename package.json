@@ -25,6 +25,7 @@
     "auth:verify": "tsx src/db/scripts/verify-auth.ts",
     "admin:verify": "tsx src/db/scripts/verify-administration.ts",
     "students-fees:verify": "tsx src/db/scripts/verify-students-fees.ts",
+    "assessments-ledger:verify": "tsx src/db/scripts/verify-assessments-ledger.ts",
     "db:seed": "tsx src/db/scripts/seed.ts",
     "db:reset": "tsx src/db/scripts/reset-demo.ts --demo",
     "db:test:reset": "tsx src/db/scripts/reset-demo.ts --test"
