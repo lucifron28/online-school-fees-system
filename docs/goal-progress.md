@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: 8 - Reports and Reconciliation (next)
-- Branch: `main`
-- Starting main commit for this phase: `8984c6f`
+- Phase: 8 - Reports and Reconciliation (in progress)
+- Branch: `feat/18-reports-reconciliation`
+- Starting main commit for this phase: `b3fae78`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 0 through Phase 7 are merged into `main`; Phase 7 adds database-backed portal ownership, persisted mock checkout/callback state, and server-authorized online-payment completion.
+- Current state: Phase 0 through Phase 7 are merged into `main`; Phase 8 has local implementation and acceptance evidence, with PR, hosted CI, and merge evidence pending.
 
 ## Completed phases
 
@@ -157,7 +157,7 @@ Phase 5 was implemented on `feat/15-assessments-ledger` in commits `e274f9b`, `e
 
 ## Remaining work
 
-- Complete Phases 8-10 in the requested branch/PR/merge sequence after Phase 7 is merged.
+- Complete Phases 9-10 in the requested branch/PR/merge sequence after Phase 8 is merged.
 - Complete Phase 11 external audit preparation and final evidence report.
 
 ## Phase 7 implementation
@@ -186,6 +186,33 @@ Phase 5 was implemented on `feat/15-assessments-ledger` in commits `e274f9b`, `e
 ## Phase 7 pull request evidence
 
 Phase 7 was implemented on `feat/17-portals-online-payment` from main commit `8664e39` in commits `497a90b`, `7a51f2b`, and `1885237`, with documentation commit `776847d`. It was self-reviewed in PR [#8](https://github.com/lucifron28/online-school-fees-system/pull/8), CI-verified by Foundation run [#51](https://github.com/lucifron28/online-school-fees-system/actions/runs/31268864899), and merged with regular merge commit `8984c6f5babc4387833ce53906f688b485172d3b`. Hosted CI passed formatting, lint, typecheck, 41 unit tests, production build, and Playwright E2E. Local isolated PostgreSQL verifiers and the authenticated portal HTTP matrix also passed.
+
+## Phase 8 implementation
+
+- Replaced hardcoded dashboard metrics with PostgreSQL-backed active-student, net-collection, outstanding-balance, posted-transaction, recent-transaction, collection-trend, and payment-method queries.
+- Added date-range collection/payment-history, outstanding-balance, reversal, payment-method, grade-level, and student-statement report services and guarded Route Handlers using Asia/Manila boundaries.
+- Added CSV exports from the same report datasets used on screen, with spreadsheet-formula injection protection for every cell.
+- Added reconciliation status and notes derived from persisted payment, allocation, receipt, and reversal state; reversed payments remain visible in audit reports but are excluded from net collections.
+- Added PDF student statement generation from persisted ledger entries and student data.
+- Added `reports-reconciliation:verify`, which proves dashboard changes after payment/reversal, net-total exclusion, reversal retention, outstanding and statement reconciliation, breakdowns, CSV output, and PDF generation.
+
+## Phase 8 commands and actual results
+
+| Command / check                                    | Result | Notes                                                                                                                                                                                                                  |
+| -------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                                   | Passed | Strict TypeScript passed for report services, APIs, dashboard/report pages, statement PDF generation, and verifier.                                                                                                    |
+| `pnpm lint`                                        | Passed | ESLint completed with exit code 0.                                                                                                                                                                                     |
+| Focused Prettier check                             | Passed | Phase 8 source, tests, verifier, package script, and documentation use repository formatting.                                                                                                                          |
+| `vitest run`                                       | Passed | 13 unit/component files and 41 tests passed, including CSV formula protection and Manila date-boundary coverage.                                                                                                       |
+| `vitest run --config vitest.integration.config.ts` | Passed | 1 integration file and 3 reset-safety tests passed.                                                                                                                                                                    |
+| `pnpm reports-reconciliation:verify`               | Passed | Isolated PostgreSQL verified dashboard/payment/reversal changes, net collections, retained reversal report, outstanding balances, statements, payment-method/grade breakdowns, CSV output, statement PDF, and cleanup. |
+| Production build                                   | Passed | Next.js 15.5.21 generated 47 routes, including summary, collections, outstanding, reversals, statement JSON, statement PDF, and CSV routes.                                                                            |
+| HTTP report authorization matrix                   | Passed | Unauthenticated report access returned `401`; admin and finance summary access returned `200`; parent and student access returned `403`; authorized CSV returned `200`; missing statement returned `404`.              |
+| `playwright test`                                  | Passed | 4 Chromium smoke tests passed against the Phase 8 production build.                                                                                                                                                    |
+
+## Phase 8 pull request evidence
+
+Phase 8 is implemented on `feat/18-reports-reconciliation` from main commit `b3fae78`. PR, hosted Foundation CI, self-review, and regular merge evidence will be recorded here after those gates complete.
 
 ## Phase 6 pull request evidence
 
