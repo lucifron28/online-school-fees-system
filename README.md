@@ -4,15 +4,15 @@
 
 ## Current status
 
-The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, persisted core administration, persisted student/guardian/fee administration, and persisted assessment/ledger posting. Payment, portal, reporting, notification, and deployment workflows remain intentionally staged for later phases.
+The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, persisted core administration, persisted student/guardian/fee administration, persisted assessment/ledger posting, and persisted CASH/BANK_DEPOSIT payment, receipt, and reversal transactions. Portal ownership, online-payment, reporting, notification, and deployment workflows remain intentionally staged for later phases.
 
 The following items remain intentionally incomplete at this stage:
 
 - Better Auth email/password sign-in, role-derived redirects, session logout, disabled-user rejection, protected layouts, and protected financial Route Handlers are implemented and verified against isolated PostgreSQL.
 - Administrator-only institution settings, school-year activation, grade levels, sections, real user management, supported account creation, role changes, and account activation/deactivation are persisted through PostgreSQL and verified against isolated PostgreSQL.
 - Student records, guardian records, parent/student account links, fee categories, and draft/active/archived fee structures are persisted through PostgreSQL and guarded for admin/finance access. Posted-assessment fee structures can only be archived.
-- Payment, reversal, portal, and report services still contain simulated or hardcoded results; assessment generation and ledger balances are persisted.
-- The committed Drizzle migration set creates a clean database and is verified against isolated PostgreSQL; later persisted financial workflows remain incomplete.
+- CASH and BANK_DEPOSIT payment posting, oldest-item allocation, idempotency, receipts, reversals, ledger entries, and audit events are persisted through PostgreSQL and verified by `pnpm payments-receipts:verify`.
+- The committed Drizzle migration set creates a clean database and is verified against isolated PostgreSQL; portal ownership, online-payment, reporting, notification, and deployment workflows remain incomplete.
 - The online payment flow is a mock demonstration only; it is not a GCash, Maya, card, banking, or payment-provider integration.
 - No production-readiness, accounting, security-certification, or tax-receipt claim is made.
 
@@ -40,12 +40,13 @@ The receipt label is **Payment Acknowledgment Receipt**. The application must no
 - Better Auth route handler: `/api/auth/*`
 - Health check: `/api/health`
 - Mock callback prototype: `/api/payments/mock-callback`
-- Receipt PDF prototype: `/api/receipts/[id]/pdf`
+- Persisted receipt PDF route: `/api/receipts/[id]/pdf`
 - CSV report prototype: `/api/reports/csv`
 - Administrator APIs: `/api/admin/settings`, `/api/admin/school-years`, `/api/admin/grade-levels`, `/api/admin/sections`, `/api/admin/users`
 - Student/guardian APIs: `/api/admin/students`, `/api/admin/guardians`, and guardian-link subroutes
 - Fee APIs: `/api/admin/fee-options`, `/api/admin/fee-categories`, and `/api/admin/fee-structures`
 - Assessment and ledger APIs: `/api/admin/students/[id]/assessments`, `/api/admin/assessments/[id]`, and `/api/admin/assessments/[id]/adjustments`
+- Payment and receipt APIs: `/api/admin/payments`, `/api/admin/payments/[id]`, `/api/admin/payments/[id]/reverse`, and `/api/receipts/[id]/pdf`
 
 ## Local setup
 
@@ -55,7 +56,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-`DATABASE_URL` is required for database commands. `TEST_DATABASE_URL` must point to a separate PostgreSQL database and must never equal `DATABASE_URL`. Run `pnpm admin:verify`, `pnpm students-fees:verify`, and `pnpm assessments-ledger:verify` against an isolated seeded database to verify administration, student/guardian/fee, and assessment/ledger persistence and constraints.
+`DATABASE_URL` is required for database commands. `TEST_DATABASE_URL` must point to a separate PostgreSQL database and must never equal `DATABASE_URL`. Run `pnpm admin:verify`, `pnpm students-fees:verify`, `pnpm assessments-ledger:verify`, and `pnpm payments-receipts:verify` against an isolated seeded database to verify administration, student/guardian/fee, assessment/ledger, and OTC payment persistence and constraints.
 
 For an intentionally destructive demo reset, set the confirmation first:
 
@@ -90,6 +91,7 @@ The reset commands refuse production mode, missing confirmations, and unsafe dat
 - `pnpm admin:verify` - verify persisted settings, school years, academic structure, account roles, and disabled-account enforcement
 - `pnpm students-fees:verify` - verify persisted student/guardian/fee records, account links, duplicate rejection, and posted-assessment structure locking
 - `pnpm assessments-ledger:verify` - verify authoritative assessment snapshots, transactional ledger posting, duplicate prevention, adjustments, audit records, and rollback
+- `pnpm payments-receipts:verify` - verify OTC payment allocation, overpayment rejection, idempotency, receipts, reversals, ledger restoration, audit events, and cleanup
 - `pnpm db:seed` - seed fictional demo data
 - `pnpm db:reset` - reset the demo database after explicit confirmation
 - `pnpm db:test:reset` - reset only the separately configured test database

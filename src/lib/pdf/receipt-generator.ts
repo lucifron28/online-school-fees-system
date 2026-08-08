@@ -4,6 +4,7 @@ import { formatCentavosForPdf } from '@/lib/utils/currency';
 export interface ReceiptPdfData {
   receiptNumber: string;
   verificationIdentifier: string;
+  status?: 'ACTIVE' | 'VOIDED';
   paymentDate: string;
   paymentMethod: string;
   referenceNumber?: string;
@@ -77,13 +78,18 @@ export async function generateReceiptPdf(data: ReceiptPdfData): Promise<Uint8Arr
     borderWidth: 1,
   });
 
-  page.drawText('PAYMENT ACKNOWLEDGMENT RECEIPT', {
-    x: 50,
-    y: y + 3,
-    size: 12,
-    font: fontBold,
-    color: rgb(0.05, 0.25, 0.6),
-  });
+  page.drawText(
+    data.status === 'VOIDED'
+      ? 'PAYMENT ACKNOWLEDGMENT RECEIPT - VOIDED'
+      : 'PAYMENT ACKNOWLEDGMENT RECEIPT',
+    {
+      x: 50,
+      y: y + 3,
+      size: 12,
+      font: fontBold,
+      color: rgb(0.05, 0.25, 0.6),
+    }
+  );
 
   page.drawText(`Receipt No: ${data.receiptNumber}`, {
     x: width - 210,

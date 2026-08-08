@@ -39,7 +39,7 @@ Client Components must not import server-only services. Financial rules must rem
 - `src/db/migrations/0000_good_ghost_rider.sql` is the committed initial migration and has been verified on a blank isolated PostgreSQL database.
 - Financial event timestamps use PostgreSQL `timestamp with time zone`; monetary values use integer centavos with database checks.
 - Localhost PostgreSQL URLs use node-postgres for seed/reset/integration tooling, while remote deployment URLs continue to use Neon.
-- Assessment generation and ledger balance calculation are now PostgreSQL-backed and transactional; payment, portal, and report services still include simulated or hardcoded results and must be replaced in later phases.
+- Assessment generation, ledger balance calculation, and OTC payment posting are PostgreSQL-backed and transactional. Portal ownership, mock online-payment persistence, and report aggregation remain later vertical slices.
 - The mock payment gateway is allowed by scope; its checkout records, callback events, and idempotency state now have database tables, while the gateway behavior remains a later vertical-slice implementation.
 
 ## State ownership
@@ -92,3 +92,16 @@ The Phase 5 service enforces the following invariants:
 - assessment, snapshot items, the assessment ledger entry, and the audit event are written in one transaction;
 - balances are recalculated from persisted debit/credit entries, and credit adjustments cannot make a balance negative;
 - every adjustment requires a reason and records the approving user and an audit event.
+
+## Payment, receipt, and reversal boundary
+
+`src/server/services/payment.service.ts` owns CASH and BANK_DEPOSIT posting, allocation, receipt creation, payment listing/detail queries, receipt PDF data, and compensating reversals. Payment Route Handlers accept only `ADMIN` and `FINANCE_STAFF` sessions; all financial values and identifiers are derived server-side.
+
+The Phase 6 service enforces the following invariants:
+
+- the current student balance comes from persisted ledger entries, and overpayments are rejected;
+- payments allocate to the oldest outstanding posted-assessment items using database-derived item amounts and prior posted allocations;
+- payment, allocations, the payment ledger entry, receipt, and audit events are written in one transaction;
+- the database-generated payment UUID is used to derive receipt and verification identifiers; the required idempotency key prevents replayed and concurrent duplicate submissions;
+- a reversal preserves the original payment, voids its receipt, adds a compensating debit, and records the reason and actor; a second reversal is rejected;
+- receipt PDFs are generated from persisted receipt, payment, allocation, student, institution, and status data rather than browser-supplied or random financial values.

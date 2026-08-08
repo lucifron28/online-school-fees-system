@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { allocatePaymentToItems, PaymentService } from '@/server/services/payment.service';
+import { paymentPostInputSchema, reversalPostInputSchema } from '@/lib/payments';
 import { generateReceiptPdf } from '@/lib/pdf/receipt-generator';
+
+const studentId = '00000000-0000-4000-8000-000000000001';
+const paymentId = '00000000-0000-4000-8000-000000000002';
 
 describe('OTC Payments, Receipts & Reversals Logic', () => {
   it('allocates payment to oldest unpaid assessment items first', () => {
@@ -9,7 +13,6 @@ describe('OTC Payments, Receipts & Reversals Logic', () => {
       { id: 'item-2', name: 'Miscellaneous Fee', amountCentavos: 200000, paidCentavos: 0 },
     ];
 
-    // Pay ₱13,000.00 (1300000 centavos)
     const allocations = allocatePaymentToItems(1300000, items);
 
     expect(allocations).toHaveLength(2);
@@ -25,50 +28,38 @@ describe('OTC Payments, Receipts & Reversals Logic', () => {
     });
   });
 
-  it('records cash and bank deposit payments successfully', async () => {
-    const res = await PaymentService.recordPayment({
-      studentId: 'std-001',
-      assessmentId: 'ass-001',
+  it('validates an OTC payment request without accepting client balances', () => {
+    const input = paymentPostInputSchema.parse({
+      studentId,
       amountCentavos: 1400000,
       paymentMethod: 'CASH',
-      processedByUserId: 'usr-finance-demo',
-      currentBalanceCentavos: 1400000,
-      assessmentItems: [
-        { id: 'item-1', name: 'Tuition Fee', amountCentavos: 1400000, paidCentavos: 0 },
-      ],
+      idempotencyKey: 'phase-six-payment-001',
     });
 
-    expect(res.status).toBe('POSTED');
-    expect(res.receiptNumber).toContain('OSFS-2026-');
-    expect(res.remainingBalanceCentavos).toBe(0);
+    expect(input.studentId).toBe(studentId);
+    expect(input.amountCentavos).toBe(1400000);
   });
 
-  it('rejects zero or negative payment amounts', async () => {
+  it('rejects zero or negative payment amounts before database access', async () => {
     await expect(
       PaymentService.recordPayment({
-        studentId: 'std-001',
-        assessmentId: 'ass-001',
+        studentId,
         amountCentavos: 0,
         paymentMethod: 'CASH',
-        processedByUserId: 'usr-finance-demo',
-        currentBalanceCentavos: 1400000,
-        assessmentItems: [],
+        idempotencyKey: 'phase-six-payment-002',
+        processedByUserId: 'finance-demo',
       })
     ).rejects.toThrow();
   });
 
-  it('rejects excess overpayment exceeding balance', async () => {
-    await expect(
-      PaymentService.recordPayment({
-        studentId: 'std-001',
-        assessmentId: 'ass-001',
-        amountCentavos: 1500000, // ₱15,000.00
+  it('requires an idempotency key for every payment request', () => {
+    expect(() =>
+      paymentPostInputSchema.parse({
+        studentId,
+        amountCentavos: 1500000,
         paymentMethod: 'CASH',
-        processedByUserId: 'usr-finance-demo',
-        currentBalanceCentavos: 1400000, // ₱14,000.00
-        assessmentItems: [],
       })
-    ).rejects.toThrow(/Overpayment rejected/);
+    ).toThrow();
   });
 
   it('generates a valid binary PDF receipt document using pdf-lib', async () => {
@@ -96,25 +87,10 @@ describe('OTC Payments, Receipts & Reversals Logic', () => {
     expect(pdfBytes.length).toBeGreaterThan(500);
   });
 
-  it('reverses payment and prevents double reversals', async () => {
-    const reversal = await PaymentService.reversePayment({
-      paymentId: 'pay-001',
-      receiptId: 'rcp-001',
-      reason: 'Incorrect amount tendered by cashier',
-      reversedByUserId: 'usr-admin-demo',
-    });
-
-    expect(reversal.paymentStatus).toBe('REVERSED');
-    expect(reversal.receiptStatus).toBe('VOIDED');
-
-    await expect(
-      PaymentService.reversePayment({
-        paymentId: 'pay-001',
-        receiptId: 'rcp-001',
-        reason: 'Attempt double reversal',
-        reversedByUserId: 'usr-admin-demo',
-        isAlreadyReversed: true,
-      })
-    ).rejects.toThrow(/Payment has already been reversed/);
+  it('requires a valid payment identifier and reason for reversal', () => {
+    expect(() => reversalPostInputSchema.parse({ paymentId, reason: '   ' })).toThrow();
+    expect(() =>
+      reversalPostInputSchema.parse({ paymentId: 'pay-001', reason: 'Valid reason' })
+    ).toThrow();
   });
 });
