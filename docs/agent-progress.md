@@ -1,15 +1,15 @@
 # Agent Progress Log
 
-This file is a historical handoff, not a completion certificate. Earlier phase notes claimed a complete system even though the current repository still contains simulated services, prototype login redirects, no committed migrations, and hardcoded report data. Those claims are recorded and corrected in [docs/goal-findings.md](goal-findings.md).
+This file is a historical handoff, not a completion certificate. Earlier phase notes claimed a complete system even though the current repository still contains simulated services, prototype login redirects, and hardcoded report data. Those claims are recorded and corrected in [docs/goal-findings.md](goal-findings.md). Phase 1 now includes a committed migration contract verified on isolated PostgreSQL.
 
 ## Current execution state
 
-- Branch: `fix/10-project-truth-and-tooling`
-- Phase: Phase 0 - project truth and tooling
+- Branch: `feat/11-database-contract`
+- Phase: Phase 1 - database contract and migrations
 - Main at start: `8bfcbb2` (`origin/main` matched locally)
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 implementation and local verification complete; PR publication pending
+- Current status: Phase 0 is merged as PR #1; Phase 1 schema, migration, seed, reset, and contract verification are complete pending PR publication
 
 ## Historical branches
 
