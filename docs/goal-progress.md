@@ -5,7 +5,7 @@
 - Phase: 0 - Project Truth and Tooling
 - Branch: `fix/10-project-truth-and-tooling`
 - Starting main commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: implementing and verifying Phase 0
+- Current state: Phase 0 implementation and verification complete; pending PR publication and merge
 
 ## Completed phases
 
@@ -13,7 +13,10 @@ None for this goal. Historical branches are being re-audited rather than accepte
 
 ## Pull requests and merges
 
-No pull request has been created for this goal yet.
+No pull request has been created for this goal yet. Local commits ready for the Phase 0 PR:
+
+- `b119d3a` `fix(docs): correct prototype completion claims`
+- `aa430db` `feat(tooling): add safe test database reset workflow`
 
 ## Phase 0 changes in progress
 
@@ -47,7 +50,7 @@ No committed migration files exist at the start of this goal. Migration work beg
 
 ## Remaining work
 
-- Finish Phase 0 verification, focused commits, PR self-review, merge, and main synchronization.
+- Publish Phase 0, complete the PR self-review, merge, and synchronize main.
 - Rebuild the database contract and migrations in Phase 1.
 - Implement all later phases in the attached goal contract.
 
@@ -58,4 +61,4 @@ No committed migration files exist at the start of this goal. Migration work beg
 
 ## Next exact action
 
-Run the Phase 0 focused checks, review the diff, commit, push, create the PR, add the self-review comment, and merge only after required checks pass.
+Push the two Phase 0 commits, create the PR, add the self-review comment, and merge only after required checks pass.

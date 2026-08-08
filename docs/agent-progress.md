@@ -9,7 +9,7 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 - Main at start: `8bfcbb2` (`origin/main` matched locally)
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 implementation in progress
+- Current status: Phase 0 implementation and local verification complete; PR publication pending
 
 ## Historical branches
 
