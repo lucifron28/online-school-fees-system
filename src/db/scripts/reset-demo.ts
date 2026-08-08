@@ -1,47 +1,89 @@
-import { getDb } from '../index';
-import * as schema from '../schema';
-import { seedDemoData } from './seed';
 import dotenv from 'dotenv';
 import path from 'path';
+import { createDb, DatabaseInstance } from '../index';
+import * as schema from '../schema';
+import { seedDemoData } from './seed';
+import {
+  assertSafeDatabaseReset,
+  DEMO_RESET_CONFIRMATION,
+  ResetMode,
+  TEST_RESET_CONFIRMATION,
+} from './reset-safety';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-export async function resetDemoDatabase() {
-  console.log('🔄 Resetting demo database state...');
-  const db = getDb();
+export interface ResetOptions {
+  mode?: ResetMode;
+  env?: NodeJS.ProcessEnv;
+  database?: DatabaseInstance;
+}
 
-  try {
-    await db.delete(schema.auditLogs);
-    await db.delete(schema.paymentReversals);
-    await db.delete(schema.receipts);
-    await db.delete(schema.paymentAllocations);
-    await db.delete(schema.payments);
-    await db.delete(schema.ledgerEntries);
-    await db.delete(schema.adjustments);
-    await db.delete(schema.assessmentItems);
-    await db.delete(schema.studentAssessments);
-    await db.delete(schema.guardianStudents);
-    await db.delete(schema.guardians);
-    await db.delete(schema.students);
-    await db.delete(schema.feeStructureItems);
-    await db.delete(schema.feeStructures);
-    await db.delete(schema.feeCategories);
+function resolveMode(mode?: ResetMode): ResetMode {
+  if (mode) return mode;
+  return process.argv.includes('--test') ? 'test' : 'demo';
+}
 
-    console.log('  ✔ Cleared all transactional & domain demo data tables');
-    await seedDemoData();
-    console.log('✅ Demo database successfully reset to clean initial state!');
-  } catch (error) {
-    console.error('❌ Failed to reset demo database:', error);
-    process.exit(1);
+export function resolveResetTarget(mode: ResetMode, env: NodeJS.ProcessEnv): string {
+  return assertSafeDatabaseReset({
+    mode,
+    databaseUrl: mode === 'test' ? env.TEST_DATABASE_URL : env.DATABASE_URL,
+    applicationDatabaseUrl: env.DATABASE_URL,
+    testDatabaseUrl: env.TEST_DATABASE_URL,
+    confirmation: mode === 'test' ? env.TEST_DB_RESET_CONFIRMATION : env.DEMO_DB_RESET_CONFIRMATION,
+    nodeEnv: env.NODE_ENV,
+  });
+}
+
+export async function clearDemoData(database: DatabaseInstance, includeAuthTables: boolean) {
+  await database.delete(schema.auditLogs);
+  await database.delete(schema.paymentReversals);
+  await database.delete(schema.receipts);
+  await database.delete(schema.paymentAllocations);
+  await database.delete(schema.payments);
+  await database.delete(schema.ledgerEntries);
+  await database.delete(schema.adjustments);
+  await database.delete(schema.assessmentItems);
+  await database.delete(schema.studentAssessments);
+  await database.delete(schema.guardianStudents);
+  await database.delete(schema.guardians);
+  await database.delete(schema.students);
+  await database.delete(schema.feeStructureItems);
+  await database.delete(schema.feeStructures);
+  await database.delete(schema.feeCategories);
+
+  if (includeAuthTables) {
+    await database.delete(schema.schoolSettings);
+    await database.delete(schema.sections);
+    await database.delete(schema.gradeLevels);
+    await database.delete(schema.schoolYears);
+    await database.delete(schema.verifications);
+    await database.delete(schema.sessions);
+    await database.delete(schema.accounts);
+    await database.delete(schema.users);
   }
+}
+
+export async function resetDemoDatabase(options: ResetOptions = {}) {
+  const mode = resolveMode(options.mode);
+  const env = options.env ?? process.env;
+  const databaseUrl = resolveResetTarget(mode, env);
+  const database = options.database ?? createDb(databaseUrl);
+
+  console.log(`Resetting ${mode} database state...`);
+  await clearDemoData(database, mode === 'test');
+  await seedDemoData(database);
+  console.log(`${mode === 'test' ? 'Test' : 'Demo'} database reset completed.`);
 }
 
 if (process.argv[1]?.includes('reset-demo.ts')) {
   resetDemoDatabase()
     .then(() => process.exit(0))
-    .catch((err) => {
-      console.error('❌ Reset failed:', err);
+    .catch((error: unknown) => {
+      console.error('Database reset refused or failed:', error);
+      console.error(
+        `Use ${DEMO_RESET_CONFIRMATION} for demo resets or ${TEST_RESET_CONFIRMATION} for test resets, and never point both database URLs at the same database.`
+      );
       process.exit(1);
     });
 }
