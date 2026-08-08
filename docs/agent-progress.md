@@ -4,12 +4,12 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 
 ## Current execution state
 
-- Branch: `feat/13-core-administration`
-- Phase: Phase 3 - core administration implementation complete locally; PR gate next
-- Main at start: `6af307f` (`origin/main` matched locally)
+- Branch: `main`
+- Phase: Phase 3 - core administration merged; Phase 4 next
+- Main at start: `e1bfd3d` (`origin/main` matched locally)
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0, Phase 1, and Phase 2 are merged as PRs #1, #2, and #3. Phase 2 merge commit is `a21124ca5486d57881bf07cc22f0fb2f35a1ae29`; hosted Foundation CI run #27 passed. Phase 3 local persistence, authorization, unit, integration, build, HTTP, and Playwright checks pass; its PR and hosted CI gate remain.
+- Current status: Phase 0 through Phase 3 are merged as PRs #1 through #4. Phase 3 merge commit is `e1bfd3d969c80dac552e6a39d7f4ee83c7b833db`; hosted Foundation CI run #33 passed.
 
 ## Historical branches
 

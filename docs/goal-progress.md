@@ -2,17 +2,18 @@
 
 ## Current phase
 
-- Phase: 3 - Core Administration (implemented locally; PR/merge next)
-- Branch: `feat/13-core-administration`
-- Starting main commit for this phase: `6af307f docs(progress): record Phase 2 merge evidence`
+- Phase: 3 - Core Administration (merged; Phase 4 next)
+- Branch: `main`
+- Starting main commit for this phase: `6af307fd3a0db8750774085c5dadaf12fac0bbb4`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 2 Better Auth sign-in, server-side role guards, protected layouts/Route Handlers, logout, compatible demo seeding, E2E protection checks, and local/hosted acceptance verification are merged into `main` at `a21124ca5486d57881bf07cc22f0fb2f35a1ae29`.
+- Current state: Phase 0 through Phase 3 are merged into `main`; Phase 3 adds persisted core administration, administrator-only management APIs, and hosted CI verification at merge commit `e1bfd3d969c80dac552e6a39d7f4ee83c7b833db`.
 
 ## Completed phases
 
 - Phase 0 - Project Truth and Tooling - merged as PR [#1](https://github.com/lucifron28/online-school-fees-system/pull/1), merge commit `404291c608a0b0479fdb3e78af582d720065f409`.
 - Phase 1 - Database Contract and Migrations - merged as PR [#2](https://github.com/lucifron28/online-school-fees-system/pull/2), merge commit `fc83f5ee6ea304abe1511a2c63f82c6eb591970b`.
 - Phase 2 - Authentication and RBAC - merged as PR [#3](https://github.com/lucifron28/online-school-fees-system/pull/3), merge commit `a21124ca5486d57881bf07cc22f0fb2f35a1ae29`.
+- Phase 3 - Core Administration - merged as PR [#4](https://github.com/lucifron28/online-school-fees-system/pull/4), merge commit `e1bfd3d969c80dac552e6a39d7f4ee83c7b833db`.
 
 ## Phase 2 implementation
 
@@ -73,12 +74,16 @@ Phase 2 was implemented on `feat/12-auth-rbac` in commits `8c03bb2`, `8cc1e9f`, 
 | HTTP admin role matrix      | Passed | Unauthenticated settings access returned `401`; administrator sign-in/settings access returned `200`; finance-staff settings access returned `403`.                                                                                               |
 | `pnpm test:e2e`             | Passed | 4 Playwright smoke tests passed locally after removing a stale port-3000 process.                                                                                                                                                                 |
 
+## Phase 3 pull request evidence
+
+Phase 3 was implemented on `feat/13-core-administration` in commits `f1ef27e` and `9232c58`, reviewed in PR [#4](https://github.com/lucifron28/online-school-fees-system/pull/4), CI-verified by run [#33](https://github.com/lucifron28/online-school-fees-system/actions/runs/31261327418), and merged with regular merge commit `e1bfd3d969c80dac552e6a39d7f4ee83c7b833db`. Hosted CI passed formatting, lint, typecheck, 45 unit tests, production build, and Playwright E2E.
+
 ## Remaining work
 
-- Complete the Phase 3 PR/merge gate, then Phases 4-10 in the requested branch/PR/merge sequence.
+- Complete Phases 4-10 in the requested branch/PR/merge sequence.
 - Complete Phase 11 external audit preparation and final evidence report.
 
 ## Known blockers
 
 - The local `gh` CLI token remains invalid; the connected GitHub app is required for PR creation, review, and merge.
-- A real fictional Neon/test PostgreSQL URL is still required for remote deployment verification; isolated local PostgreSQL covers Phase 2 runtime acceptance.
+- A real fictional Neon/test PostgreSQL URL is still required for remote deployment verification; isolated local PostgreSQL covers Phases 1-3 runtime acceptance.
