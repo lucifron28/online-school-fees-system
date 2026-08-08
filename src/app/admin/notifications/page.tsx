@@ -1,0 +1,20 @@
+import { Bell } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { NotificationHistory } from '@/components/notifications/notification-history';
+
+export default function AdminNotificationsPage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+          <Bell className="mr-1 h-3.5 w-3.5" /> Auditable delivery history
+        </Badge>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight">Notifications</h2>
+        <p className="text-sm text-slate-500">
+          Review persisted assessment, payment, receipt, and reversal notifications for all users.
+        </p>
+      </div>
+      <NotificationHistory audit />
+    </div>
+  );
+}

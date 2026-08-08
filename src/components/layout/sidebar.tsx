@@ -45,6 +45,7 @@ export function Sidebar({
     { name: 'Payments (OTC)', href: '/admin/payments/manual', icon: Wallet },
     { name: 'Transactions', href: '/admin/transactions', icon: Receipt },
     { name: 'Reports', href: '/admin/reports', icon: FileText },
+    { name: 'Notifications', href: '/admin/notifications', icon: BellRing },
     { name: 'Users', href: '/admin/users', icon: UserCheck },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
@@ -54,6 +55,7 @@ export function Sidebar({
     { name: 'My Children', href: '/parent/children/S2024-0001', icon: Users },
     { name: 'Payment History', href: '/parent/history', icon: History },
     { name: 'Make Payment', href: '/parent/pay', icon: CreditCard },
+    { name: 'Notifications', href: '/parent/notifications', icon: BellRing },
     { name: 'Announcements', href: '/parent/announcements', icon: BellRing },
     { name: 'Profile', href: '/parent/profile', icon: UserCheck },
     { name: 'Settings', href: '/parent/settings', icon: Settings },
@@ -63,6 +65,7 @@ export function Sidebar({
     { name: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
     { name: 'My Account', href: '/student/account', icon: GraduationCap },
     { name: 'Payment History', href: '/student/history', icon: History },
+    { name: 'Notifications', href: '/student/notifications', icon: BellRing },
     { name: 'Announcements', href: '/student/announcements', icon: BellRing },
     { name: 'Profile', href: '/student/profile', icon: UserCheck },
   ];
