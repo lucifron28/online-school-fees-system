@@ -170,26 +170,37 @@ export const schoolYears = pgTable(
   (table) => ({
     nameUnique: uniqueIndex('school_years_name_unique').on(table.name),
     statusIndex: index('school_years_status_idx').on(table.status),
+    activeUnique: uniqueIndex('school_years_single_active_unique')
+      .on(table.status)
+      .where(sql`${table.status} = 'ACTIVE'`),
+    datesValid: check('school_years_dates_valid', sql`${table.startDate} < ${table.endDate}`),
   })
 );
 
-export const schoolSettings = pgTable('school_settings', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  schoolName: text('school_name').default('Online School Fees System').notNull(),
-  shortName: text('short_name').default('OSFS').notNull(),
-  address: text('address').default('123 Education Way, Manila, Philippines').notNull(),
-  email: text('email').default('info@schoolfees.example.com').notNull(),
-  phone: text('phone').default('+63 (2) 8123-4567').notNull(),
-  logoUrl: text('logo_url'),
-  receiptPrefix: text('receipt_prefix').default('OSFS').notNull(),
-  currencyCode: text('currency_code').default('PHP').notNull(),
-  timezone: text('timezone').default('Asia/Manila').notNull(),
-  studentPortalEnabled: boolean('student_portal_enabled').default(true).notNull(),
-  activeSchoolYearId: uuid('active_school_year_id').references(() => schoolYears.id, {
-    onDelete: 'set null',
-  }),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+export const schoolSettings = pgTable(
+  'school_settings',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    singletonKey: text('singleton_key').default('default').notNull(),
+    schoolName: text('school_name').default('Online School Fees System').notNull(),
+    shortName: text('short_name').default('OSFS').notNull(),
+    address: text('address').default('123 Education Way, Manila, Philippines').notNull(),
+    email: text('email').default('info@schoolfees.example.com').notNull(),
+    phone: text('phone').default('+63 (2) 8123-4567').notNull(),
+    logoUrl: text('logo_url'),
+    receiptPrefix: text('receipt_prefix').default('OSFS').notNull(),
+    currencyCode: text('currency_code').default('PHP').notNull(),
+    timezone: text('timezone').default('Asia/Manila').notNull(),
+    studentPortalEnabled: boolean('student_portal_enabled').default(true).notNull(),
+    activeSchoolYearId: uuid('active_school_year_id').references(() => schoolYears.id, {
+      onDelete: 'set null',
+    }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    singletonUnique: uniqueIndex('school_settings_singleton_key_unique').on(table.singletonKey),
+  })
+);
 
 export const gradeLevels = pgTable(
   'grade_levels',

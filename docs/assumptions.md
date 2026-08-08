@@ -52,6 +52,14 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - Disabled users, unauthenticated requests, and wrong-role requests are rejected by server guards. Student access also respects `ENABLE_STUDENT_PORTAL`.
 - Demo seed accounts use Better Auth's sign-up/password utilities and all use `DemoPass123!`.
 
-## 10. Current prototype boundary
+## 10. Core administration
 
-Phase 1 migrations and database-contract checks plus Phase 2 authentication/RBAC checks are implemented and verified on isolated local PostgreSQL databases. Administration, database-backed financial transactions, ownership queries, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
+- Institution settings are singleton data for the single-school deployment and are persisted in `school_settings`.
+- A deployment has at most one `ACTIVE` school year. Activating another year archives the previous active year and updates the institution setting in one transaction.
+- Sections may reference draft or active school years, but never archived years. Grade and section codes are normalized to uppercase before uniqueness checks.
+- Only `ADMIN` may manage institution settings, academic structure, and user roles/status. At least one active administrator must remain.
+- User creation uses the server-side Better Auth sign-up utility with public sign-up still disabled.
+
+## 11. Current prototype boundary
+
+Phase 1 migrations, Phase 2 authentication/RBAC, and Phase 3 core administration are implemented and verified on isolated local PostgreSQL databases. Database-backed financial transactions, ownership queries, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.

@@ -16,6 +16,7 @@ The previous internal-audit document is superseded. Its passing status described
 | AUD-012 | Reporting                | Dashboard metrics are hardcoded constants and do not derive from PostgreSQL.                                                                                                                                             | Open                                                                             |
 | AUD-013 | Reset safety             | The former reset command could delete application data without a separate test target or explicit confirmation.                                                                                                          | Resolved in Phase 0; integration-tested                                          |
 | AUD-014 | Claims and wording       | Prior docs described prototype screens as complete and used official-receipt wording.                                                                                                                                    | Resolved in Phase 0/1; remaining UI wording is tracked for later repair          |
+| AUD-015 | Core administration      | Settings and user pages previously used fixed client state; school-year, academic-structure, and account-management invariants were not persisted or authorization-tested.                                             | Resolved in Phase 3 local verification; hosted PR and deployment evidence pending |
 
 ## Audit rule
 

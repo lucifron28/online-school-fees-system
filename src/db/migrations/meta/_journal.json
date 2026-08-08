@@ -8,6 +8,13 @@
       "when": 1786188187200,
       "tag": "0000_good_ghost_rider",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786196575681,
+      "tag": "0001_clean_rictor",
+      "breakpoints": true
     }
   ]
 }
