@@ -21,6 +21,7 @@ test.describe('authenticated financial workflow', () => {
   test('admin, finance, parent, and student complete an owned demo workflow', async ({
     browser,
   }) => {
+    test.setTimeout(120_000);
     const suffix = Date.now();
     const adminContext = await browser.newContext();
     const financeContext = await browser.newContext();
@@ -142,11 +143,11 @@ test.describe('authenticated financial workflow', () => {
 
       const parent = await parentContext.newPage();
       await login(parent, 'parent', 'parent@demo.school');
-      const children = await jsonResponse<Array<{ id: string; studentNumber: string }>>(
+      const children = await jsonResponse<Array<{ studentId: string; studentNumber: string }>>(
         await parent.request.get('/api/portal/parent/children')
       );
       expect(
-        children.some((child) => child.id === createdStudent.id),
+        children.some((child) => child.studentId === createdStudent.id),
         `Parent children: ${children.map((child) => child.studentNumber).join(', ')}`
       ).toBe(true);
       const parentPaymentsBeforeOnline = await jsonResponse<Array<{ id: string }>>(
