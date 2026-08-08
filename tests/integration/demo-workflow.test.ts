@@ -1,8 +1,10 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { createAuth } from '@/lib/auth/server';
 import { getDb } from '@/db';
 import * as schema from '@/db/schema';
 import { AssessmentService } from '@/server/services/assessment.service';
+import { processMockCallback } from '@/server/services/payment-gateway.service';
+import { PaymentService } from '@/server/services/payment.service';
 import { PortalService } from '@/server/services/portal.service';
 import { ReportService } from '@/server/services/report.service';
 import { describe, expect, it } from 'vitest';
@@ -218,5 +220,106 @@ databaseContract('deterministic demo database workflow', () => {
         db
       )
     ).rejects.toThrow('already exists');
+  });
+
+  it('serializes concurrent payment attempts and preserves a succeeded checkout', async () => {
+    const unpaidStudent = (
+      await db.select().from(schema.students).where(eq(schema.students.studentNumber, 'DEMO-0006'))
+    )[0];
+    expect(unpaidStudent).toBeDefined();
+
+    const idempotencyKeys = ['phase11-concurrency-a', 'phase11-concurrency-b'];
+    const paymentResults = await Promise.allSettled(
+      idempotencyKeys.map((idempotencyKey) =>
+        PaymentService.recordPayment(
+          {
+            studentId: unpaidStudent!.id,
+            amountCentavos: 4_000_000,
+            paymentMethod: 'MOCK_ONLINE',
+            idempotencyKey,
+            skipNotifications: true,
+          },
+          db
+        )
+      )
+    );
+
+    try {
+      expect(paymentResults.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(paymentResults.filter((result) => result.status === 'rejected')).toHaveLength(1);
+
+      const createdPayments = await db
+        .select({ id: schema.payments.id })
+        .from(schema.payments)
+        .where(inArray(schema.payments.idempotencyKey, idempotencyKeys));
+      expect(createdPayments).toHaveLength(1);
+
+      const entries = await db
+        .select({
+          debitCentavos: schema.ledgerEntries.debitCentavos,
+          creditCentavos: schema.ledgerEntries.creditCentavos,
+        })
+        .from(schema.ledgerEntries)
+        .where(eq(schema.ledgerEntries.studentId, unpaidStudent!.id));
+      expect(ledgerBalance(entries)).toBe(70_000_00 - 4_000_000);
+
+      const succeededCheckout = (
+        await db
+          .select()
+          .from(schema.mockPaymentCheckouts)
+          .where(eq(schema.mockPaymentCheckouts.status, 'SUCCEEDED'))
+          .limit(1)
+      )[0];
+      expect(succeededCheckout).toBeDefined();
+
+      const callbackInput = {
+        paymentReference: succeededCheckout!.checkoutReference,
+        eventId: 'phase11-conflict-event',
+        idempotencyKey: 'phase11-conflict-key',
+        status: 'CANCELLED' as const,
+      };
+      const callbackResult = await processMockCallback(callbackInput, db);
+      expect(callbackResult).toMatchObject({
+        status: 'failed',
+        verificationStatus: 'SUCCESS',
+        checkoutStatus: 'SUCCEEDED',
+      });
+      expect(callbackResult.error).toContain('cannot be downgraded');
+    } finally {
+      const createdPayments = await db
+        .select({ id: schema.payments.id })
+        .from(schema.payments)
+        .where(inArray(schema.payments.idempotencyKey, idempotencyKeys));
+      const paymentIds = createdPayments.map((payment) => payment.id);
+
+      if (paymentIds.length > 0) {
+        const receipts = await db
+          .select({ id: schema.receipts.id })
+          .from(schema.receipts)
+          .where(inArray(schema.receipts.paymentId, paymentIds));
+        const entityIds = [...paymentIds, ...receipts.map((receipt) => receipt.id)];
+        await db.transaction(async (tx) => {
+          await tx.delete(schema.auditLogs).where(inArray(schema.auditLogs.entityId, entityIds));
+          await tx
+            .delete(schema.paymentReversals)
+            .where(inArray(schema.paymentReversals.paymentId, paymentIds));
+          await tx
+            .delete(schema.paymentAllocations)
+            .where(inArray(schema.paymentAllocations.paymentId, paymentIds));
+          await tx.delete(schema.receipts).where(inArray(schema.receipts.paymentId, paymentIds));
+          await tx.delete(schema.payments).where(inArray(schema.payments.id, paymentIds));
+          await tx.delete(schema.ledgerEntries).where(
+            inArray(
+              schema.ledgerEntries.description,
+              paymentIds.map((paymentId) => `Payment ${paymentId}`)
+            )
+          );
+        });
+      }
+
+      await db
+        .delete(schema.mockPaymentCallbackEvents)
+        .where(eq(schema.mockPaymentCallbackEvents.eventId, 'phase11-conflict-event'));
+    }
   });
 });

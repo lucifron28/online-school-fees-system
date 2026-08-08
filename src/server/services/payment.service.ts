@@ -399,6 +399,7 @@ export class PaymentService {
           .select({ id: schema.students.id, status: schema.students.status })
           .from(schema.students)
           .where(eq(schema.students.id, values.studentId))
+          .for('update')
           .limit(1);
         if (!student[0]) throw new NotFoundError('The student does not exist.');
 
@@ -546,6 +547,14 @@ export class PaymentService {
       if (payment.status !== 'POSTED') {
         throw new ValidationError('Only a posted payment can be reversed.');
       }
+
+      const studentRows = await tx
+        .select({ id: schema.students.id })
+        .from(schema.students)
+        .where(eq(schema.students.id, payment.studentId))
+        .for('update')
+        .limit(1);
+      if (!studentRows[0]) throw new NotFoundError('The student does not exist.');
 
       const existingReversal = await tx
         .select({ id: schema.paymentReversals.id })

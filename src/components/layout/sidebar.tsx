@@ -52,13 +52,10 @@ export function Sidebar({
 
   const parentNav = [
     { name: 'Dashboard', href: '/parent/dashboard', icon: LayoutDashboard },
-    { name: 'My Children', href: '/parent/children/S2024-0001', icon: Users },
+    { name: 'My Children', href: '/parent/dashboard', icon: Users },
     { name: 'Payment History', href: '/parent/history', icon: History },
     { name: 'Make Payment', href: '/parent/pay', icon: CreditCard },
     { name: 'Notifications', href: '/parent/notifications', icon: BellRing },
-    { name: 'Announcements', href: '/parent/announcements', icon: BellRing },
-    { name: 'Profile', href: '/parent/profile', icon: UserCheck },
-    { name: 'Settings', href: '/parent/settings', icon: Settings },
   ];
 
   const studentNav = [
@@ -66,8 +63,6 @@ export function Sidebar({
     { name: 'My Account', href: '/student/account', icon: GraduationCap },
     { name: 'Payment History', href: '/student/history', icon: History },
     { name: 'Notifications', href: '/student/notifications', icon: BellRing },
-    { name: 'Announcements', href: '/student/announcements', icon: BellRing },
-    { name: 'Profile', href: '/student/profile', icon: UserCheck },
   ];
 
   const navItems = role === 'admin' ? adminNav : role === 'parent' ? parentNav : studentNav;
