@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: 7 - Parent/Student Portals and Online Payment (next)
-- Branch: `main`
-- Starting main commit for this phase: `61efc21`
+- Phase: 7 - Parent/Student Portals and Online Payment (in progress)
+- Branch: `feat/17-portals-online-payment`
+- Starting main commit for this phase: `8664e39`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 0 through Phase 6 are merged into `main`; Phase 6 adds persisted OTC payments, oldest-item allocation, idempotency, receipts, reversals, and audit events.
+- Current state: Phase 0 through Phase 6 are merged into `main`; Phase 7 has local implementation and acceptance evidence, with PR, hosted CI, and merge evidence pending.
 
 ## Completed phases
 
@@ -156,8 +156,35 @@ Phase 5 was implemented on `feat/15-assessments-ledger` in commits `e274f9b`, `e
 
 ## Remaining work
 
-- Complete Phases 7-10 in the requested branch/PR/merge sequence.
+- Complete Phases 8-10 in the requested branch/PR/merge sequence after Phase 7 is merged.
 - Complete Phase 11 external audit preparation and final evidence report.
+
+## Phase 7 implementation
+
+- Replaced caller-supplied parent/student ownership lists with PostgreSQL queries through guardian/student account relationships.
+- Connected parent and student dashboards, account, history, child-detail, receipt, and payment screens to persisted Route Handlers; portal receipt PDFs enforce ownership server-side.
+- Replaced module-level mock-payment state with persisted checkout and callback-event records. Checkout amount and student authority come from the stored server record, not the browser return URL or callback body.
+- Added delayed, failed, cancelled, successful, and duplicate callback handling. Only a server-verified successful callback calls the shared `PaymentService` with `MOCK_ONLINE`; non-success outcomes do not change the ledger.
+- Added `portals-online:verify` for database ownership, checkout idempotency, callback idempotency, restart-safe verification, payment/receipt persistence, and cleanup. No new migration was required because the committed schema already contained the mock checkout and callback-event tables.
+
+## Phase 7 commands and actual results
+
+| Command / check                                    | Result | Notes                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                                   | Passed | Strict TypeScript passed for portal services, APIs, pages, payment gateway changes, and verifiers.                                                                                                                                                                    |
+| `pnpm lint`                                        | Passed | ESLint completed with exit code 0 and no warnings.                                                                                                                                                                                                                    |
+| Focused Prettier check                             | Passed | All Phase 7 implementation, test, verifier, and documentation files use repository formatting.                                                                                                                                                                        |
+| `vitest run`                                       | Passed | 13 unit/component files and 41 tests passed.                                                                                                                                                                                                                          |
+| `vitest run --config vitest.integration.config.ts` | Passed | 1 integration file and 3 reset-safety tests passed.                                                                                                                                                                                                                   |
+| PostgreSQL prerequisite verifiers                  | Passed | Migration, auth, students/fees, assessments/ledger, and payments/receipts verifiers passed against isolated `osfs_phase4`.                                                                                                                                            |
+| `pnpm portals-online:verify`                       | Passed | Isolated PostgreSQL verified parent/student ownership, unlinked access rejection, persisted checkout/callback state, success/failure/cancellation/pending behavior, duplicate callbacks, restart-safe verification, and cleanup.                                      |
+| `pnpm build`                                       | Passed | Next.js 15.5.21 production build generated 43 routes; only the expected temporary low-entropy verification-secret warning appeared.                                                                                                                                   |
+| HTTP portal authorization matrix                   | Passed | Unauthenticated parent access returned `401`; parent access returned `200`; missing parent checkout returned `404`; student account without a linked demo fixture returned `400`; admin access to parent data returned `403`; invalid public callback returned `404`. |
+| `playwright test`                                  | Passed | 4 Chromium smoke tests passed against the Phase 7 production build.                                                                                                                                                                                                   |
+
+## Phase 7 pull request evidence
+
+Phase 7 is implemented on `feat/17-portals-online-payment` from main commit `8664e39` in commits `497a90b`, `7a51f2b`, and `1885237`. PR, hosted Foundation CI, self-review, and regular merge evidence will be recorded here after those gates complete.
 
 ## Phase 6 pull request evidence
 
@@ -167,3 +194,4 @@ Phase 6 was implemented on `feat/16-payments-receipts-audit` in commits `2d474ec
 
 - The local `gh` CLI token remains invalid; the connected GitHub app is required for PR creation, review, and merge.
 - A real fictional Neon/test PostgreSQL URL is still required for remote deployment verification; isolated local PostgreSQL covers local runtime acceptance through Phase 6.
+- The current seed creates demo users and academic reference data but no linked demo student/guardian fixture; the Phase 7 verifier creates and cleans an isolated relationship fixture for ownership and payment acceptance. A populated demo walkthrough seed remains a later hardening decision.
