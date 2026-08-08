@@ -4,12 +4,12 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 
 ## Current execution state
 
-- Branch: `feat/15-assessments-ledger`
-- Phase: Phase 5 in progress; Phases 0-4 merged
-- Main at start: `75a955e` (`origin/main` matched locally)
+- Branch: `main`
+- Phase: Phase 5 merged; Phase 6 next
+- Main at start: `ecb68ed` (`origin/main` matched locally)
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 through Phase 4 are merged as PRs #1 through #5. Phase 4 merge commit is `c03bb8fe9513e218ec02cba459f4eee49d4d0457`; hosted Foundation CI run #37 passed. Phase 5 local service and isolated-database verification passed; PR evidence is pending.
+- Current status: Phase 0 through Phase 5 are merged as PRs #1 through #6. Phase 5 merge commit is `ecb68edb8355fe2115a57a9e41bc51dadf0e005e`; hosted Foundation CI run #43 passed. Phase 6 is the next implementation branch.
 
 ## Historical branches
 
