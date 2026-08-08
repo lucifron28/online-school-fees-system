@@ -4,12 +4,12 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 
 ## Current execution state
 
-- Branch: `feat/17-portals-online-payment`
-- Phase: Phase 7 in progress; Phases 0-6 merged
-- Main at start: `8664e39` (`origin/main` matched locally)
+- Branch: `main`
+- Phase: Phase 7 merged; Phase 8 next
+- Main at start: `8984c6f` (`origin/main` matched locally)
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 through Phase 6 are merged as PRs #1 through #7. Phase 6 merge commit is `61efc21afd1924716c74481bd10fd3acab559fc2`; hosted Foundation CI run #47 passed. Phase 7 is implemented locally in commits `497a90b`, `7a51f2b`, and `1885237`; local PostgreSQL, HTTP, build, and Playwright acceptance checks passed. PR and hosted CI evidence are pending.
+- Current status: Phase 0 through Phase 7 are merged as PRs #1 through #8. Phase 7 merge commit is `8984c6f5babc4387833ce53906f688b485172d3b`; hosted Foundation CI run #51 passed; local PostgreSQL, HTTP, build, and Playwright acceptance checks passed. Phase 8 is the next implementation branch.
 
 ## Historical branches
 
