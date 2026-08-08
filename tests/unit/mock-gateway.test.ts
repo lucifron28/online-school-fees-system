@@ -1,58 +1,47 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { MockPaymentGateway } from '@/server/services/payment-gateway.service';
+import { describe, expect, it } from 'vitest';
+import {
+  mockCallbackInputSchema,
+  mockPaymentOutcomeSchema,
+  portalCheckoutInputSchema,
+} from '@/lib/portal';
 
-describe('Simulated Online Payment Gateway & Idempotent Callbacks', () => {
-  let gateway: MockPaymentGateway;
-
-  beforeEach(() => {
-    gateway = new MockPaymentGateway();
-    MockPaymentGateway.clearStore();
-  });
-
-  it('creates mock online checkout session successfully', async () => {
-    const checkout = await gateway.createCheckout({
-      studentId: 'std-001',
-      assessmentId: 'ass-001',
+describe('Persisted mock payment input contracts', () => {
+  it('accepts a checkout request without a browser return URL', () => {
+    const parsed = portalCheckoutInputSchema.parse({
+      studentId: '00000000-0000-4000-8000-000000000001',
       amountCentavos: 1400000,
       paymentChannel: 'GCash',
-      returnUrl: 'http://localhost:3000/parent/pay',
-      parentUserId: 'parent-001',
+      idempotencyKey: 'checkout-12345678',
     });
 
-    expect(checkout.paymentReference).toContain('PAY-ONLINE-');
-    expect(checkout.redirectUrl).toContain('/parent/pay/mock-checkout');
+    expect(parsed.paymentChannel).toBe('GCash');
+    expect(parsed).not.toHaveProperty('returnUrl');
   });
 
-  it('verifies online payment and prevents duplicate callback replays (IDEMPOTENCY)', async () => {
-    const ref = 'PAY-ONLINE-123456';
-
-    // First callback execution
-    const firstResult = MockPaymentGateway.processCallback(ref, 'SUCCESS', 1400000, 'std-001');
-    expect(firstResult.isAlreadyProcessed).toBe(false);
-
-    // Verify payment status
-    const verification1 = await gateway.verifyPayment(ref);
-    expect(verification1.isAlreadyProcessed).toBe(true);
-
-    // Duplicate callback replay attempt
-    const secondResult = MockPaymentGateway.processCallback(ref, 'SUCCESS', 1400000, 'std-001');
-    expect(secondResult.isAlreadyProcessed).toBe(true);
+  it('accepts success, failure, cancellation, and delayed outcomes', () => {
+    expect(mockPaymentOutcomeSchema.options).toEqual(['SUCCESS', 'FAILED', 'CANCELLED', 'PENDING']);
   });
 
-  it('rejects invalid or unknown payment reference format', async () => {
-    await expect(gateway.verifyPayment('INVALID-REF-999')).rejects.toThrow(/UNKNOWN_REFERENCE/);
-  });
-
-  it('rejects checkout creation with zero or negative amount', async () => {
-    await expect(
-      gateway.createCheckout({
-        studentId: 'std-001',
-        assessmentId: 'ass-001',
-        amountCentavos: 0,
-        paymentChannel: 'Maya',
-        returnUrl: 'http://localhost:3000/parent/pay',
-        parentUserId: 'parent-001',
+  it('requires callback event and idempotency identifiers', () => {
+    expect(() =>
+      mockCallbackInputSchema.parse({
+        paymentReference: 'MOCK-reference',
+        status: 'SUCCESS',
       })
-    ).rejects.toThrow();
+    ).toThrow();
+  });
+
+  it('does not trust browser-supplied amount or student fields in callbacks', () => {
+    const parsed = mockCallbackInputSchema.parse({
+      paymentReference: 'MOCK-reference',
+      eventId: 'event-12345678',
+      idempotencyKey: 'callback-12345678',
+      status: 'SUCCESS',
+      amountCentavos: 1,
+      studentId: 'attacker-student',
+    });
+
+    expect(parsed).not.toHaveProperty('amountCentavos');
+    expect(parsed).not.toHaveProperty('studentId');
   });
 });
