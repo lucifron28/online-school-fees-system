@@ -1,9 +1,17 @@
+import { randomUUID } from 'node:crypto';
+import { eq, or } from 'drizzle-orm';
+import { getDb, type DatabaseInstance } from '@/db';
+import * as schema from '@/db/schema';
+import { mockCallbackInputSchema, type MockCallbackInput } from '@/lib/portal';
+import { AppError, NotFoundError, ValidationError } from '@/server/errors/index';
+import { PaymentService } from './payment.service';
+
 export interface CheckoutInput {
   studentId: string;
-  assessmentId: string;
+  assessmentId?: string | null;
   amountCentavos: number;
   paymentChannel: 'GCash' | 'Maya' | 'CreditCard';
-  returnUrl: string;
+  idempotencyKey: string;
   parentUserId: string;
 }
 
@@ -11,6 +19,7 @@ export interface CheckoutResult {
   checkoutId: string;
   paymentReference: string;
   redirectUrl: string;
+  status: (typeof schema.mockPaymentCheckouts.$inferSelect)['status'];
 }
 
 export interface PaymentVerification {
@@ -27,89 +36,293 @@ export interface PaymentGateway {
   verifyPayment(paymentReference: string): Promise<PaymentVerification>;
 }
 
-// In-memory idempotency store for payment references
-const processedReferences = new Map<
-  string,
-  { status: string; amountCentavos: number; studentId: string }
->();
+function isUniqueViolation(error: unknown) {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
+}
+
+function statusForCheckout(status: (typeof schema.mockPaymentCheckouts.$inferSelect)['status']) {
+  if (status === 'SUCCEEDED') return 'SUCCESS' as const;
+  if (status === 'FAILED') return 'FAILED' as const;
+  if (status === 'CANCELLED' || status === 'EXPIRED') return 'CANCELLED' as const;
+  return 'PENDING' as const;
+}
+
+function eventTypeForStatus(status: MockCallbackInput['status']) {
+  return {
+    SUCCESS: 'PAYMENT_SUCCEEDED',
+    FAILED: 'PAYMENT_FAILED',
+    CANCELLED: 'PAYMENT_CANCELLED',
+    PENDING: 'PAYMENT_PENDING',
+  }[status] as (typeof schema.mockPaymentCallbackEvents.$inferInsert)['eventType'];
+}
+
+async function selectCheckoutByReference(reference: string, db: DatabaseInstance) {
+  const rows = await db
+    .select()
+    .from(schema.mockPaymentCheckouts)
+    .where(eq(schema.mockPaymentCheckouts.checkoutReference, reference))
+    .limit(1);
+  if (!rows[0]) throw new NotFoundError('The mock payment checkout does not exist.');
+  return rows[0];
+}
+
+async function selectExistingCallback(input: MockCallbackInput, db: DatabaseInstance) {
+  const rows = await db
+    .select({
+      event: schema.mockPaymentCallbackEvents,
+      checkout: schema.mockPaymentCheckouts,
+    })
+    .from(schema.mockPaymentCallbackEvents)
+    .innerJoin(
+      schema.mockPaymentCheckouts,
+      eq(schema.mockPaymentCheckouts.id, schema.mockPaymentCallbackEvents.checkoutId)
+    )
+    .where(
+      or(
+        eq(schema.mockPaymentCallbackEvents.eventId, input.eventId),
+        eq(schema.mockPaymentCallbackEvents.idempotencyKey, input.idempotencyKey)
+      )
+    )
+    .limit(1);
+  return rows[0];
+}
+
+function callbackResult(
+  checkout: typeof schema.mockPaymentCheckouts.$inferSelect,
+  input: MockCallbackInput,
+  duplicate: boolean,
+  eventStatus: (typeof schema.mockPaymentCallbackEvents.$inferSelect)['processingStatus'] = 'PROCESSED',
+  errorMessage?: string | null
+) {
+  return {
+    status: eventStatus === 'FAILED' ? 'failed' : 'ok',
+    paymentReference: input.paymentReference,
+    verificationStatus: statusForCheckout(checkout.status),
+    checkoutStatus: checkout.status,
+    paymentId: checkout.paymentId,
+    isAlreadyProcessed: duplicate,
+    duplicatePrevented: duplicate,
+    error: errorMessage ?? undefined,
+  };
+}
 
 export class MockPaymentGateway implements PaymentGateway {
-  /**
-   * Creates a mock online checkout session.
-   */
+  constructor(private readonly db: DatabaseInstance = getDb()) {}
+
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
     if (input.amountCentavos <= 0) {
-      throw new Error('Checkout amount must be greater than zero.');
+      throw new ValidationError('Checkout amount must be greater than zero.');
     }
 
-    const checkoutId = `chk_${Math.random().toString(36).substring(2, 12)}`;
-    const paymentReference = `PAY-ONLINE-${Math.floor(100000 + Math.random() * 900000)}`;
-    const redirectUrl = `/parent/pay/mock-checkout?ref=${paymentReference}&amt=${input.amountCentavos}&channel=${input.paymentChannel}&studentId=${input.studentId}`;
+    const existing = await this.db
+      .select()
+      .from(schema.mockPaymentCheckouts)
+      .where(eq(schema.mockPaymentCheckouts.idempotencyKey, input.idempotencyKey))
+      .limit(1);
+    if (existing[0]) {
+      if (
+        existing[0].studentId !== input.studentId ||
+        existing[0].amountCentavos !== input.amountCentavos
+      ) {
+        throw new ValidationError(
+          'The checkout idempotency key was already used for another payment.'
+        );
+      }
+      return this.checkoutResult(existing[0]);
+    }
 
-    return {
-      checkoutId,
-      paymentReference,
-      redirectUrl,
-    };
+    try {
+      const [checkout] = await this.db
+        .insert(schema.mockPaymentCheckouts)
+        .values({
+          checkoutReference: `MOCK-${randomUUID()}`,
+          idempotencyKey: input.idempotencyKey,
+          studentId: input.studentId,
+          assessmentId: input.assessmentId ?? null,
+          amountCentavos: input.amountCentavos,
+          status: 'CREATED',
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        })
+        .returning();
+      if (!checkout) throw new AppError('The mock payment checkout could not be created.');
+      return this.checkoutResult(checkout);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        const replay = await this.db
+          .select()
+          .from(schema.mockPaymentCheckouts)
+          .where(eq(schema.mockPaymentCheckouts.idempotencyKey, input.idempotencyKey))
+          .limit(1);
+        if (replay[0]) return this.checkoutResult(replay[0]);
+      }
+      throw error;
+    }
   }
 
-  /**
-   * Server-side payment verification with strict IDEMPOTENCY guarantee.
-   * Duplicate callback calls return `isAlreadyProcessed: true` and do NOT re-post payment.
-   */
   async verifyPayment(paymentReference: string): Promise<PaymentVerification> {
-    if (!paymentReference || !paymentReference.startsWith('PAY-ONLINE-')) {
-      throw new Error('UNKNOWN_REFERENCE: The specified payment reference does not exist.');
-    }
-
-    // Idempotency Check: if already processed, return existing status with isAlreadyProcessed: true
-    if (processedReferences.has(paymentReference)) {
-      const existing = processedReferences.get(paymentReference)!;
-      return {
-        paymentReference,
-        status: existing.status as 'SUCCESS' | 'FAILED' | 'CANCELLED' | 'PENDING',
-        amountCentavos: existing.amountCentavos,
-        studentId: existing.studentId,
-        paidAt: new Date(),
-        isAlreadyProcessed: true,
-      };
-    }
-
-    // Default simulation result for unhandled references
+    const checkout = await selectCheckoutByReference(paymentReference, this.db);
     return {
-      paymentReference,
-      status: 'SUCCESS',
-      amountCentavos: 1400000,
-      studentId: 'std-001',
-      paidAt: new Date(),
-      isAlreadyProcessed: false,
+      paymentReference: checkout.checkoutReference,
+      status: statusForCheckout(checkout.status),
+      amountCentavos: checkout.amountCentavos,
+      studentId: checkout.studentId,
+      paidAt: checkout.completedAt ?? undefined,
+      isAlreadyProcessed: checkout.status !== 'CREATED',
     };
   }
 
-  /**
-   * Simulates processing a callback outcome (SUCCESS, FAILED, CANCELLED) and stores reference for idempotency.
-   */
-  static processCallback(
-    paymentReference: string,
-    status: 'SUCCESS' | 'FAILED' | 'CANCELLED',
-    amountCentavos: number,
-    studentId: string
-  ) {
-    if (processedReferences.has(paymentReference)) {
-      return {
-        isAlreadyProcessed: true,
-        status: processedReferences.get(paymentReference)!.status,
-      };
-    }
+  private checkoutResult(
+    checkout: typeof schema.mockPaymentCheckouts.$inferSelect
+  ): CheckoutResult {
+    return {
+      checkoutId: checkout.id,
+      paymentReference: checkout.checkoutReference,
+      redirectUrl: `/parent/pay/mock-checkout?ref=${encodeURIComponent(checkout.checkoutReference)}`,
+      status: checkout.status,
+    };
+  }
+}
 
-    processedReferences.set(paymentReference, { status, amountCentavos, studentId });
-    return { isAlreadyProcessed: false, status };
+export async function getMockCheckout(paymentReference: string, db: DatabaseInstance = getDb()) {
+  return selectCheckoutByReference(paymentReference, db);
+}
+
+export async function processMockCallback(
+  input: MockCallbackInput,
+  db: DatabaseInstance = getDb()
+) {
+  const values = mockCallbackInputSchema.parse(input);
+  const existing = await selectExistingCallback(values, db);
+  if (existing) {
+    return callbackResult(
+      existing.checkout,
+      values,
+      true,
+      existing.event.processingStatus,
+      existing.event.errorMessage
+    );
   }
 
-  /**
-   * Resets idempotency memory store (for testing).
-   */
-  static clearStore() {
-    processedReferences.clear();
+  try {
+    return await db.transaction(async (tx) => {
+      const transactionDb = tx as unknown as DatabaseInstance;
+      const duplicate = await selectExistingCallback(values, transactionDb);
+      if (duplicate) {
+        return callbackResult(
+          duplicate.checkout,
+          values,
+          true,
+          duplicate.event.processingStatus,
+          duplicate.event.errorMessage
+        );
+      }
+
+      const checkout = await selectCheckoutByReference(values.paymentReference, transactionDb);
+      const [event] = await tx
+        .insert(schema.mockPaymentCallbackEvents)
+        .values({
+          checkoutId: checkout.id,
+          eventId: values.eventId,
+          idempotencyKey: values.idempotencyKey,
+          eventType: eventTypeForStatus(values.status),
+          payload: values,
+          processingStatus: 'RECEIVED',
+        })
+        .returning();
+      if (!event) throw new AppError('The mock callback event could not be recorded.');
+
+      if (values.status === 'PENDING') {
+        const [updatedCheckout] = await tx
+          .update(schema.mockPaymentCheckouts)
+          .set({ updatedAt: new Date() })
+          .where(eq(schema.mockPaymentCheckouts.id, checkout.id))
+          .returning();
+        await tx
+          .update(schema.mockPaymentCallbackEvents)
+          .set({ processingStatus: 'PROCESSED', processedAt: new Date() })
+          .where(eq(schema.mockPaymentCallbackEvents.id, event.id));
+        return callbackResult(updatedCheckout ?? checkout, values, false);
+      }
+
+      if (
+        values.status === 'SUCCESS' &&
+        ['FAILED', 'CANCELLED', 'EXPIRED'].includes(checkout.status)
+      ) {
+        const message = 'A terminally failed or cancelled checkout cannot be completed.';
+        await tx
+          .update(schema.mockPaymentCallbackEvents)
+          .set({ processingStatus: 'FAILED', processedAt: new Date(), errorMessage: message })
+          .where(eq(schema.mockPaymentCallbackEvents.id, event.id));
+        return callbackResult(checkout, values, false, 'FAILED', message);
+      }
+
+      if (values.status === 'SUCCESS') {
+        try {
+          const payment = await PaymentService.recordPayment(
+            {
+              studentId: checkout.studentId,
+              amountCentavos: checkout.amountCentavos,
+              paymentMethod: 'MOCK_ONLINE',
+              referenceNumber: checkout.checkoutReference,
+              idempotencyKey: `mock-online-${checkout.id}`,
+            },
+            transactionDb
+          );
+          const [updatedCheckout] = await tx
+            .update(schema.mockPaymentCheckouts)
+            .set({
+              status: 'SUCCEEDED',
+              paymentId: payment.id,
+              completedAt: payment.createdAt,
+              updatedAt: new Date(),
+            })
+            .where(eq(schema.mockPaymentCheckouts.id, checkout.id))
+            .returning();
+          await tx
+            .update(schema.mockPaymentCallbackEvents)
+            .set({ processingStatus: 'PROCESSED', processedAt: new Date() })
+            .where(eq(schema.mockPaymentCallbackEvents.id, event.id));
+          return callbackResult(updatedCheckout ?? checkout, values, false);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Online payment failed.';
+          await tx
+            .update(schema.mockPaymentCheckouts)
+            .set({ status: 'FAILED', updatedAt: new Date() })
+            .where(eq(schema.mockPaymentCheckouts.id, checkout.id));
+          await tx
+            .update(schema.mockPaymentCallbackEvents)
+            .set({ processingStatus: 'FAILED', processedAt: new Date(), errorMessage: message })
+            .where(eq(schema.mockPaymentCallbackEvents.id, event.id));
+          const failedCheckout = { ...checkout, status: 'FAILED' as const };
+          return callbackResult(failedCheckout, values, false, 'FAILED', message);
+        }
+      }
+
+      const checkoutStatus = values.status === 'FAILED' ? 'FAILED' : 'CANCELLED';
+      const [updatedCheckout] = await tx
+        .update(schema.mockPaymentCheckouts)
+        .set({ status: checkoutStatus, updatedAt: new Date() })
+        .where(eq(schema.mockPaymentCheckouts.id, checkout.id))
+        .returning();
+      await tx
+        .update(schema.mockPaymentCallbackEvents)
+        .set({ processingStatus: 'PROCESSED', processedAt: new Date() })
+        .where(eq(schema.mockPaymentCallbackEvents.id, event.id));
+      return callbackResult(updatedCheckout ?? checkout, values, false);
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      const replay = await selectExistingCallback(values, db);
+      if (replay) {
+        return callbackResult(
+          replay.checkout,
+          values,
+          true,
+          replay.event.processingStatus,
+          replay.event.errorMessage
+        );
+      }
+    }
+    throw error;
   }
 }

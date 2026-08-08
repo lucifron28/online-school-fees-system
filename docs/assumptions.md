@@ -87,6 +87,15 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - Overpayments are rejected. Reversals preserve the original payment, create a compensating debit, void the linked receipt, and record the reversal reason and actor; double reversal is rejected.
 - Receipt PDFs are generated from stored payment, allocation, receipt, student, institution, and status data. A reversed receipt is visibly marked voided.
 
-## 14. Current prototype boundary
+## 14. Parent/student portals and mock online payments
 
-Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, Phase 5 assessment/ledger posting, and Phase 6 OTC payment/receipt/reversal transactions are implemented and verified on isolated local PostgreSQL databases. Portal ownership queries, mock online-payment persistence, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
+- A parent may view only students linked through the persisted guardian-to-student relationship for the authenticated `PARENT` user.
+- A student may view only the student row linked to the authenticated `STUDENT` user. Caller-supplied student IDs, child lists, balances, and receipt ownership are not authorization evidence.
+- Mock checkout state, callback events, and idempotency keys are persisted in PostgreSQL. The stored checkout is authoritative for student and amount; the browser return URL cannot mark a payment successful.
+- `SUCCESS` callbacks are server-verified and use the same `PaymentService` transaction as other payments with method `MOCK_ONLINE`. `PENDING`, `FAILED`, and `CANCELLED` outcomes do not change the ledger.
+- Replayed callback events and repeated checkout idempotency keys return the existing persisted result and do not create duplicate payments, allocations, receipts, or audit events.
+- The online flow is intentionally a mock demonstration. It does not connect to GCash, Maya, card networks, banks, or a real payment provider.
+
+## 15. Current prototype boundary
+
+Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, Phase 5 assessment/ledger posting, Phase 6 OTC payment/receipt/reversal transactions, and Phase 7 portal ownership/mock online-payment persistence are implemented and verified on isolated local PostgreSQL databases. Reports, notifications, deployment, and a populated demo relationship seed remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.

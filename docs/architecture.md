@@ -39,8 +39,8 @@ Client Components must not import server-only services. Financial rules must rem
 - `src/db/migrations/0000_good_ghost_rider.sql` is the committed initial migration and has been verified on a blank isolated PostgreSQL database.
 - Financial event timestamps use PostgreSQL `timestamp with time zone`; monetary values use integer centavos with database checks.
 - Localhost PostgreSQL URLs use node-postgres for seed/reset/integration tooling, while remote deployment URLs continue to use Neon.
-- Assessment generation, ledger balance calculation, and OTC payment posting are PostgreSQL-backed and transactional. Portal ownership, mock online-payment persistence, and report aggregation remain later vertical slices.
-- The mock payment gateway is allowed by scope; its checkout records, callback events, and idempotency state now have database tables, while the gateway behavior remains a later vertical-slice implementation.
+- Assessment generation, ledger balance calculation, OTC payment posting, portal ownership, and mock online-payment completion are PostgreSQL-backed and transactional. Report aggregation, notifications, and deployment remain later vertical slices.
+- The mock payment gateway is allowed by scope. Its checkout records, callback events, and idempotency state are persisted, while no real payment-provider integration is claimed.
 
 ## State ownership
 
@@ -105,3 +105,18 @@ The Phase 6 service enforces the following invariants:
 - the database-generated payment UUID is used to derive receipt and verification identifiers; the required idempotency key prevents replayed and concurrent duplicate submissions;
 - a reversal preserves the original payment, voids its receipt, adds a compensating debit, and records the reason and actor; a second reversal is rejected;
 - receipt PDFs are generated from persisted receipt, payment, allocation, student, institution, and status data rather than browser-supplied or random financial values.
+
+## Parent/student portal and mock online-payment boundary
+
+`src/server/services/portal.service.ts` owns portal queries and derives access from the authenticated user's persisted relationship: a parent reaches students through `guardians.userId -> guardianStudents -> students`, while a student reaches only the `students.userId` row. Portal Route Handlers never accept caller-supplied child lists or student ownership claims.
+
+`src/server/services/payment-gateway.service.ts` owns the mock checkout and callback boundary. Checkout rows and callback events are persisted in PostgreSQL, with unique idempotency keys and callback event identifiers. The stored checkout is authoritative for the student and amount; browser return URLs and callback bodies cannot mark a payment successful or change its financial values.
+
+The Phase 7 invariants are:
+
+- parent and student list/detail/payment/receipt queries are filtered by authenticated database ownership;
+- checkout creation is idempotent and rejects amounts above the student's persisted ledger balance;
+- `PENDING`, `FAILED`, and `CANCELLED` callbacks do not create payments, allocations, receipts, or ledger entries;
+- a verified `SUCCESS` callback calls the shared `PaymentService` with `MOCK_ONLINE`, then records the checkout payment ID;
+- duplicate callback events and repeated checkout idempotency keys return the existing persisted result without duplicate financial records;
+- a new gateway instance can verify the same checkout because state is not held in a module-level map.

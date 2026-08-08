@@ -27,6 +27,7 @@
     "students-fees:verify": "tsx src/db/scripts/verify-students-fees.ts",
     "assessments-ledger:verify": "tsx src/db/scripts/verify-assessments-ledger.ts",
     "payments-receipts:verify": "tsx src/db/scripts/verify-payments-receipts.ts",
+    "portals-online:verify": "tsx src/db/scripts/verify-portals-online-payment.ts",
     "db:seed": "tsx src/db/scripts/seed.ts",
     "db:reset": "tsx src/db/scripts/reset-demo.ts --demo",
     "db:test:reset": "tsx src/db/scripts/reset-demo.ts --test"

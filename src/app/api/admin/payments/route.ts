@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { PaymentPostInput } from '@/lib/payments';
-import { paymentListInputSchema, paymentPostInputSchema } from '@/lib/payments';
+import { otcPaymentPostInputSchema, paymentListInputSchema } from '@/lib/payments';
 import { requireRequestAuth } from '@/server/auth/guards';
 import { readJson, routeErrorResponse } from '@/server/http';
 import { listPayments, PaymentService } from '@/server/services/payment.service';
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const actor = await requireRequestAuth(request, ['ADMIN', 'FINANCE_STAFF']);
-    const body = paymentPostInputSchema.parse(await readJson<PaymentPostInput>(request));
+    const body = otcPaymentPostInputSchema.parse(await readJson<PaymentPostInput>(request));
     return NextResponse.json(
       await PaymentService.recordPayment({ ...body, processedByUserId: actor.id }),
       { status: 201 }
