@@ -39,7 +39,7 @@ Client Components must not import server-only services. Financial rules must rem
 - `src/db/migrations/0000_good_ghost_rider.sql` is the committed initial migration and has been verified on a blank isolated PostgreSQL database.
 - Financial event timestamps use PostgreSQL `timestamp with time zone`; monetary values use integer centavos with database checks.
 - Localhost PostgreSQL URLs use node-postgres for seed/reset/integration tooling, while remote deployment URLs continue to use Neon.
-- Assessment generation, ledger balance calculation, OTC payment posting, portal ownership, and mock online-payment completion are PostgreSQL-backed and transactional. Report aggregation, notifications, and deployment remain later vertical slices.
+- Assessment generation, ledger balance calculation, OTC payment posting, portal ownership, mock online-payment completion, report aggregation, and notification history are PostgreSQL-backed. Deployment remains a later vertical slice.
 - The mock payment gateway is allowed by scope. Its checkout records, callback events, and idempotency state are persisted, while no real payment-provider integration is claimed.
 
 ## State ownership
@@ -133,3 +133,16 @@ The Phase 8 invariants are:
 - CSV cells beginning with spreadsheet formula characters are prefixed with a text marker to prevent formula injection;
 - reconciliation is `RECONCILED` only when the persisted receipt and allocation total agree with the payment; missing or mismatched records are marked `REVIEW`;
 - student statements and statement PDFs are generated from persisted ledger entries and student data, with the demo disclaimer preserved.
+
+## Notification delivery boundary
+
+`src/server/services/notification.service.ts` owns notification recipient resolution, persisted event dedupe, delivery attempts, provider selection, failure recording, and manual retries. Assessment posting, payment success, receipt availability, and reversal dispatches are invoked after their financial transaction commits; provider failures are caught and recorded without changing the financial result.
+
+The Phase 9 invariants are:
+
+- recipients are resolved from the persisted student-user and guardian-user relationships; caller-supplied recipient lists are not accepted;
+- notification dedupe keys include the persisted event entity and recipient user, while the delivery table enforces one channel row per notification;
+- Resend is selected only when its API key and sender address are configured; otherwise the console provider records a deterministic local/CI-safe delivery outcome;
+- delivery attempts record channel, status, attempt count, provider message ID, timestamps, and failure text, with automatic retry state and an authenticated admin/finance manual retry route;
+- duplicate payment idempotency requests and duplicate mock callback events do not create or deliver duplicate notification records;
+- no due reminder is emitted until due-date requirements are confirmed.

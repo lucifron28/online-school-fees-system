@@ -105,6 +105,14 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - A payment is `RECONCILED` when its persisted receipt exists and its persisted allocation total equals the payment amount. Missing or mismatched financial relationships are marked `REVIEW` with a note.
 - Student statements and PDFs are generated from persisted ledger entries; the PDF remains a fictional demo document and is not an official tax or accounting record.
 
-## 16. Current prototype boundary
+## 16. Notifications
 
-Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, Phase 5 assessment/ledger posting, Phase 6 OTC payment/receipt/reversal transactions, Phase 7 portal ownership/mock online-payment persistence, and Phase 8 reports/reconciliation are implemented and verified on isolated local PostgreSQL databases. Notifications, deployment, and a populated demo relationship seed remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
+- Assessment posting, successful payment, receipt availability, and reversal events create one persisted notification per linked student or guardian account.
+- Notification dedupe keys include the event entity and recipient user, and the notification-delivery unique key prevents multiple channel rows for one notification.
+- Resend is used only when both `RESEND_API_KEY` and `EMAIL_FROM` are configured. Local and CI environments use the console provider and do not require real email delivery.
+- Delivery failures are recorded with attempt counts and retry timestamps. A provider failure is isolated from the already-committed financial transaction; manual retries use the persisted delivery row.
+- Due reminders are not generated because no confirmed due-date requirement or due-date field is in scope.
+
+## 17. Current prototype boundary
+
+Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, Phase 5 assessment/ledger posting, Phase 6 OTC payment/receipt/reversal transactions, Phase 7 portal ownership/mock online-payment persistence, Phase 8 reports/reconciliation, and Phase 9 notifications are implemented and verified on isolated local PostgreSQL databases. Deployment and a populated demo relationship seed remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
