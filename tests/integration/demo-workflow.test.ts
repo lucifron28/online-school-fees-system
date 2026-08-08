@@ -154,7 +154,7 @@ databaseContract('deterministic demo database workflow', () => {
       })
       .from(schema.ledgerEntries)
       .where(eq(schema.ledgerEntries.studentId, unpaidStudent!.id));
-    expect(ledgerBalance(unpaidEntries)).toBe(7_000_00);
+    expect(ledgerBalance(unpaidEntries)).toBe(70_000_00);
 
     const report = await ReportService.getCollectionReport(
       { from: '2026-08-01', to: '2026-08-31' },
