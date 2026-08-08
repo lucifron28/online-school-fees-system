@@ -2,9 +2,9 @@
 
 ## Current phase
 
-- Phase: 2 - Authentication and RBAC (merged; Phase 3 next)
-- Branch: `main`
-- Starting main commit for this phase: `fc83f5ee6ea304abe1511a2c63f82c6eb591970b`
+- Phase: 3 - Core Administration (implemented locally; PR/merge next)
+- Branch: `feat/13-core-administration`
+- Starting main commit for this phase: `6af307f docs(progress): record Phase 2 merge evidence`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
 - Current state: Phase 2 Better Auth sign-in, server-side role guards, protected layouts/Route Handlers, logout, compatible demo seeding, E2E protection checks, and local/hosted acceptance verification are merged into `main` at `a21124ca5486d57881bf07cc22f0fb2f35a1ae29`.
 
@@ -28,29 +28,54 @@
 
 ## Commands and actual results
 
-| Command                             | Result | Notes                                                                                                                                                                                                 |
-| ----------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm format:check`                 | Passed | Prettier passed locally and in hosted Foundation CI.                                                                                                                                                   |
-| `pnpm typecheck`                    | Passed | Strict TypeScript passed after auth, layout, seed, test, and E2E changes.                                                                                                                             |
-| `pnpm lint`                         | Passed | ESLint completed with exit code 0 locally and in hosted Foundation CI.                                                                                                                                 |
-| `pnpm test`                         | Passed | 12 unit/component files and 41 tests passed; Phase 2 adds fixed role-routing coverage.                                                                                                                |
-| `pnpm test:integration`             | Passed | 1 integration file and 3 reset-safety tests passed.                                                                                                                                                    |
-| `pnpm test:e2e`                     | Passed | 4 Playwright smoke tests passed locally and in hosted Foundation CI after protected-route expectations were updated.                                                                                  |
-| `pnpm build`                        | Passed | Next.js 15.5.21 compiled all 26 routes locally and in hosted Foundation CI with the production auth environment configured.                                                                            |
-| `pnpm db:migrate`                   | Passed | Applied the committed migration to isolated `osfs_auth_phase2` PostgreSQL.                                                                                                                            |
-| `pnpm db:seed`                      | Passed | Created and idempotently updated all four demo accounts using Better Auth-compatible password hashing.                                                                                                 |
-| `pnpm auth:verify`                  | Passed | Verified four demo sign-ins, stored roles, invalid credentials, disabled-user rejection, session persistence, logout, and public sign-up rejection.                                                    |
-| HTTP role/route matrix              | Passed | All four accounts signed in; admin/finance report access returned `200`; parent/student cross-role report access returned `403`; unauthenticated report access returned `401`.                        |
-| HTTP logout and feature flag        | Passed | Logout removed report access; disabling the student portal redirected both public and authenticated student routes to the fixed unauthorized page.                                                    |
-| Hosted Foundation CI run [#27](https://github.com/lucifron28/online-school-fees-system/actions/runs/31259066634) | Passed | Formatting, lint, typecheck, unit tests, production build, and Playwright E2E all passed on Phase 2 head `95845d6cbba1732891852acc439768a3580a7283`. |
+| Command                                                                                                          | Result | Notes                                                                                                                                                                          |
+| ---------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm format:check`                                                                                              | Passed | Prettier passed locally and in hosted Foundation CI.                                                                                                                           |
+| `pnpm typecheck`                                                                                                 | Passed | Strict TypeScript passed after auth, layout, seed, test, and E2E changes.                                                                                                      |
+| `pnpm lint`                                                                                                      | Passed | ESLint completed with exit code 0 locally and in hosted Foundation CI.                                                                                                         |
+| `pnpm test`                                                                                                      | Passed | 12 unit/component files and 41 tests passed; Phase 2 adds fixed role-routing coverage.                                                                                         |
+| `pnpm test:integration`                                                                                          | Passed | 1 integration file and 3 reset-safety tests passed.                                                                                                                            |
+| `pnpm test:e2e`                                                                                                  | Passed | 4 Playwright smoke tests passed locally and in hosted Foundation CI after protected-route expectations were updated.                                                           |
+| `pnpm build`                                                                                                     | Passed | Next.js 15.5.21 compiled all 26 routes locally and in hosted Foundation CI with the production auth environment configured.                                                    |
+| `pnpm db:migrate`                                                                                                | Passed | Applied the committed migration to isolated `osfs_auth_phase2` PostgreSQL.                                                                                                     |
+| `pnpm db:seed`                                                                                                   | Passed | Created and idempotently updated all four demo accounts using Better Auth-compatible password hashing.                                                                         |
+| `pnpm auth:verify`                                                                                               | Passed | Verified four demo sign-ins, stored roles, invalid credentials, disabled-user rejection, session persistence, logout, and public sign-up rejection.                            |
+| HTTP role/route matrix                                                                                           | Passed | All four accounts signed in; admin/finance report access returned `200`; parent/student cross-role report access returned `403`; unauthenticated report access returned `401`. |
+| HTTP logout and feature flag                                                                                     | Passed | Logout removed report access; disabling the student portal redirected both public and authenticated student routes to the fixed unauthorized page.                             |
+| Hosted Foundation CI run [#27](https://github.com/lucifron28/online-school-fees-system/actions/runs/31259066634) | Passed | Formatting, lint, typecheck, unit tests, production build, and Playwright E2E all passed on Phase 2 head `95845d6cbba1732891852acc439768a3580a7283`.                           |
 
 ## Pull request evidence
 
 Phase 2 was implemented on `feat/12-auth-rbac` in commits `8c03bb2`, `8cc1e9f`, `3e8b0f7`, and `95845d6`, reviewed in PR [#3](https://github.com/lucifron28/online-school-fees-system/pull/3), CI-verified by run [#27](https://github.com/lucifron28/online-school-fees-system/actions/runs/31259066634), and merged with regular merge commit `a21124ca5486d57881bf07cc22f0fb2f35a1ae29`.
 
+## Phase 3 implementation
+
+- Replaced fixed institution settings and user-directory state with PostgreSQL-backed administration services and Route Handlers.
+- Added a singleton settings key, valid school-year date check, single-active-school-year index, transactional activation, grade-level/section administration, and archived-year section protection.
+- Added exact `ADMIN` guards for settings/users pages and all administration APIs. Finance staff retain the broader admin layout but cannot manage administration.
+- Added supported server-side Better Auth account creation, role changes, activation/deactivation, self-protection, and last-active-administrator protection.
+- Added loading, empty, error, retry, confirmation, and success states to the settings and user-management screens.
+
+## Phase 3 commands and actual results
+
+| Command                     | Result | Notes                                                                                                                                                                                                                                             |
+| --------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm db:generate`          | Passed | Generated `src/db/migrations/0001_clean_rictor.sql` and snapshot metadata for singleton settings, school-year uniqueness, and date validation.                                                                                                    |
+| `pnpm db:migrate`           | Passed | Applied to isolated local PostgreSQL database `osfs_admin_phase3`.                                                                                                                                                                                |
+| `pnpm db:verify:migrations` | Passed | Verified 27 tables, 10 unique indexes, 10 checks, and financial delete protection.                                                                                                                                                                |
+| `pnpm db:seed`              | Passed | Seeded the isolated database with the demo institution, active school year, academic structure, and four Better Auth accounts.                                                                                                                    |
+| `pnpm admin:verify`         | Passed | Verified settings persistence, student-portal flag persistence, school-year lifecycle, academic structure constraints, account roles, and disabled-account sign-in rejection; generated records were cleaned up and original seed state restored. |
+| `pnpm typecheck`            | Passed | Strict TypeScript passed for all Phase 3 routes, services, components, scripts, and tests.                                                                                                                                                        |
+| `pnpm lint`                 | Passed | ESLint completed with exit code 0.                                                                                                                                                                                                                |
+| `pnpm test`                 | Passed | 13 unit/component files and 45 tests passed.                                                                                                                                                                                                      |
+| `pnpm test:integration`     | Passed | 1 integration file and 3 reset-safety tests passed.                                                                                                                                                                                               |
+| `pnpm build`                | Passed | Next.js 15.5.21 production build generated 31 routes.                                                                                                                                                                                             |
+| HTTP admin role matrix      | Passed | Unauthenticated settings access returned `401`; administrator sign-in/settings access returned `200`; finance-staff settings access returned `403`.                                                                                               |
+| `pnpm test:e2e`             | Passed | 4 Playwright smoke tests passed locally after removing a stale port-3000 process.                                                                                                                                                                 |
+
 ## Remaining work
 
-- Complete Phases 3-10 in the requested branch/PR/merge sequence.
+- Complete the Phase 3 PR/merge gate, then Phases 4-10 in the requested branch/PR/merge sequence.
 - Complete Phase 11 external audit preparation and final evidence report.
 
 ## Known blockers

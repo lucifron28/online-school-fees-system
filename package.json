@@ -23,6 +23,7 @@
     "db:check": "tsx src/db/scripts/check-db.ts",
     "db:verify:migrations": "tsx src/db/scripts/verify-migrations.ts",
     "auth:verify": "tsx src/db/scripts/verify-auth.ts",
+    "admin:verify": "tsx src/db/scripts/verify-administration.ts",
     "db:seed": "tsx src/db/scripts/seed.ts",
     "db:reset": "tsx src/db/scripts/reset-demo.ts --demo",
     "db:test:reset": "tsx src/db/scripts/reset-demo.ts --test"

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth/server';
 import { getServerEnv } from '@/lib/env';
 import { getRoleLoginPath, parseUserRole, type UserRole } from '@/lib/auth/roles';
+import { isStudentPortalEnabled } from '@/server/services/administration.service';
 import { NextResponse } from 'next/server';
 
 export type { UserRole } from '@/lib/auth/roles';
@@ -66,7 +67,7 @@ export async function requireAuth(
 
   if (user.role === 'STUDENT') {
     const env = getServerEnv();
-    if (env.ENABLE_STUDENT_PORTAL === false) {
+    if (env.ENABLE_STUDENT_PORTAL === false || !(await isStudentPortalEnabled())) {
       throw new Error('STUDENT_PORTAL_DISABLED');
     }
   }

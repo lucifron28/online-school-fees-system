@@ -4,13 +4,14 @@
 
 ## Current status
 
-The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, server-side business-rule prototypes, and unit tests. Financial and payment workflows remain intentionally staged for later phases.
+The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, persisted core administration, server-side business-rule prototypes, and unit tests. Financial and payment workflows remain intentionally staged for later phases.
 
 The following items remain intentionally incomplete at this stage:
 
 - Better Auth email/password sign-in, role-derived redirects, session logout, disabled-user rejection, protected layouts, and protected financial Route Handlers are implemented and verified against isolated PostgreSQL.
+- Administrator-only institution settings, school-year activation, grade levels, sections, real user management, supported account creation, role changes, and account activation/deactivation are persisted through PostgreSQL and verified against isolated PostgreSQL.
 - Assessment, payment, reversal, portal, and report services still contain simulated or hardcoded results.
-- The Phase 1 Drizzle migration set creates a clean database and is verified against isolated PostgreSQL; later persisted financial workflows remain incomplete.
+- The committed Drizzle migration set creates a clean database and is verified against isolated PostgreSQL; later persisted financial workflows remain incomplete.
 - The online payment flow is a mock demonstration only; it is not a GCash, Maya, card, banking, or payment-provider integration.
 - No production-readiness, accounting, security-certification, or tax-receipt claim is made.
 
@@ -40,6 +41,7 @@ The receipt label is **Payment Acknowledgment Receipt**. The application must no
 - Mock callback prototype: `/api/payments/mock-callback`
 - Receipt PDF prototype: `/api/receipts/[id]/pdf`
 - CSV report prototype: `/api/reports/csv`
+- Administrator APIs: `/api/admin/settings`, `/api/admin/school-years`, `/api/admin/grade-levels`, `/api/admin/sections`, `/api/admin/users`
 
 ## Local setup
 
@@ -49,7 +51,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-`DATABASE_URL` is required for database commands. `TEST_DATABASE_URL` must point to a separate PostgreSQL database and must never equal `DATABASE_URL`.
+`DATABASE_URL` is required for database commands. `TEST_DATABASE_URL` must point to a separate PostgreSQL database and must never equal `DATABASE_URL`. Run `pnpm admin:verify` against an isolated seeded database to verify administration persistence and constraints.
 
 For an intentionally destructive demo reset, set the confirmation first:
 
@@ -81,6 +83,7 @@ The reset commands refuse production mode, missing confirmations, and unsafe dat
 - `pnpm db:migrate` - apply committed Drizzle migrations
 - `pnpm db:verify:migrations` - verify tables, constraints, enums, timestamps, and financial delete protection
 - `pnpm auth:verify` - verify Better Auth demo sign-in, sessions, logout, disabled users, and public sign-up rejection
+- `pnpm admin:verify` - verify persisted settings, school years, academic structure, account roles, and disabled-account enforcement
 - `pnpm db:seed` - seed fictional demo data
 - `pnpm db:reset` - reset the demo database after explicit confirmation
 - `pnpm db:test:reset` - reset only the separately configured test database
