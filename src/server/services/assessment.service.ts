@@ -11,6 +11,7 @@ import {
 } from '@/lib/assessments';
 import { addCentavos, subtractCentavos } from '@/lib/utils/currency';
 import { AppError, NotFoundError, ValidationError } from '@/server/errors';
+import { NotificationService } from './notification.service';
 
 export type FeeItemInput = {
   feeCategoryId: string;
@@ -376,7 +377,9 @@ export class AssessmentService {
       return assessment;
     });
 
-    return getAssessment(created.id, db);
+    const assessment = await getAssessment(created.id, db);
+    await NotificationService.notifyAssessmentPosted(created.id);
+    return assessment;
   }
 
   static async applyAdjustment(input: AdjustmentInput, db: DatabaseInstance = getDb()) {

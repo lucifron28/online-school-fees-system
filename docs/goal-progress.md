@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: 9 - Notifications (next)
-- Branch: `main`
+- Phase: 9 - Notifications (implementation in progress)
+- Branch: `feat/19-notifications`
 - Starting main commit for this phase: `1781c11`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 0 through Phase 8 are merged into `main`; Phase 8 adds database-backed reports, reconciliation, formula-safe CSV, and statement PDFs.
+- Current state: Phase 0 through Phase 8 are merged into `main`; Phase 9 notification implementation and local verification are complete on this branch, pending PR review and merge.
 
 ## Completed phases
 
@@ -158,8 +158,8 @@ Phase 5 was implemented on `feat/15-assessments-ledger` in commits `e274f9b`, `e
 
 ## Remaining work
 
-- Complete Phases 9-10 in the requested branch/PR/merge sequence after Phase 8 is merged.
-- Complete Phase 11 external audit preparation and final evidence report.
+- Complete the Phase 9 PR review, merge, and main synchronization.
+- Complete Phases 10-11 in the requested branch/PR/merge sequence.
 
 ## Phase 7 implementation
 
@@ -224,3 +224,30 @@ Phase 6 was implemented on `feat/16-payments-receipts-audit` in commits `2d474ec
 - The local `gh` CLI token remains invalid; the connected GitHub app is required for PR creation, review, and merge.
 - A real fictional Neon/test PostgreSQL URL is still required for remote deployment verification; isolated local PostgreSQL covers local runtime acceptance through Phase 7.
 - The current seed creates demo users and academic reference data but no linked demo student/guardian fixture; the Phase 7 verifier creates and cleans an isolated relationship fixture for ownership and payment acceptance. A populated demo walkthrough seed remains a later hardening decision.
+
+## Phase 9 implementation
+
+- Added the provider-neutral `EmailProvider` interface with a configured Resend implementation and a console fallback when `RESEND_API_KEY` and `EMAIL_FROM` are unavailable.
+- Added persisted, recipient-scoped notification dispatch for assessment posting, successful payment, receipt availability, and payment reversal. Due reminders remain intentionally unimplemented because no confirmed due-date requirement exists.
+- Added database-backed delivery state transitions (`PENDING`, `RETRYING`, `SENT`, and `FAILED`), attempt counts, retry timestamps, provider IDs, and failure messages. Manual retries are available to administrators and finance staff.
+- Added unique recipient/event dedupe keys so repeated payment requests and mock callback replays do not create duplicate messages. Notification dispatch runs after financial commits and catches provider failures so financial success is not rolled back.
+- Added authenticated notification APIs and role-scoped history pages. Admin/finance users can audit all notification history; parent and student users can retrieve only their own records.
+- Added `notifications:verify`, which exercises assessment/payment/receipt/reversal triggers, linked student/guardian recipients, console delivery, failed Resend-style delivery and retries, financial success despite email failure, duplicate payment submission, duplicate mock callback replay, and cleanup.
+
+## Phase 9 commands and actual results
+
+| Command / check                     | Result               | Notes                                                                                                                                                                                                                                          |
+| ----------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                    | Passed               | Strict TypeScript passed after notification service, provider, API, UI, payment, assessment, gateway, and verifier changes.                                                                                                                    |
+| `pnpm lint`                         | Passed               | ESLint completed with exit code 0.                                                                                                                                                                                                             |
+| `pnpm test`                         | Passed               | 14 unit/component files and 44 tests passed, including provider selection and notification schema coverage.                                                                                                                                    |
+| `pnpm test:integration`             | Passed               | 1 integration file and 3 reset-safety tests passed.                                                                                                                                                                                            |
+| `pnpm notifications:verify`         | Passed               | Isolated PostgreSQL verified persisted event history, recipient dedupe, console fallback, provider failures/retries, financial success despite delivery failure, reversal notifications, duplicate payments, duplicate callbacks, and cleanup. |
+| `pnpm build`                        | Passed               | Next.js 15.5.21 production build generated 51 routes, including notification history and retry APIs/pages.                                                                                                                                     |
+| `pnpm test:e2e`                     | Passed               | 4 Chromium smoke tests passed after restarting a repository-owned stale Next.js server; the clean-server rerun exited 0.                                                                                                                       |
+| Focused Prettier check              | Passed for code      | All Phase 9 source, tests, verifier, and package-script files pass the repository's local Prettier binary; legacy documentation newline formatting remains covered by the repository-wide limitation below.                                    |
+| Repository-wide `pnpm format:check` | Known legacy failure | 126 pre-existing legacy files are reported by the local Windows checkout; Phase 9 files pass focused formatting and no unrelated legacy files were reformatted.                                                                                |
+
+## Phase 9 pull request evidence
+
+Pending branch commits, GitHub self-review, hosted CI, PR merge, and main synchronization.

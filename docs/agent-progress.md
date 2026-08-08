@@ -4,12 +4,12 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 
 ## Current execution state
 
-- Branch: `main`
-- Phase: Phase 8 merged; Phase 9 next
+- Branch: `feat/19-notifications`
+- Phase: Phase 9 notification implementation complete locally; PR review and merge pending
 - Main at start: `1781c11` (`origin/main` matched locally)
 - GitHub connector: authenticated with push/admin permission
 - Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 through Phase 8 are merged as PRs #1 through #9. Phase 8 merge commit is `1781c11360774c60640b241f5d3b4bb41cb0f479`; hosted Foundation CI run #55 passed; local PostgreSQL verifier, HTTP, build, and Playwright acceptance checks passed. Phase 9 is the next implementation branch.
+- Current status: Phase 0 through Phase 8 are merged as PRs #1 through #9. Phase 8 merge commit is `1781c11360774c60640b241f5d3b4bb41cb0f479`; hosted Foundation CI run #55 passed. Phase 9 is implemented on `feat/19-notifications`; local PostgreSQL, unit, integration, build, and clean-server Playwright checks passed. The Phase 9 PR and hosted CI remain pending.
 
 ## Historical branches
 

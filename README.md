@@ -4,7 +4,7 @@
 
 ## Current status
 
-The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, persisted core administration, persisted student/guardian/fee administration, persisted assessment/ledger posting, persisted CASH/BANK_DEPOSIT payment, receipt, and reversal transactions, database-backed parent/student portal ownership with a mock online-payment flow, and database-backed reports and reconciliation. Notification and deployment workflows remain intentionally staged for later phases.
+The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, persisted core administration, persisted student/guardian/fee administration, persisted assessment/ledger posting, persisted CASH/BANK_DEPOSIT payment, receipt, and reversal transactions, database-backed parent/student portal ownership with a mock online-payment flow, database-backed reports and reconciliation, and persisted notification history with configurable delivery providers. Deployment and populated demo relationship data remain intentionally staged for later phases.
 
 The following items remain intentionally incomplete at this stage:
 
@@ -12,7 +12,7 @@ The following items remain intentionally incomplete at this stage:
 - Administrator-only institution settings, school-year activation, grade levels, sections, real user management, supported account creation, role changes, and account activation/deactivation are persisted through PostgreSQL and verified against isolated PostgreSQL.
 - Student records, guardian records, parent/student account links, fee categories, and draft/active/archived fee structures are persisted through PostgreSQL and guarded for admin/finance access. Posted-assessment fee structures can only be archived.
 - CASH and BANK_DEPOSIT payment posting, oldest-item allocation, idempotency, receipts, reversals, ledger entries, and audit events are persisted through PostgreSQL and verified by `pnpm payments-receipts:verify`.
-- The committed Drizzle migration set creates a clean database and is verified against isolated PostgreSQL; notifications, deployment, and a populated demo relationship seed remain incomplete.
+- The committed Drizzle migration set creates a clean database and is verified against isolated PostgreSQL; notification delivery is implemented and verified, while deployment and a populated demo relationship seed remain incomplete.
 - Parent and student portal queries are filtered from authenticated database relationships. Mock checkout and callback state is persisted; only a server-verified successful callback can create a `MOCK_ONLINE` payment through the shared payment service.
 - The online payment flow is a mock demonstration only; it is not a GCash, Maya, card, banking, or payment-provider integration.
 - No production-readiness, accounting, security-certification, or tax-receipt claim is made.
@@ -47,6 +47,7 @@ The receipt label is **Payment Acknowledgment Receipt**. The application must no
 - Owned portal receipt PDF route: `/api/portal/receipts/[id]/pdf`
 - Reports API: `/api/reports/summary`, `/api/reports/collections`, `/api/reports/outstanding`, `/api/reports/reversals`, and `/api/reports/statement/[studentId]`
 - Report exports: `/api/reports/csv` and `/api/reports/statements/[studentId]/pdf`
+- Notifications: `/api/notifications`, `/api/notifications/[id]/retry`, and role-scoped notification pages under `/admin/notifications`, `/parent/notifications`, and `/student/notifications`
 - Administrator APIs: `/api/admin/settings`, `/api/admin/school-years`, `/api/admin/grade-levels`, `/api/admin/sections`, `/api/admin/users`
 - Student/guardian APIs: `/api/admin/students`, `/api/admin/guardians`, and guardian-link subroutes
 - Fee APIs: `/api/admin/fee-options`, `/api/admin/fee-categories`, and `/api/admin/fee-structures`
@@ -61,7 +62,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-`DATABASE_URL` is required for database commands. `TEST_DATABASE_URL` must point to a separate PostgreSQL database and must never equal `DATABASE_URL`. Run `pnpm admin:verify`, `pnpm students-fees:verify`, `pnpm assessments-ledger:verify`, `pnpm payments-receipts:verify`, and `pnpm portals-online:verify` against an isolated seeded database to verify administration, student/guardian/fee, assessment/ledger, OTC payment, portal ownership, and mock online-payment persistence and constraints.
+`DATABASE_URL` is required for database commands. `TEST_DATABASE_URL` must point to a separate PostgreSQL database and must never equal `DATABASE_URL`. Run the phase verifiers, including `pnpm notifications:verify`, against an isolated seeded database to verify PostgreSQL persistence, ownership, financial transactions, notification delivery, and constraints.
 
 For an intentionally destructive demo reset, set the confirmation first:
 
@@ -99,6 +100,7 @@ The reset commands refuse production mode, missing confirmations, and unsafe dat
 - `pnpm payments-receipts:verify` - verify OTC payment allocation, overpayment rejection, idempotency, receipts, reversals, ledger restoration, audit events, and cleanup
 - `pnpm portals-online:verify` - verify parent/student ownership, persisted mock checkout/callback state, server-authorized success, duplicate callbacks, restart-safe verification, and cleanup
 - `pnpm reports-reconciliation:verify` - verify database-backed dashboard metrics, Manila date ranges, net/reversal totals, outstanding balances, statements, breakdowns, formula-safe CSV, statement PDF output, and cleanup
+- `pnpm notifications:verify` - verify persisted assessment/payment/receipt/reversal notifications, console fallback, provider failures and retries, financial success despite email failure, duplicate payment protection, duplicate callback protection, and cleanup
 - `pnpm db:seed` - seed fictional demo data
 - `pnpm db:reset` - reset the demo database after explicit confirmation
 - `pnpm db:test:reset` - reset only the separately configured test database

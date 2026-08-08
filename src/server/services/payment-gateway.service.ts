@@ -4,6 +4,7 @@ import { getDb, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import { mockCallbackInputSchema, type MockCallbackInput } from '@/lib/portal';
 import { AppError, NotFoundError, ValidationError } from '@/server/errors/index';
+import { NotificationService } from './notification.service';
 import { PaymentService } from './payment.service';
 
 export interface CheckoutInput {
@@ -204,7 +205,7 @@ export async function processMockCallback(
   }
 
   try {
-    return await db.transaction(async (tx) => {
+    const callbackResponse = await db.transaction(async (tx) => {
       const transactionDb = tx as unknown as DatabaseInstance;
       const duplicate = await selectExistingCallback(values, transactionDb);
       if (duplicate) {
@@ -265,6 +266,7 @@ export async function processMockCallback(
               paymentMethod: 'MOCK_ONLINE',
               referenceNumber: checkout.checkoutReference,
               idempotencyKey: `mock-online-${checkout.id}`,
+              skipNotifications: true,
             },
             transactionDb
           );
@@ -310,6 +312,10 @@ export async function processMockCallback(
         .where(eq(schema.mockPaymentCallbackEvents.id, event.id));
       return callbackResult(updatedCheckout ?? checkout, values, false);
     });
+    if (values.status === 'SUCCESS' && callbackResponse.paymentId) {
+      await NotificationService.notifyPaymentSuccessful(callbackResponse.paymentId);
+    }
+    return callbackResponse;
   } catch (error) {
     if (isUniqueViolation(error)) {
       const replay = await selectExistingCallback(values, db);
