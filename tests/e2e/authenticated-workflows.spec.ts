@@ -121,7 +121,7 @@ test.describe('authenticated financial workflow', () => {
         await finance.request.post('/api/admin/payments', {
           data: {
             studentId: createdStudent.id,
-            amountCentavos: 1_000_00,
+            amountCentavos: 10_000_00,
             paymentMethod: 'CASH',
             referenceNumber: `E2E-CASH-${suffix}`,
             idempotencyKey: `e2e-cash-${suffix}`,
@@ -129,7 +129,7 @@ test.describe('authenticated financial workflow', () => {
         })
       );
       expect(payment.receipt.status).toBe('ACTIVE');
-      expect(payment.remainingBalanceCentavos).toBe(6_000_00);
+      expect(payment.remainingBalanceCentavos).toBe(60_000_00);
 
       const parent = await parentContext.newPage();
       await login(parent, 'parent', 'parent@demo.school');
@@ -146,7 +146,7 @@ test.describe('authenticated financial workflow', () => {
         await parent.request.post('/api/portal/parent/checkouts', {
           data: {
             studentId: createdStudent.id,
-            amountCentavos: 500_00,
+            amountCentavos: 5_000_00,
             paymentChannel: 'GCash',
             idempotencyKey: `e2e-checkout-${suffix}`,
           },
@@ -189,7 +189,7 @@ test.describe('authenticated financial workflow', () => {
       );
       expect(reversed.paymentStatus).toBe('REVERSED');
       expect(reversed.receiptStatus).toBe('VOIDED');
-      expect(reversed.balanceCentavos).toBe(6_500_00);
+      expect(reversed.balanceCentavos).toBe(65_000_00);
 
       const receiptPdf = await finance.request.get(`/api/receipts/${payment.receipt.id}/pdf`);
       expect(receiptPdf.status()).toBe(200);

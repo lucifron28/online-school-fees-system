@@ -130,7 +130,7 @@ databaseContract('deterministic demo database workflow', () => {
       .from(schema.ledgerEntries)
       .where(eq(schema.ledgerEntries.studentId, partialStudent!.id));
     expect(ledgerBalance(partialEntries)).toBeGreaterThan(0);
-    expect(partialEntries.at(-1)?.balanceCentavos).toBe(5_000_00);
+    expect(partialEntries.at(-1)?.balanceCentavos).toBe(50_000_00);
 
     const fullyPaidStudent = (
       await db.select().from(schema.students).where(eq(schema.students.studentNumber, 'DEMO-0003'))
