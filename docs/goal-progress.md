@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: 5 - Assessments and Ledger (next)
-- Branch: `main`
-- Starting main commit for this phase: `c03bb8f`
+- Phase: 5 - Assessments and Ledger (in progress)
+- Branch: `feat/15-assessments-ledger`
+- Starting main commit for this phase: `75a955e`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 0 through Phase 4 are merged into `main`; Phase 4 adds persisted student, guardian, account-link, fee-category, and fee-structure management with hosted CI verification.
+- Current state: Phase 0 through Phase 4 are merged into `main`; Phase 5 adds persisted assessment snapshots, authoritative ledger balances, audited adjustments, and student-profile financial views.
 
 ## Completed phases
 
@@ -108,12 +108,33 @@ Phase 3 was implemented on `feat/13-core-administration` in commits `f1ef27e` an
 
 Phase 4 was implemented on `feat/14-students-guardians-fees` in commit `496ee86d384011f65ff5e607f5627b11ae9202d7`, reviewed in PR [#5](https://github.com/lucifron28/online-school-fees-system/pull/5), self-reviewed with no blocking findings, CI-verified by run [#37](https://github.com/lucifron28/online-school-fees-system/actions/runs/31263570390), and merged with regular merge commit `c03bb8fe9513e218ec02cba459f4eee49d4d0457`. Hosted Foundation CI passed formatting, lint, typecheck, 43 unit tests, production build, and Playwright E2E.
 
+## Phase 5 implementation
+
+- Replaced the simulated assessment service with PostgreSQL-backed assessment generation, authoritative active fee-structure loading, immutable item snapshots, transactional assessment ledger posting, and duplicate-period protection.
+- Added ledger-authoritative student balances, reason-required debit/credit adjustments, over-credit protection, and audit events for assessment posting and adjustments.
+- Added guarded assessment and adjustment Route Handlers plus persisted assessments and ledger entries to the admin student profile.
+- Added `assessments-ledger:verify`, which exercises persistence, snapshot immutability, duplicate rollback, balance reconciliation, audit records, over-credit rejection, and a forced post-insert transaction rollback.
+
+## Phase 5 commands and actual results
+
+| Command / check | Result | Notes |
+| --- | --- | --- |
+| `pnpm typecheck` | Passed | Strict TypeScript passed with the database service, Route Handlers, profile component, and verifier. |
+| `pnpm lint` | Passed | ESLint completed with exit code 0. |
+| Focused Prettier check | Passed | All Phase 5 files use repository Prettier formatting; the repository-wide local check still reports 82 pre-existing files. |
+| `vitest run` | Passed | 13 unit/component files and 43 tests passed with elevated read access required by the local sandbox. |
+| `pnpm assessments-ledger:verify` | Passed | Isolated `osfs_phase4` PostgreSQL verified authoritative posting, immutable snapshots, duplicate prevention, adjustments, audit rows, and full rollback; generated records were cleaned up. |
+
+## Phase 5 pull request evidence
+
+Phase 5 implementation and hosted CI/PR evidence will be recorded here after the focused commit is pushed and merged.
+
 ## Remaining work
 
-- Complete Phases 5-10 in the requested branch/PR/merge sequence.
+- Complete Phases 6-10 in the requested branch/PR/merge sequence.
 - Complete Phase 11 external audit preparation and final evidence report.
 
 ## Known blockers
 
 - The local `gh` CLI token remains invalid; the connected GitHub app is required for PR creation, review, and merge.
-- A real fictional Neon/test PostgreSQL URL is still required for remote deployment verification; isolated local PostgreSQL covers local runtime acceptance through Phase 4.
+- A real fictional Neon/test PostgreSQL URL is still required for remote deployment verification; isolated local PostgreSQL covers local runtime acceptance through Phase 5.
