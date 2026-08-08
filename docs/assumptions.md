@@ -70,6 +70,14 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - Fee categories used by a fee structure must be active at the time of assignment.
 - Once a student assessment is `POSTED`, the fee structure definition and items are immutable; archiving remains allowed.
 
-## 12. Current prototype boundary
+## 12. Assessment and ledger behavior
 
-Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, and Phase 4 student/guardian/fee administration are implemented and verified on isolated local PostgreSQL databases. Database-backed financial transactions, ownership queries, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
+- Assessment posting uses the fee structure's configured period, with `ANNUAL` as the default.
+- Only active students, active school years, and active fee structures can be posted.
+- Fee names, categories, and integer-centavo amounts are copied into assessment items and are not recalculated from a later fee-structure edit.
+- A student may have one assessment per school year and period. Duplicate generation is rejected by the service and database uniqueness constraint.
+- Ledger balances are the sum of persisted debits minus persisted credits. Credit adjustments cannot make the balance negative, and all adjustments require a reason and approving user.
+
+## 13. Current prototype boundary
+
+Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, and Phase 5 assessment/ledger posting are implemented and verified on isolated local PostgreSQL databases. Payment transactions, portal ownership queries, reports, notifications, and deployment remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
