@@ -1,41 +1,62 @@
-import { describe, it, expect } from 'vitest';
-import { ReportService, CollectionReportItem } from '@/server/services/report.service';
+import { describe, expect, it } from 'vitest';
+import {
+  getManilaDateString,
+  parseManilaDateStart,
+  resolveReportDateRange,
+  type CollectionReportItem,
+} from '@/lib/reports';
+import { ReportService, protectSpreadsheetFormula } from '@/server/services/report.service';
 
-describe('Financial Reports & Dashboard Metrics Logic', () => {
+function collectionItem(overrides: Partial<CollectionReportItem> = {}): CollectionReportItem {
+  return {
+    id: 'payment-1',
+    receiptNumber: 'OSFS-2026-000123',
+    studentId: 'student-1',
+    studentNumber: 'STU-001',
+    studentName: 'Juan Dela Cruz',
+    gradeLevelName: 'Grade 10',
+    sectionName: 'A',
+    amountCentavos: 1400000,
+    paymentMethod: 'CASH',
+    referenceNumber: null,
+    status: 'POSTED',
+    createdAt: new Date('2026-08-08T04:00:00.000Z'),
+    reconciliationStatus: 'RECONCILED',
+    note: 'Payment, allocation, and receipt are present.',
+    ...overrides,
+  };
+}
+
+describe('Financial Reports & Reconciliation Logic', () => {
   it('excludes REVERSED payments from net collection totals', () => {
     const payments = [
-      { amountCentavos: 1000000, status: 'POSTED' }, // ₱10,000.00
-      { amountCentavos: 500000, status: 'POSTED' }, // ₱5,000.00
-      { amountCentavos: 2000000, status: 'REVERSED' }, // ₱20,000.00 (REVERSED)
+      { amountCentavos: 1000000, status: 'POSTED' },
+      { amountCentavos: 500000, status: 'POSTED' },
+      { amountCentavos: 2000000, status: 'REVERSED' },
     ];
 
-    const net = ReportService.calculateNetCollections(payments);
-    expect(net).toBe(1500000); // Only ₱15,000.00 posted
+    expect(ReportService.calculateNetCollections(payments)).toBe(1500000);
   });
 
-  it('generates valid CSV format string from report items', () => {
-    const items: CollectionReportItem[] = [
-      {
-        id: '1',
-        receiptNumber: 'OSFS-2026-000123',
-        studentName: 'Juan Dela Cruz',
-        amountCentavos: 1400000,
-        paymentMethod: 'GCash',
-        status: 'POSTED',
-        createdAt: new Date('2024-05-30'),
-      },
-    ];
+  it('generates CSV rows with escaped fields and formula protection', () => {
+    const csv = ReportService.generateCsvReport([
+      collectionItem({ studentName: '=HYPERLINK("https://attacker.example")' }),
+    ]);
 
-    const csv = ReportService.generateCsvReport(items);
-    expect(csv).toContain('OR Number,Student Name,Amount (PHP),Payment Method,Status,Date');
-    expect(csv).toContain('OSFS-2026-000123');
-    expect(csv).toContain('Juan Dela Cruz');
+    expect(csv).toContain('"Payment ID"');
+    expect(csv).toContain('\'=HYPERLINK(""https://attacker.example"")');
+    expect(protectSpreadsheetFormula('+SUM(A1)')).toBe("'+SUM(A1)");
+    expect(protectSpreadsheetFormula('Juan Dela Cruz')).toBe('Juan Dela Cruz');
   });
 
-  it('returns valid dashboard summary metrics', () => {
-    const metrics = ReportService.computeDashboardSummary();
-    expect(metrics.activeStudents).toBe(1245);
-    expect(metrics.collectionsMonthCentavos).toBe(124500000);
-    expect(metrics.postedTransactionsCount).toBe(2350);
+  it('resolves report ranges using Asia/Manila calendar boundaries', () => {
+    const now = new Date('2026-08-08T16:30:00.000Z');
+    const range = resolveReportDateRange({}, now);
+
+    expect(getManilaDateString(now)).toBe('2026-08-09');
+    expect(range.from).toBe('2026-08-01');
+    expect(range.to).toBe('2026-08-09');
+    expect(range.start).toEqual(parseManilaDateStart('2026-08-01'));
+    expect(range.end).toEqual(parseManilaDateStart('2026-08-10'));
   });
 });
