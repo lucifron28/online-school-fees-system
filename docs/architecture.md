@@ -120,3 +120,16 @@ The Phase 7 invariants are:
 - a verified `SUCCESS` callback calls the shared `PaymentService` with `MOCK_ONLINE`, then records the checkout payment ID;
 - duplicate callback events and repeated checkout idempotency keys return the existing persisted result without duplicate financial records;
 - a new gateway instance can verify the same checkout because state is not held in a module-level map.
+
+## Reports and reconciliation boundary
+
+`src/server/services/report.service.ts` owns dashboard metrics, date-range collection/payment-history reports, outstanding balances, reversals, payment-method and grade-level breakdowns, student statements, CSV serialization, and reconciliation flags. Every report Route Handler requires `ADMIN` or `FINANCE_STAFF`; parent and student users cannot access administrative report data.
+
+The Phase 8 invariants are:
+
+- date filters are converted from Asia/Manila calendar dates to UTC instants before PostgreSQL comparison;
+- net collections include only `POSTED` payments, while `REVERSED` payments remain visible in the reversal and transaction reports;
+- dashboard totals, screen tables, and CSV exports use the same service results, so exported totals cannot diverge from displayed totals;
+- CSV cells beginning with spreadsheet formula characters are prefixed with a text marker to prevent formula injection;
+- reconciliation is `RECONCILED` only when the persisted receipt and allocation total agree with the payment; missing or mismatched records are marked `REVIEW`;
+- student statements and statement PDFs are generated from persisted ledger entries and student data, with the demo disclaimer preserved.

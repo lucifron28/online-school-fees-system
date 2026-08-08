@@ -96,6 +96,15 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - Replayed callback events and repeated checkout idempotency keys return the existing persisted result and do not create duplicate payments, allocations, receipts, or audit events.
 - The online flow is intentionally a mock demonstration. It does not connect to GCash, Maya, card networks, banks, or a real payment provider.
 
-## 15. Current prototype boundary
+## 15. Reports and reconciliation
 
-Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, Phase 5 assessment/ledger posting, Phase 6 OTC payment/receipt/reversal transactions, and Phase 7 portal ownership/mock online-payment persistence are implemented and verified on isolated local PostgreSQL databases. Reports, notifications, deployment, and a populated demo relationship seed remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
+- Administrative reports are available only to `ADMIN` and `FINANCE_STAFF` users.
+- Report date inputs are Manila calendar dates. The server converts the start of the selected day and the exclusive end of the selected day using `Asia/Manila` before querying PostgreSQL.
+- Net collections include only `POSTED` payments. `REVERSED` payments remain visible in payment history and reversal reports and are excluded from dashboard and collection net totals.
+- CSV exports use the same report result as the screen and prefix spreadsheet formula-looking cells with a text marker to prevent formula injection.
+- A payment is `RECONCILED` when its persisted receipt exists and its persisted allocation total equals the payment amount. Missing or mismatched financial relationships are marked `REVIEW` with a note.
+- Student statements and PDFs are generated from persisted ledger entries; the PDF remains a fictional demo document and is not an official tax or accounting record.
+
+## 16. Current prototype boundary
+
+Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, Phase 5 assessment/ledger posting, Phase 6 OTC payment/receipt/reversal transactions, Phase 7 portal ownership/mock online-payment persistence, and Phase 8 reports/reconciliation are implemented and verified on isolated local PostgreSQL databases. Notifications, deployment, and a populated demo relationship seed remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
