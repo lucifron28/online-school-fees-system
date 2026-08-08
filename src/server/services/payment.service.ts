@@ -12,13 +12,17 @@ import {
 import { addCentavos, formatCentavos, subtractCentavos } from '@/lib/utils/currency';
 import { AppError, NotFoundError, ValidationError } from '@/server/errors';
 import { calculateBalanceFromEntries } from './assessment.service';
+import { NotificationService, type EmailProvider } from './notification.service';
 
 export interface OtcPaymentInput extends PaymentPostInput {
   processedByUserId: string;
+  notificationProvider?: EmailProvider;
 }
 
 export interface OnlinePaymentInput extends PaymentPostInput {
   processedByUserId?: string | null;
+  skipNotifications?: boolean;
+  notificationProvider?: EmailProvider;
 }
 
 export interface ReversalInput extends ReversalPostInput {
@@ -492,7 +496,15 @@ export class PaymentService {
         return payment;
       });
 
-      return getPayment(created.id, db);
+      const payment = await getPayment(created.id, db);
+      if (!('skipNotifications' in input && input.skipNotifications)) {
+        await NotificationService.notifyPaymentSuccessful(
+          created.id,
+          undefined,
+          input.notificationProvider
+        );
+      }
+      return payment;
     } catch (error) {
       if (isUniqueViolation(error)) {
         const replay = await findPaymentByIdempotencyKey(values.idempotencyKey, db);
@@ -509,7 +521,7 @@ export class PaymentService {
       throw new ValidationError('An authenticated administrator is required to reverse a payment.');
     }
 
-    return db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const transactionDb = tx as unknown as DatabaseInstance;
       const paymentRows = await tx
         .select({
@@ -598,5 +610,7 @@ export class PaymentService {
         balanceCentavos: nextBalance,
       };
     });
+    await NotificationService.notifyPaymentReversed(result.paymentId);
+    return result;
   }
 }
