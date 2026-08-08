@@ -6,13 +6,23 @@ export type DatabaseInstance = NeonHttpDatabase<typeof schema>;
 
 let _dbInstance: DatabaseInstance | null = null;
 
+export function createDb(databaseUrl: string): DatabaseInstance {
+  if (!databaseUrl) {
+    throw new Error('A database URL is required to create a database client.');
+  }
+
+  const sql: NeonQueryFunction<boolean, boolean> = neon(databaseUrl);
+  return drizzle(sql, { schema });
+}
+
 /**
  * Server-only database accessor.
  * Returns the Drizzle ORM database client initialized with Neon PostgreSQL.
  * Allows build-time initialization without requiring an active database connection.
  * Throws a clear configuration error if DATABASE_URL is not set when a database operation is actually invoked at runtime.
  */
-export function getDb(): DatabaseInstance {
+export function getDb(databaseUrlOverride?: string): DatabaseInstance {
+  if (databaseUrlOverride) return createDb(databaseUrlOverride);
   if (_dbInstance) return _dbInstance;
 
   const databaseUrl = process.env.DATABASE_URL;
@@ -24,8 +34,7 @@ export function getDb(): DatabaseInstance {
     return _dbInstance;
   }
 
-  const sql: NeonQueryFunction<boolean, boolean> = neon(databaseUrl);
-  _dbInstance = drizzle(sql, { schema });
+  _dbInstance = createDb(databaseUrl);
   return _dbInstance;
 }
 

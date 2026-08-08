@@ -1,4 +1,4 @@
-import { getDb } from '../index';
+import { DatabaseInstance, getDb } from '../index';
 import * as schema from '../schema';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -13,10 +13,8 @@ function hashPassword(password: string): string {
   return crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
 }
 
-export async function seedDemoData() {
+export async function seedDemoData(db: DatabaseInstance = getDb()) {
   console.log('🌱 Seeding demo database...');
-
-  const db = getDb();
 
   // 1. Institution Settings
   const existingSettings = await db.select().from(schema.schoolSettings).limit(1);
