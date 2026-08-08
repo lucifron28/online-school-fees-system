@@ -9,6 +9,29 @@ on:
 jobs:
   quality-and-build:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/osfs_demo
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/osfs_test
+      BETTER_AUTH_SECRET: ci-only-fictional-secret-32-characters-minimum
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NODE_ENV: test
+      ENABLE_STUDENT_PORTAL: 'true'
+      NEXT_PUBLIC_ENABLE_DEMO_NAV: 'true'
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -27,6 +50,29 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Create dedicated PostgreSQL databases
+        env:
+          PGPASSWORD: postgres
+        run: |
+          createdb -h localhost -U postgres osfs_demo
+          createdb -h localhost -U postgres osfs_test
+
+      - name: Apply application migrations
+        run: pnpm db:migrate
+
+      - name: Seed application demo database
+        run: pnpm db:seed
+
+      - name: Apply integration database migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/osfs_test
+        run: pnpm db:migrate
+
+      - name: Safely reset and seed integration database
+        env:
+          TEST_DB_RESET_CONFIRMATION: RESET_TEST_DATABASE
+        run: pnpm db:test:reset
+
       - name: Check Formatting
         run: pnpm format:check
 
@@ -38,6 +84,9 @@ jobs:
 
       - name: Run Unit Tests
         run: pnpm test
+
+      - name: Run Database Integration Tests
+        run: pnpm test:integration
 
       - name: Production Build
         run: pnpm build
