@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
 import { getDb } from '@/db';
 import * as schema from '@/db/schema';
@@ -15,7 +16,7 @@ async function main() {
   if (!databaseUrl) throw new Error('DATABASE_URL is required for reports verification.');
 
   const db = getDb(databaseUrl);
-  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const suffix = `${Date.now()}-${randomUUID()}`;
   let studentId: string | undefined;
   let assessmentId: string | undefined;
   let assessmentItemId: string | undefined;

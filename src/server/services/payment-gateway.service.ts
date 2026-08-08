@@ -57,12 +57,16 @@ function eventTypeForStatus(status: MockCallbackInput['status']) {
   }[status] as (typeof schema.mockPaymentCallbackEvents.$inferInsert)['eventType'];
 }
 
-async function selectCheckoutByReference(reference: string, db: DatabaseInstance) {
-  const rows = await db
+async function selectCheckoutByReference(
+  reference: string,
+  db: DatabaseInstance,
+  lockForUpdate = false
+) {
+  const query = db
     .select()
     .from(schema.mockPaymentCheckouts)
-    .where(eq(schema.mockPaymentCheckouts.checkoutReference, reference))
-    .limit(1);
+    .where(eq(schema.mockPaymentCheckouts.checkoutReference, reference));
+  const rows = lockForUpdate ? await query.for('update').limit(1) : await query.limit(1);
   if (!rows[0]) throw new NotFoundError('The mock payment checkout does not exist.');
   return rows[0];
 }
@@ -218,7 +222,11 @@ export async function processMockCallback(
         );
       }
 
-      const checkout = await selectCheckoutByReference(values.paymentReference, transactionDb);
+      const checkout = await selectCheckoutByReference(
+        values.paymentReference,
+        transactionDb,
+        true
+      );
       const [event] = await tx
         .insert(schema.mockPaymentCallbackEvents)
         .values({
@@ -231,6 +239,15 @@ export async function processMockCallback(
         })
         .returning();
       if (!event) throw new AppError('The mock callback event could not be recorded.');
+
+      if (checkout.status === 'SUCCEEDED' && values.status !== 'SUCCESS') {
+        const message = 'A successfully completed checkout cannot be downgraded.';
+        await tx
+          .update(schema.mockPaymentCallbackEvents)
+          .set({ processingStatus: 'FAILED', processedAt: new Date(), errorMessage: message })
+          .where(eq(schema.mockPaymentCallbackEvents.id, event.id));
+        return callbackResult(checkout, values, false, 'FAILED', message);
+      }
 
       if (values.status === 'PENDING') {
         const [updatedCheckout] = await tx

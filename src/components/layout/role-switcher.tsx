@@ -36,7 +36,7 @@ export function DevRoleSwitcher() {
     {
       num: 8,
       label: '8. Admin Student Profile',
-      href: '/admin/students/S2024-0001',
+      href: '/admin/students',
       group: 'Admin',
     },
     { num: 9, label: '9. Parent Login', href: '/login/parent', group: 'Login' },
@@ -44,14 +44,14 @@ export function DevRoleSwitcher() {
     {
       num: 11,
       label: '11. Parent Child Account Details',
-      href: '/parent/children/S2024-0001',
+      href: '/parent/dashboard',
       group: 'Parent',
     },
     { num: 12, label: '12. Parent Make Payment (Online)', href: '/parent/pay', group: 'Parent' },
     {
       num: 13,
       label: '13. Parent Payment Receipt',
-      href: '/parent/receipts/OR-2024-000123',
+      href: '/parent/history',
       group: 'Parent',
     },
     { num: 14, label: '14. Parent Payment History', href: '/parent/history', group: 'Parent' },
@@ -62,13 +62,13 @@ export function DevRoleSwitcher() {
     {
       num: 19,
       label: '19. Student Payment Receipt',
-      href: '/student/receipts/OR-2024-000123',
+      href: '/student/history',
       group: 'Student',
     },
     {
       num: 20,
       label: '20. Admin Transaction Details',
-      href: '/admin/transactions/OR-2024-000123',
+      href: '/admin/transactions',
       group: 'Admin',
     },
   ];

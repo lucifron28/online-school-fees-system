@@ -103,15 +103,15 @@ export default function HomeHubPage() {
         {
           num: 8,
           title: 'ADMIN STUDENT PROFILE',
-          desc: 'Student profile header, fee assessment breakdown, and payment history',
-          href: '/admin/students/S2024-0001',
+          desc: 'Select a persisted student to view the profile, assessment, and payment history',
+          href: '/admin/students',
           icon: Users,
         },
         {
           num: 20,
           title: 'LAST TRANSACTION DETAILS',
-          desc: 'Detailed view of completed transaction OR-2024-000123 with print option',
-          href: '/admin/transactions/OR-2024-000123',
+          desc: 'Select a persisted transaction to view details and print its acknowledgment',
+          href: '/admin/transactions',
           icon: Receipt,
         },
       ],
@@ -132,8 +132,8 @@ export default function HomeHubPage() {
         {
           num: 11,
           title: 'CHILD ACCOUNT DETAILS',
-          desc: 'Itemized fee breakdown, paid vs. balance breakdown, and status badges',
-          href: '/parent/children/S2024-0001',
+          desc: 'Select a linked child to view itemized fees, payments, and balance status',
+          href: '/parent/dashboard',
           icon: Users,
         },
         {
@@ -146,8 +146,8 @@ export default function HomeHubPage() {
         {
           num: 13,
           title: 'PARENT PAYMENT RECEIPT',
-          desc: 'Official digital receipt view with itemized charges and download action',
-          href: '/parent/receipts/OR-2024-000123',
+          desc: 'Select a persisted acknowledgment receipt from payment history',
+          href: '/parent/history',
           icon: Receipt,
         },
         {
@@ -189,8 +189,8 @@ export default function HomeHubPage() {
         {
           num: 19,
           title: 'STUDENT PAYMENT RECEIPT',
-          desc: 'Digital receipt viewer for completed payments',
-          href: '/student/receipts/OR-2024-000123',
+          desc: 'Select a persisted acknowledgment receipt from payment history',
+          href: '/student/history',
           icon: Receipt,
         },
       ],
