@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
@@ -33,6 +34,7 @@ async function main() {
   const checks: string[] = [];
   const createdStudentIds: string[] = [];
   const createdGuardianIds: string[] = [];
+  const createdUserIds: string[] = [];
   const createdStructureIds: string[] = [];
   const createdCategoryIds: string[] = [];
   const createdAssessmentIds: string[] = [];
@@ -65,13 +67,27 @@ async function main() {
 
   try {
     const studentNumber = `VERIFY-${stamp}`;
+    const verificationUserId = randomUUID();
+    const [verificationUser] = await db
+      .insert(schema.users)
+      .values({
+        id: verificationUserId,
+        name: 'Students and fees verification user',
+        email: `students-fees-${stamp}@example.com`,
+        role: 'STUDENT',
+        active: true,
+        emailVerified: true,
+      })
+      .returning({ id: schema.users.id });
+    if (!verificationUser) throw new Error('Verification student account could not be created.');
+    createdUserIds.push(verificationUser.id);
     const student = await createStudent(
       {
         studentNumber,
         firstName: 'Phase Four',
         lastName: 'Student',
         email: `phase-four-student-${stamp}@example.com`,
-        userId: studentUser[0].id,
+        userId: verificationUser.id,
         gradeLevelId: gradeLevel[0].id,
         sectionId: null,
         schoolYearId: activeSchoolYear[0].id,
@@ -87,7 +103,7 @@ async function main() {
       'Student did not persist across reads.'
     );
     assertCheck(
-      persistedStudent.userId === studentUser[0].id,
+      persistedStudent.userId === verificationUser.id,
       'Student account link did not persist.'
     );
 
@@ -265,6 +281,9 @@ async function main() {
     }
     for (const studentId of createdStudentIds) {
       await db.delete(schema.students).where(eq(schema.students.id, studentId));
+    }
+    for (const userId of createdUserIds) {
+      await db.delete(schema.users).where(eq(schema.users.id, userId));
     }
     for (const categoryId of createdCategoryIds) {
       await db.delete(schema.feeCategories).where(eq(schema.feeCategories.id, categoryId));
