@@ -349,9 +349,8 @@ test.describe('authenticated financial workflow', () => {
       await expect(finance).toHaveURL(/\/admin\/transactions\//, { timeout: 15_000 });
       const firstTransactionUrl = finance.url();
       await expect(
-        finance.getByText('Remaining Balance After Payment:', { exact: false })
-      ).toBeVisible();
-      await expect(finance.getByText('₱60,000.00')).toBeVisible();
+        finance.getByText('Remaining Balance After Payment:', { exact: false }).locator('..')
+      ).toContainText('₱60,000.00');
 
       await finance.goto('/admin/payments/manual');
       await studentSelect.selectOption(withdrawnStudentId!);
@@ -368,7 +367,7 @@ test.describe('authenticated financial workflow', () => {
         '₱55,000.00'
       );
       await expect(
-        finance.getByText('Remaining Balance After Payment:', { exact: false })
+        finance.getByText('Remaining Balance After Payment:', { exact: false }).locator('..')
       ).toContainText('₱60,000.00');
     } finally {
       await financeContext.close();
