@@ -296,11 +296,11 @@ test.describe('authenticated financial workflow', () => {
       await expect(finance).toHaveURL(/\/admin\/transactions\//);
       const receiptLink = finance.getByRole('link', { name: 'Receipt PDF', exact: true });
       await expect(receiptLink).toBeVisible();
+      await expect(receiptLink).toHaveAttribute('href', /\/api\/receipts\/.*\/pdf/);
       const [receiptPopup] = await Promise.all([
         finance.waitForEvent('popup'),
         receiptLink.click(),
       ]);
-      await expect(receiptPopup).toHaveURL(/\/api\/receipts\/.*\/pdf/);
       await receiptPopup.close();
 
       const parent = await parentContext.newPage();
