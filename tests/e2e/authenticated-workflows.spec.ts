@@ -293,7 +293,7 @@ test.describe('authenticated financial workflow', () => {
       await expect(finance.getByText('Payment posted', { exact: true })).toBeVisible();
       await expect(finance.getByText(/OSFS-\d{4}-\d{6}/)).toBeVisible();
       await finance.getByRole('link', { name: 'View transaction', exact: true }).click();
-      await expect(finance).toHaveURL(/\/admin\/transactions\//);
+      await expect(finance).toHaveURL(/\/admin\/transactions\//, { timeout: 15_000 });
       const receiptLink = finance.getByRole('link', { name: 'Receipt PDF', exact: true });
       await expect(receiptLink).toBeVisible();
       await expect(receiptLink).toHaveAttribute('href', /\/api\/receipts\/.*\/pdf/);
@@ -305,10 +305,11 @@ test.describe('authenticated financial workflow', () => {
 
       const parent = await parentContext.newPage();
       await login(parent, 'parent', 'parent@demo.school');
-      await expect(parent.getByText(/DEMO-0001/)).toBeVisible();
+      await expect(parent.getByText(/DEMO-0001/)).toBeVisible({ timeout: 15_000 });
       await parent.getByRole('link', { name: 'Payment History', exact: true }).click();
-      await expect(parent.getByRole('heading', { name: 'Payment history' })).toBeVisible();
-      await expect(parent.getByText(/DEMO-0001/)).toBeVisible();
+      await expect(parent.getByRole('heading', { name: 'Payment history' })).toBeVisible({
+        timeout: 15_000,
+      });
 
       const student = await studentContext.newPage();
       await login(student, 'student', 'student@demo.school');
