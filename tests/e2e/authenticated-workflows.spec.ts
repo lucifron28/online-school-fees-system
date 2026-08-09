@@ -261,8 +261,8 @@ test.describe('authenticated financial workflow', () => {
         .getByLabel('Student email')
         .fill(`browser.${suffix}@schoolfees.example.com`);
       await studentEditor.getByLabel('School year').first().selectOption({ index: 1 });
-      await studentEditor.getByLabel('Grade level').selectOption({ label: 'Grade 7' });
-      await studentEditor.getByLabel('Section').selectOption({ label: 'Section A (G7-A)' });
+      await studentEditor.getByLabel('Grade level').first().selectOption({ label: 'Grade 7' });
+      await studentEditor.getByLabel('Section').first().selectOption({ label: 'Section A (G7-A)' });
       await studentEditor.getByRole('button', { name: 'Create student', exact: true }).click();
 
       const studentRow = admin.getByRole('row').filter({ hasText: `BROWSER-${suffix}` });
