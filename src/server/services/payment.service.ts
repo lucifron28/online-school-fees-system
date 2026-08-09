@@ -12,7 +12,9 @@ import {
 import { addCentavos, formatCentavos, subtractCentavos } from '@/lib/utils/currency';
 import { AppError, NotFoundError, ValidationError } from '@/server/errors';
 import { calculateBalanceFromEntries } from './assessment.service';
+import { lockStudentForLedgerMutation } from './ledger.service';
 import { NotificationService, type EmailProvider } from './notification.service';
+import { allocateReceiptNumber } from './receipt.service';
 
 export interface OtcPaymentInput extends PaymentPostInput {
   processedByUserId: string;
@@ -395,13 +397,7 @@ export class PaymentService {
         const duplicate = await findPaymentByIdempotencyKey(values.idempotencyKey, transactionDb);
         if (duplicate[0]) return duplicate[0];
 
-        const student = await tx
-          .select({ id: schema.students.id, status: schema.students.status })
-          .from(schema.students)
-          .where(eq(schema.students.id, values.studentId))
-          .for('update')
-          .limit(1);
-        if (!student[0]) throw new NotFoundError('The student does not exist.');
+        const student = await lockStudentForLedgerMutation(values.studentId, transactionDb);
 
         const [ledger, outstandingItems] = await Promise.all([
           selectStudentLedger(values.studentId, transactionDb),
@@ -462,7 +458,7 @@ export class PaymentService {
           description: `Payment ${payment.id}`,
         });
 
-        const receiptNumber = `OSFS-${new Date().getUTCFullYear()}-${payment.id}`;
+        const { receiptNumber } = await allocateReceiptNumber(transactionDb, payment.createdAt);
         const verificationIdentifier = `VER-${payment.id}`;
         const [receipt] = await tx
           .insert(schema.receipts)
@@ -501,7 +497,7 @@ export class PaymentService {
       if (!('skipNotifications' in input && input.skipNotifications)) {
         await NotificationService.notifyPaymentSuccessful(
           created.id,
-          undefined,
+          db,
           input.notificationProvider
         );
       }
@@ -548,13 +544,7 @@ export class PaymentService {
         throw new ValidationError('Only a posted payment can be reversed.');
       }
 
-      const studentRows = await tx
-        .select({ id: schema.students.id })
-        .from(schema.students)
-        .where(eq(schema.students.id, payment.studentId))
-        .for('update')
-        .limit(1);
-      if (!studentRows[0]) throw new NotFoundError('The student does not exist.');
+      await lockStudentForLedgerMutation(payment.studentId, transactionDb);
 
       const existingReversal = await tx
         .select({ id: schema.paymentReversals.id })
@@ -619,7 +609,7 @@ export class PaymentService {
         balanceCentavos: nextBalance,
       };
     });
-    await NotificationService.notifyPaymentReversed(result.paymentId);
+    await NotificationService.notifyPaymentReversed(result.paymentId, db);
     return result;
   }
 }

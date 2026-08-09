@@ -83,13 +83,13 @@ export default function ParentDashboardPage() {
             <Card className="shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">Total posted paid</span>
+                  <span className="text-xs font-semibold text-slate-500">Net payments</span>
                   <DollarSign className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="mt-3 text-3xl font-extrabold text-slate-900">
                   {formatCentavos(paid)}
                 </div>
-                <p className="mt-1 text-xs text-slate-500">Persisted finance ledger credits</p>
+                <p className="mt-1 text-xs text-slate-500">Payments less persisted reversals</p>
               </CardContent>
             </Card>
           </div>

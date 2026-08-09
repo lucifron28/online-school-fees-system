@@ -2,8 +2,8 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { getDb, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import { getServerEnv } from '@/lib/env';
-import { addCentavos } from '@/lib/utils/currency';
 import { calculateBalanceFromEntries } from './assessment.service';
+import { calculateNetPaidFromEntries } from './ledger.service';
 import { getReceiptPdfData } from './payment.service';
 import { ForbiddenError, NotFoundError, ValidationError } from '@/server/errors/index';
 import { getStudentAssessments, getStudentLedger } from './assessment.service';
@@ -84,17 +84,27 @@ async function selectLedgerTotals(studentIds: string[], db: DatabaseInstance) {
     .from(schema.ledgerEntries)
     .where(inArray(schema.ledgerEntries.studentId, studentIds));
 
-  const totals = new Map<string, { balance: number; paid: number }>();
+  const entriesByStudent = new Map<
+    string,
+    Array<{
+      entryType: string;
+      debitCentavos: number;
+      creditCentavos: number;
+    }>
+  >();
   for (const entry of entries) {
-    const current = totals.get(entry.studentId) ?? { balance: 0, paid: 0 };
-    current.balance = calculateBalanceFromEntries([
-      { debitCentavos: current.balance, creditCentavos: 0 },
-      { debitCentavos: entry.debitCentavos, creditCentavos: entry.creditCentavos },
-    ]);
-    if (entry.entryType === 'PAYMENT') {
-      current.paid = addCentavos(current.paid, entry.creditCentavos);
-    }
-    totals.set(entry.studentId, current);
+    const studentEntries = entriesByStudent.get(entry.studentId) ?? [];
+    studentEntries.push(entry);
+    entriesByStudent.set(entry.studentId, studentEntries);
+  }
+
+  const totals = new Map<string, { balance: number; paid: number }>();
+  for (const studentId of studentIds) {
+    const studentEntries = entriesByStudent.get(studentId) ?? [];
+    totals.set(studentId, {
+      balance: calculateBalanceFromEntries(studentEntries),
+      paid: calculateNetPaidFromEntries(studentEntries),
+    });
   }
   return totals;
 }
@@ -269,9 +279,7 @@ export async function getStudentAccountForUser(
   return {
     student: toChildSummary(studentProfile, {
       balance: ledger.balanceCentavos,
-      paid: ledger.entries
-        .filter((entry) => entry.entryType === 'PAYMENT')
-        .reduce((total, entry) => addCentavos(total, entry.creditCentavos), 0),
+      paid: calculateNetPaidFromEntries(ledger.entries),
     }),
     assessments,
     ledger,
