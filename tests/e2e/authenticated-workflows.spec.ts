@@ -251,14 +251,19 @@ test.describe('authenticated financial workflow', () => {
       await admin.goto('/admin/students');
       await admin.getByRole('button', { name: 'Add student', exact: true }).click();
       await expect(admin.getByRole('heading', { name: 'Add student record' })).toBeVisible();
-      await admin.getByLabel('Student number').fill(`BROWSER-${suffix}`);
-      await admin.getByLabel('First name').fill('Browser');
-      await admin.getByLabel('Last name').fill('Flow');
-      await admin.getByLabel('Student email').fill(`browser.${suffix}@schoolfees.example.com`);
-      await admin.getByLabel('School year').selectOption({ index: 1 });
-      await admin.getByLabel('Grade level').selectOption({ label: 'Grade 7' });
-      await admin.getByLabel('Section').selectOption({ label: 'Section A (G7-A)' });
-      await admin.getByRole('button', { name: 'Create student', exact: true }).click();
+      const studentEditor = admin.locator('form').filter({
+        has: admin.getByRole('button', { name: 'Create student', exact: true }),
+      });
+      await studentEditor.getByLabel('Student number').fill(`BROWSER-${suffix}`);
+      await studentEditor.getByLabel('First name').fill('Browser');
+      await studentEditor.getByLabel('Last name').fill('Flow');
+      await studentEditor
+        .getByLabel('Student email')
+        .fill(`browser.${suffix}@schoolfees.example.com`);
+      await studentEditor.getByLabel('School year').selectOption({ index: 1 });
+      await studentEditor.getByLabel('Grade level').selectOption({ label: 'Grade 7' });
+      await studentEditor.getByLabel('Section').selectOption({ label: 'Section A (G7-A)' });
+      await studentEditor.getByRole('button', { name: 'Create student', exact: true }).click();
 
       const studentRow = admin.getByRole('row').filter({ hasText: `BROWSER-${suffix}` });
       await expect(studentRow).toBeVisible();
