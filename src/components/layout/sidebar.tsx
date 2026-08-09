@@ -22,7 +22,7 @@ import {
   Wallet,
 } from 'lucide-react';
 
-export type Role = 'admin' | 'parent' | 'student';
+export type Role = 'admin' | 'finance' | 'parent' | 'student';
 
 interface SidebarProps {
   role: Role;
@@ -65,17 +65,35 @@ export function Sidebar({
     { name: 'Notifications', href: '/student/notifications', icon: BellRing },
   ];
 
-  const navItems = role === 'admin' ? adminNav : role === 'parent' ? parentNav : studentNav;
+  const navItems =
+    role === 'admin'
+      ? adminNav
+      : role === 'finance'
+        ? adminNav.filter((item) => !['Users', 'Settings'].includes(item.name))
+        : role === 'parent'
+          ? parentNav
+          : studentNav;
+
+  const portalPath = role === 'parent' ? '/parent' : role === 'student' ? '/student' : '/admin';
 
   const roleTitle =
     role === 'admin'
       ? 'Administrator Portal'
-      : role === 'parent'
-        ? 'Parent Portal'
-        : 'Student Portal';
-  const roleBadge = role === 'admin' ? 'ADMIN' : role === 'parent' ? 'PARENT' : 'STUDENT';
-  const roleColor =
+      : role === 'finance'
+        ? 'Finance Staff Portal'
+        : role === 'parent'
+          ? 'Parent Portal'
+          : 'Student Portal';
+  const roleBadge =
     role === 'admin'
+      ? 'ADMIN'
+      : role === 'finance'
+        ? 'FINANCE STAFF'
+        : role === 'parent'
+          ? 'PARENT'
+          : 'STUDENT';
+  const roleColor =
+    role === 'admin' || role === 'finance'
       ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
       : role === 'parent'
         ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/30'
@@ -109,7 +127,7 @@ export function Sidebar({
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href !== `/${role}/dashboard` && pathname.startsWith(item.href));
+            (item.href !== `${portalPath}/dashboard` && pathname.startsWith(item.href));
           const Icon = item.icon;
           return (
             <Link
@@ -142,11 +160,11 @@ export function Sidebar({
         <div className="flex items-center justify-between rounded-lg bg-slate-800/50 px-3 py-2 text-xs">
           <div className="flex items-center space-x-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-700 font-bold text-slate-200">
-              {role === 'admin' ? 'A' : role === 'parent' ? 'P' : 'S'}
+              {role === 'admin' ? 'A' : role === 'finance' ? 'F' : role === 'parent' ? 'P' : 'S'}
             </div>
             <div>
               <p className="max-w-[110px] truncate font-medium text-slate-200">{userName}</p>
-              <p className="text-[10px] capitalize text-slate-400">{role}</p>
+              <p className="text-[10px] text-slate-400">{roleTitle}</p>
             </div>
           </div>
         </div>

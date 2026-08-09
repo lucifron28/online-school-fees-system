@@ -9,7 +9,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-      <Sidebar role="admin" userName={user.name} logoutPath="/login/admin" />
+      <Sidebar
+        role={user.role === 'FINANCE_STAFF' ? 'finance' : 'admin'}
+        userName={user.name}
+        logoutPath="/login/admin"
+      />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header
           userName={user.name}
