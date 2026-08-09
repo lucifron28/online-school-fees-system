@@ -46,7 +46,11 @@ export async function getCurrentUser(
       active,
     };
   } catch (error) {
-    return null;
+    console.error('Authentication session lookup failed.', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+      message: error instanceof Error ? error.message : 'Unknown authentication error',
+    });
+    throw error;
   }
 }
 
@@ -101,7 +105,10 @@ export async function requirePortalUser(
     if (error instanceof Error && error.message === 'UNAUTHENTICATED') {
       redirect(loginPath);
     }
-    redirect('/unauthorized');
+    if (error instanceof Error && error.message === 'FORBIDDEN') {
+      redirect('/unauthorized');
+    }
+    throw error;
   }
 }
 

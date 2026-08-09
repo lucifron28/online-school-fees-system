@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { UserRole } from '@/server/auth/guards';
+import { routeErrorResponse } from '@/server/http';
 
 describe('Auth & RBAC Logic Tests', () => {
   it('identifies demo user roles correctly', () => {
@@ -49,5 +50,14 @@ describe('Auth & RBAC Logic Tests', () => {
     expect(canAccessStudent('STUDENT')).toBe(true);
     expect(canAccessStudent('ADMIN')).toBe(false);
     expect(canAccessStudent('PARENT')).toBe(false);
+  });
+
+  it('keeps authentication infrastructure failures as server errors', async () => {
+    const response = routeErrorResponse(new Error('database connection string leaked'));
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Unexpected server error.',
+      code: 'INTERNAL_SERVER_ERROR',
+    });
   });
 });
