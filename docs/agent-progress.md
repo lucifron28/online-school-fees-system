@@ -1,15 +1,15 @@
 # Agent Progress Log
 
-This file is a historical handoff, not a completion certificate. Earlier phase notes claimed a complete system even though the current repository still contains simulated services, later-phase ownership gaps, and hardcoded report data. Those claims are recorded and corrected in [docs/goal-findings.md](goal-findings.md). Phases 1 and 2 now include committed database and authentication contracts verified on isolated PostgreSQL.
+This file is a historical handoff, not a completion certificate. Earlier phase notes claimed a complete system even though the current repository still contains intentionally simulated payment-provider behavior and external deployment prerequisites. Those claims are recorded and corrected in [docs/goal-findings.md](goal-findings.md). The current branch is performing External Audit Repair Round 1 against the committed PostgreSQL, authentication, financial, portal, notification, and browser contracts.
 
 ## Current execution state
 
-- Branch: `main`
-- Phase: Phase 11 external-audit preparation merged; external deployment evidence remains
-- Phase 10 main start: `960f107`; current main: `407cb8f18c207f648ca57c7f88c2c78d8f0728cf`
-- GitHub connector: authenticated with push/admin permission
-- Local `gh` CLI: unavailable because its cached token is invalid
-- Current status: Phase 0 through Phase 11 are merged as PRs #1 through #12. Phase 11 merge commit is `407cb8f18c207f648ca57c7f88c2c78d8f0728cf`; hosted Foundation CI run #72 passed migrations, safe reset/seed, formatting, lint, typecheck, 44 unit tests, database integration tests, production build, and Playwright. External Vercel/Neon preview evidence still requires fictional credentials.
+- Branch: `fix/22-external-audit-round-1`
+- Phase: External Audit Repair Round 1; PR, review, merge, and main synchronization remain pending
+- Starting main: `3960ef1ccf71234f4d768615b19a614f3f474a63`; current branch includes the repair-round changes
+- GitHub connector: required for PR creation, self-review comment, merge, and remote CI because the local `gh` token is invalid
+- Local verification: unit tests, typecheck, lint, focused formatting, and production build have passed; PostgreSQL integration and browser evidence require the hosted CI database/browser environment on this branch
+- Current scope: student-row serialization, database-backed receipt sequences, reversal-aware net payments, atomic notification retry claims, authenticated browser workflows, clear missing-database runtime errors, callback trust-boundary tests, deterministic seed documentation, and CI contract verification
 
 ## Historical branches
 

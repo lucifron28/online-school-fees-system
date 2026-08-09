@@ -223,8 +223,8 @@ Phase 6 was implemented on `feat/16-payments-receipts-audit` in commits `2d474ec
 ## Known blockers
 
 - The local `gh` CLI token remains invalid; the connected GitHub app is required for PR creation, review, and merge.
-- A real fictional Neon/test PostgreSQL URL is still required for remote deployment verification; isolated local PostgreSQL covers local runtime acceptance through Phase 7.
-- The current seed creates demo users and academic reference data but no linked demo student/guardian fixture; the Phase 7 verifier creates and cleans an isolated relationship fixture for ownership and payment acceptance. A populated demo walkthrough seed remains a later hardening decision.
+- A configured hosted PostgreSQL environment is still required for Round 1 concurrency, verifier, and authenticated browser evidence; the local Windows checkout has no usable `TEST_DATABASE_URL` or Docker PostgreSQL service.
+- External Vercel/Neon preview credentials are still required for deployment evidence. The committed seed now contains deterministic fictional walkthrough data: 20 students, 10 guardians, persisted links, financial fixtures, mock checkout outcomes, and notification history.
 
 ## Phase 9 implementation
 
@@ -312,3 +312,44 @@ Phase 10 was implemented on `test/20-demo-hardening` from main commit `960f107` 
 ## Phase 11 pull request evidence
 
 Phase 11 was implemented on `fix/21-external-audit-preparation` in commit `719df07b1a8f6e41643ee8c06dbb2868ce9a08e5`, self-reviewed in PR [#12](https://github.com/lucifron28/online-school-fees-system/pull/12) with review ID `4889598638` and no inline review threads, CI-verified by Foundation run [#72](https://github.com/lucifron28/online-school-fees-system/actions/runs/31275665685), and merged with regular merge commit `407cb8f18c207f648ca57c7f88c2c78d8f0728cf`. External Vercel/Neon preview evidence remains the only outstanding environment prerequisite.
+
+## External Audit Repair Round 1 implementation
+
+- Added one shared student-row lock invariant for assessment posting, assessment adjustments, CASH/BANK_DEPOSIT/MOCK_ONLINE payment posting, and payment reversals. Every path locks before reading or writing ledger state inside its transaction.
+- Added a PostgreSQL receipt sequence keyed by persisted school prefix and calendar year. Allocation is transaction-local, timezone-aware for `Asia/Manila`, database-backed, and formatted as `<PREFIX>-<YEAR>-<SEQUENCE>`.
+- Changed parent/student account summaries and dashboard wording to show net payments: `PAYMENT` credits less `REVERSAL` debits. Reversal history remains separately visible.
+- Made notification delivery claiming atomic, made `SENT` terminal, retained per-attempt history, and added a fake-provider concurrent manual-retry test. This scope has no scheduler; `PENDING` is the retryable state.
+- Added a browser-only Playwright scenario for visible admin student/assessment setup, finance CASH posting and receipt PDF, parent payment history, and student account/history. The existing API-heavy workflow remains unchanged.
+- Added a clear lazy runtime error when `DATABASE_URL` is absent, preserving build/import safety without a placeholder database URL.
+- Tightened the intentionally public mock callback boundary: input cannot choose student/amount/method, stored checkout values are authoritative, references are persisted and unguessable, duplicate event/idempotency keys are guarded, unknown references fail, and terminal states cannot be reopened.
+- Updated the README, architecture, progress/findings/audit records, and Foundation CI. CI reruns the deterministic seed and executes all PostgreSQL contract verifiers before the integration, build, and browser stages.
+
+## External Audit Repair Round 1 findings and disposition
+
+| Finding                                                          | Severity     | Disposition on this branch                                                                           |
+| ---------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
+| Student-row serialization across all ledger mutations            | HIGH         | Implemented; clean PostgreSQL concurrency evidence pending hosted CI.                                |
+| Database-backed, Manila-year receipt sequence                    | MEDIUM       | Implemented with migration, unit tests, and clean PostgreSQL concurrency evidence pending hosted CI. |
+| Reversal-aware parent net payments                               | MEDIUM       | Implemented and unit/integration covered; hosted workflow evidence pending.                          |
+| Atomic notification retry claiming and attempt history           | MEDIUM       | Implemented and fake-provider covered; hosted PostgreSQL evidence pending.                           |
+| Browser-only authenticated admin/finance/parent/student workflow | MEDIUM       | Implemented in Playwright; hosted browser evidence pending.                                          |
+| Missing `DATABASE_URL` runtime behavior                          | MEDIUM       | Implemented and focused-tested locally.                                                              |
+| Deterministic seed/documentation/CI verifier coverage            | MEDIUM       | Implemented; CI rerun is pending.                                                                    |
+| Mock callback trust-boundary and replay safety                   | LOW / MEDIUM | Implemented with schema, service, verifier, and unit coverage; hosted database evidence pending.     |
+
+## External Audit Repair Round 1 commands and actual results
+
+| Command / check                             | Result                  | Notes                                                                                                                                                                              |
+| ------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CodeGraph audit queries                     | Passed                  | Traced ledger mutations, receipt allocation, notification retry, callback, portal ownership, and CI blast radius before editing.                                                   |
+| `pnpm.cmd install --frozen-lockfile`        | Passed                  | Frozen lockfile install completed; a later local E2E attempt exposed a Windows pnpm link-recreation issue and required disposable dependency recovery.                             |
+| Focused Prettier check                      | Passed                  | Changed source, test, migration metadata, workflow, README, and audit files were formatted; full repository formatting remains a Windows newline-baseline issue.                   |
+| `pnpm.cmd lint`                             | Passed                  | ESLint exited 0 after the Round 1 callback and migration-verifier changes.                                                                                                         |
+| `pnpm.cmd typecheck`                        | Passed                  | Strict TypeScript exited 0.                                                                                                                                                        |
+| `pnpm.cmd test`                             | Passed                  | 16 unit/component files and 49 tests passed, including receipt/net-payment, missing-database, and callback trust-boundary coverage.                                                |
+| `pnpm.cmd test:integration`                 | Passed with local skips | Three reset-safety tests passed; eight PostgreSQL workflow tests were skipped because `TEST_DATABASE_URL` is not configured locally.                                               |
+| `pnpm.cmd build`                            | Passed                  | Next.js production build generated 51 routes; local output included expected Better Auth default-secret warnings because no secret is configured.                                  |
+| `pnpm.cmd format:check`                     | Baseline failure        | Prettier reported 131 existing repository files with Windows newline/style differences; the focused changed-file check passed.                                                     |
+| `pnpm.cmd test:e2e`                         | Not accepted locally    | The first run reused a stale local server; the clean-server attempt could not complete because the Windows pnpm web-server process recreated/removed dependency links.             |
+| Clean PostgreSQL migrations/seed/verifiers  | Pending hosted CI       | No usable local PostgreSQL/Docker/test URL is available. The workflow now migrates, seeds twice, runs all contract verifiers, resets the test DB, and then runs integration tests. |
+| Authenticated browser-only Round 1 scenario | Pending hosted CI       | The Playwright scenario is present; CI must execute it against the seeded database.                                                                                                |

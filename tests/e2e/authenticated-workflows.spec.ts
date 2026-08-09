@@ -4,8 +4,14 @@ const PASSWORD = 'DemoPass123!';
 
 async function login(page: Page, portal: 'admin' | 'parent' | 'student', email: string) {
   await page.goto(`/login/${portal}`);
-  await page.locator('input[type="email"]').fill(email);
-  await page.locator('input[type="password"]').fill(PASSWORD);
+  const emailLabel =
+    portal === 'admin'
+      ? 'Email / Admin ID'
+      : portal === 'parent'
+        ? 'Parent Email / Account ID'
+        : 'Student Email / Account ID';
+  await page.getByLabel(emailLabel).fill(email);
+  await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: /sign in/i }).click();
   await expect(page).toHaveURL(new RegExp(`/${portal === 'admin' ? 'admin' : portal}/dashboard$`), {
     timeout: 15_000,
@@ -227,6 +233,91 @@ test.describe('authenticated financial workflow', () => {
         parentContext.close(),
         studentContext.close(),
         anonymousContext.close(),
+      ]);
+    }
+  });
+
+  test('browser-only UI workflow posts an assessment and cash payment', async ({ browser }) => {
+    test.setTimeout(120_000);
+    const suffix = Date.now();
+    const adminContext = await browser.newContext();
+    const financeContext = await browser.newContext();
+    const parentContext = await browser.newContext();
+    const studentContext = await browser.newContext();
+
+    try {
+      const admin = await adminContext.newPage();
+      await login(admin, 'admin', 'admin@demo.school');
+      await admin.goto('/admin/students');
+      await admin.getByRole('button', { name: 'Add student', exact: true }).click();
+      await expect(admin.getByRole('heading', { name: 'Add student record' })).toBeVisible();
+      await admin.getByLabel('Student number').fill(`BROWSER-${suffix}`);
+      await admin.getByLabel('First name').fill('Browser');
+      await admin.getByLabel('Last name').fill('Flow');
+      await admin.getByLabel('Student email').fill(`browser.${suffix}@schoolfees.example.com`);
+      await admin.getByLabel('School year').selectOption({ index: 1 });
+      await admin.getByLabel('Grade level').selectOption({ label: 'Grade 7' });
+      await admin.getByLabel('Section').selectOption({ label: 'Section A (G7-A)' });
+      await admin.getByRole('button', { name: 'Create student', exact: true }).click();
+
+      const studentRow = admin.getByRole('row').filter({ hasText: `BROWSER-${suffix}` });
+      await expect(studentRow).toBeVisible();
+      await studentRow.getByRole('link', { name: 'View student' }).click();
+      await expect(admin.getByRole('heading', { name: 'Student profile' })).toBeVisible();
+      await admin.getByRole('button', { name: 'Post assessment', exact: true }).click();
+      const structureSelect = admin.getByLabel('Active fee structure');
+      await expect(structureSelect.locator('option')).toHaveCount(2, { timeout: 15_000 });
+      await structureSelect.selectOption({ index: 1 });
+      await admin.getByRole('button', { name: 'Post assessment', exact: true }).last().click();
+      await expect(admin.getByText('POSTED', { exact: true })).toBeVisible();
+
+      const finance = await financeContext.newPage();
+      await login(finance, 'admin', 'finance@demo.school');
+      await finance.goto('/admin/payments/manual');
+      const studentSelect = finance.getByLabel('Student');
+      await expect(studentSelect).toBeVisible();
+      await studentSelect.selectOption({ label: `BROWSER-${suffix} — Browser Flow` });
+      await expect(finance.getByText('Authoritative current balance')).toBeVisible();
+      await finance.getByLabel('Payment method').selectOption('CASH');
+      await finance.getByLabel('Amount received (PHP)').fill('10.00');
+      await finance.getByLabel('Deposit/reference no. (optional)').fill(`BROWSER-${suffix}`);
+      await finance
+        .getByRole('button', { name: 'Post payment and issue receipt', exact: true })
+        .click();
+      await expect(finance.getByText('Payment posted', { exact: true })).toBeVisible();
+      await expect(finance.getByText(/OSFS-\d{4}-\d{6}/)).toBeVisible();
+      await finance.getByRole('link', { name: 'View transaction', exact: true }).click();
+      await expect(finance).toHaveURL(/\/admin\/transactions\//);
+      const receiptLink = finance.getByRole('link', { name: 'Receipt PDF', exact: true });
+      await expect(receiptLink).toBeVisible();
+      const [receiptPopup] = await Promise.all([
+        finance.waitForEvent('popup'),
+        receiptLink.click(),
+      ]);
+      await receiptPopup.waitForLoadState('domcontentloaded');
+      await expect(receiptPopup).toHaveURL(/\/api\/receipts\/.*\/pdf/);
+      await receiptPopup.close();
+
+      const parent = await parentContext.newPage();
+      await login(parent, 'parent', 'parent@demo.school');
+      await expect(parent.getByText('DEMO-0001', { exact: true })).toBeVisible();
+      await parent.getByRole('link', { name: 'Payment History', exact: true }).click();
+      await expect(parent.getByRole('heading', { name: 'Payment history' })).toBeVisible();
+      await expect(parent.getByText('DEMO-0001', { exact: true })).toBeVisible();
+
+      const student = await studentContext.newPage();
+      await login(student, 'student', 'student@demo.school');
+      await expect(student.getByText(/Welcome, Alex!/)).toBeVisible();
+      await student.getByRole('link', { name: 'My Account', exact: true }).click();
+      await expect(student.getByText('Finance-posted fee assessments')).toBeVisible();
+      await student.getByRole('link', { name: 'Payment History', exact: true }).click();
+      await expect(student.getByRole('heading', { name: 'Payment history' })).toBeVisible();
+    } finally {
+      await Promise.all([
+        adminContext.close(),
+        financeContext.close(),
+        parentContext.close(),
+        studentContext.close(),
       ]);
     }
   });
