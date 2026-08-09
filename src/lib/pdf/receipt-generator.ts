@@ -12,7 +12,7 @@ export interface ReceiptPdfData {
   studentName: string;
   gradeAndSection: string;
   amountReceivedCentavos: number;
-  remainingBalanceCentavos: number;
+  balanceAfterPaymentCentavos: number | null;
   processedByName: string;
   allocations: Array<{
     name: string;
@@ -200,20 +200,25 @@ export async function generateReceiptPdf(data: ReceiptPdfData): Promise<Uint8Arr
     color: rgb(0.1, 0.5, 0.1),
   });
 
-  page.drawText('Remaining Balance:', {
+  page.drawText('Remaining Balance After Payment:', {
     x: 55,
     y: y - 28,
     size: 9,
     font: fontBold,
     color: rgb(0.4, 0.4, 0.4),
   });
-  page.drawText(formatCentavosForPdf(data.remainingBalanceCentavos), {
-    x: 230,
-    y: y - 28,
-    size: 9,
-    font: fontBold,
-    color: rgb(0.7, 0.1, 0.1),
-  });
+  page.drawText(
+    data.balanceAfterPaymentCentavos === null
+      ? 'Unavailable (legacy receipt)'
+      : formatCentavosForPdf(data.balanceAfterPaymentCentavos),
+    {
+      x: 230,
+      y: y - 28,
+      size: 9,
+      font: fontBold,
+      color: rgb(0.7, 0.1, 0.1),
+    }
+  );
 
   // Footer & Verification
   y -= 80;

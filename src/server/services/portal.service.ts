@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { getDb, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import { getServerEnv } from '@/lib/env';
+import { parseReceiptSnapshot } from '@/lib/receipt-snapshot';
 import { calculateBalanceFromEntries } from './assessment.service';
 import { calculateNetPaidFromEntries } from './ledger.service';
 import { getReceiptPdfData } from './payment.service';
@@ -36,6 +37,7 @@ export interface PortalPaymentSummary {
   receiptId: string | null;
   receiptNumber: string | null;
   receiptStatus: string | null;
+  balanceAfterPaymentCentavos: number | null;
   allocations: Array<{
     targetType: 'ASSESSMENT_ITEM' | 'DEBIT_ADJUSTMENT';
     name: string;
@@ -198,6 +200,7 @@ export async function listOwnedPayments(
     receiptId: schema.receipts.id,
     receiptNumber: schema.receipts.receiptNumber,
     receiptStatus: schema.receipts.status,
+    issuanceSnapshot: schema.receipts.issuanceSnapshot,
   };
 
   const rows =
@@ -269,6 +272,8 @@ export async function listOwnedPayments(
     receiptId: row.receiptId,
     receiptNumber: row.receiptNumber,
     receiptStatus: row.receiptStatus,
+    balanceAfterPaymentCentavos:
+      parseReceiptSnapshot(row.issuanceSnapshot)?.payment.balanceAfterPaymentCentavos ?? null,
     allocations: allocationsByPayment.get(row.id) ?? [],
   }));
 }

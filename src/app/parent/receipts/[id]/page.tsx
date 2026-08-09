@@ -116,6 +116,14 @@ export default function ParentReceiptPage({ params }: { params: Promise<{ id: st
                   {formatCentavos(payment.amountCentavos)}
                 </span>
               </div>
+              <div className="mt-3 flex items-center justify-between border-t pt-3 text-xs">
+                <span className="text-slate-500">Remaining Balance After Payment</span>
+                <span className="font-mono font-semibold">
+                  {payment.balanceAfterPaymentCentavos === null
+                    ? 'Unavailable for legacy receipt'
+                    : formatCentavos(payment.balanceAfterPaymentCentavos)}
+                </span>
+              </div>
               {payment.allocations.length > 0 && (
                 <div className="mt-4 border-t pt-3">
                   <p className="text-xs font-semibold text-slate-600">Allocation breakdown</p>
