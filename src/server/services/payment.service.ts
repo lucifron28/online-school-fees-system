@@ -719,11 +719,12 @@ export class PaymentService {
         if (!payment) throw new AppError('The payment could not be created.');
 
         await tx.insert(schema.paymentAllocations).values(
-          allocations.map((allocation) => ({
+          allocations.map((allocation, allocationIndex) => ({
             paymentId: payment.id,
             assessmentItemId: allocation.assessmentItemId,
             adjustmentId: allocation.adjustmentId,
             amountCentavos: allocation.amountCentavos,
+            createdAt: new Date(payment.createdAt.getTime() + allocationIndex),
           }))
         );
 
