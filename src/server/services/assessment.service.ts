@@ -24,6 +24,19 @@ export type FeeItemInput = {
 export type GenerateAssessmentInput = AssessmentGenerateInput;
 export type { AdjustmentInput };
 
+export type LedgerBalanceEntry = {
+  assessmentId?: string | null;
+  debitCentavos: number;
+  creditCentavos: number;
+};
+
+export type AssessmentBalanceReconciliation = {
+  studentBalanceCentavos: number;
+  attributedBalanceCentavos: number;
+  assessmentBalances: Map<string, number>;
+  isReconciled: boolean;
+};
+
 export function calculateBalanceFromEntries(
   entries: Array<{ debitCentavos: number; creditCentavos: number }>
 ): number {
@@ -36,6 +49,52 @@ export function calculateBalanceFromEntries(
   }
 
   return subtractCentavos(totalDebits, totalCredits);
+}
+
+/** Calculates each assessment's net persisted ledger balance from its attributed entries. */
+export function calculateAssessmentBalances(entries: LedgerBalanceEntry[]) {
+  const balances = new Map<string, number>();
+  for (const entry of entries) {
+    if (!entry.assessmentId) continue;
+    const current = balances.get(entry.assessmentId) ?? 0;
+    balances.set(
+      entry.assessmentId,
+      addCentavos(current, subtractCentavos(entry.debitCentavos, entry.creditCentavos))
+    );
+  }
+  return balances;
+}
+
+/** Reconciles the student-wide balance to all assessment-attributed ledger balances. */
+export function reconcileStudentAssessmentBalances(
+  entries: LedgerBalanceEntry[]
+): AssessmentBalanceReconciliation {
+  const studentBalanceCentavos = calculateBalanceFromEntries(entries);
+  const assessmentBalances = calculateAssessmentBalances(entries);
+  const attributedBalanceCentavos = [...assessmentBalances.values()].reduce(
+    (total, balance) => addCentavos(total, balance),
+    0
+  );
+  return {
+    studentBalanceCentavos,
+    attributedBalanceCentavos,
+    assessmentBalances,
+    isReconciled: studentBalanceCentavos === attributedBalanceCentavos,
+  };
+}
+
+export function assertStudentAssessmentReconciliation(
+  reconciliation: AssessmentBalanceReconciliation
+) {
+  if (
+    !reconciliation.isReconciled ||
+    reconciliation.studentBalanceCentavos < 0 ||
+    [...reconciliation.assessmentBalances.values()].some((balance) => balance < 0)
+  ) {
+    throw new ValidationError(
+      'The student ledger is not reconciled to non-negative assessment balances.'
+    );
+  }
 }
 
 async function insertAuditLog(
@@ -409,15 +468,19 @@ export class AssessmentService {
 
       const entries = await tx
         .select({
+          assessmentId: schema.ledgerEntries.assessmentId,
           debitCentavos: schema.ledgerEntries.debitCentavos,
           creditCentavos: schema.ledgerEntries.creditCentavos,
         })
         .from(schema.ledgerEntries)
         .where(eq(schema.ledgerEntries.studentId, values.studentId));
-      const currentBalance = calculateBalanceFromEntries(entries);
-      if (values.type === 'CREDIT' && values.amountCentavos > currentBalance) {
+      const reconciliation = reconcileStudentAssessmentBalances(entries);
+      assertStudentAssessmentReconciliation(reconciliation);
+      const currentBalance = reconciliation.studentBalanceCentavos;
+      const assessmentBalance = reconciliation.assessmentBalances.get(values.assessmentId) ?? 0;
+      if (values.type === 'CREDIT' && values.amountCentavos > assessmentBalance) {
         throw new ValidationError(
-          'A credit adjustment cannot reduce the student balance below zero.'
+          'A credit adjustment cannot reduce the assessment balance below zero.'
         );
       }
       const nextBalance =
