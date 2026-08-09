@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Building2, Download, RefreshCw } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
-import type { PortalAccount, PortalPayment } from '@/lib/portal-types';
+import type { PortalPayment } from '@/lib/portal-types';
 import { formatCentavos } from '@/lib/utils/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,15 +20,6 @@ export default function ParentReceiptPage({ params }: { params: Promise<{ id: st
   const payment = paymentsQuery.data?.find(
     (candidate) => candidate.receiptId === id || candidate.receiptNumber === id
   );
-  const accountQuery = useQuery({
-    queryKey: ['parent-child-account', payment?.studentId],
-    enabled: Boolean(payment?.studentId),
-    queryFn: () => requestJson<PortalAccount>(`/api/portal/parent/children/${payment?.studentId}`),
-  });
-  const allocationAssessment = accountQuery.data?.assessments.find((assessment) =>
-    assessment.items.some((item) => item.amountCentavos > 0)
-  );
-
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center justify-between gap-3">
@@ -54,12 +45,10 @@ export default function ParentReceiptPage({ params }: { params: Promise<{ id: st
       </div>
 
       {paymentsQuery.isLoading && <p className="text-sm text-slate-500">Loading stored receipt…</p>}
-      {(paymentsQuery.isError || accountQuery.isError) && (
+      {paymentsQuery.isError && (
         <Card>
           <CardContent className="space-y-3 p-6">
-            <p className="text-sm text-rose-600">
-              {getClientErrorMessage(paymentsQuery.error ?? accountQuery.error)}
-            </p>
+            <p className="text-sm text-rose-600">{getClientErrorMessage(paymentsQuery.error)}</p>
             <Button variant="outline" onClick={() => void paymentsQuery.refetch()}>
               <RefreshCw className="mr-1.5 h-4 w-4" /> Retry
             </Button>
@@ -127,11 +116,26 @@ export default function ParentReceiptPage({ params }: { params: Promise<{ id: st
                   {formatCentavos(payment.amountCentavos)}
                 </span>
               </div>
-              {allocationAssessment && (
-                <p className="mt-2 text-xs text-slate-500">
-                  Applied to the oldest outstanding assessment item(s) for{' '}
-                  {allocationAssessment.schoolYearName}.
-                </p>
+              {payment.allocations.length > 0 && (
+                <div className="mt-4 border-t pt-3">
+                  <p className="text-xs font-semibold text-slate-600">Allocation breakdown</p>
+                  <div className="mt-2 space-y-1">
+                    {payment.allocations.map((allocation, index) => (
+                      <div
+                        key={`${allocation.targetType}-${allocation.name}-${index}`}
+                        className="flex justify-between gap-3 text-xs"
+                      >
+                        <span>
+                          {allocation.targetType === 'DEBIT_ADJUSTMENT' ? 'Debit adjustment: ' : ''}
+                          {allocation.name}
+                        </span>
+                        <span className="font-mono font-semibold">
+                          {formatCentavos(allocation.amountCentavos)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
 

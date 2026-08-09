@@ -914,6 +914,7 @@ async function ensureCheckout(
             studentId: input.student.id,
             assessmentId: input.assessment.id,
             paymentId: input.paymentId ?? null,
+            paymentChannel: 'GCash',
             amountCentavos: input.status === 'SUCCEEDED' ? 7_000_00 : 1_000_00,
             status: input.status,
             expiresAt: DEMO_EXPIRY,

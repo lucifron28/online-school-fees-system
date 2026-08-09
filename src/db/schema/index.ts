@@ -312,6 +312,9 @@ export const guardianStudents = pgTable(
       table.guardianId,
       table.studentId
     ),
+    primaryStudentUnique: uniqueIndex('guardian_students_student_primary_unique')
+      .on(table.studentId)
+      .where(sql`${table.isPrimary} = true`),
     guardianIndex: index('guardian_students_guardian_idx').on(table.guardianId),
     studentIndex: index('guardian_students_student_idx').on(table.studentId),
   })
@@ -546,9 +549,8 @@ export const paymentAllocations = pgTable(
     paymentId: uuid('payment_id')
       .notNull()
       .references(() => payments.id),
-    assessmentItemId: uuid('assessment_item_id')
-      .notNull()
-      .references(() => assessmentItems.id),
+    assessmentItemId: uuid('assessment_item_id').references(() => assessmentItems.id),
+    adjustmentId: uuid('adjustment_id').references(() => adjustments.id),
     amountCentavos: integer('amount_centavos').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -557,10 +559,19 @@ export const paymentAllocations = pgTable(
       table.paymentId,
       table.assessmentItemId
     ),
+    paymentAdjustmentUnique: uniqueIndex('payment_allocations_payment_adjustment_unique').on(
+      table.paymentId,
+      table.adjustmentId
+    ),
     amountPositive: check('payment_allocations_amount_positive', sql`${table.amountCentavos} > 0`),
+    exactlyOneTarget: check(
+      'payment_allocations_exactly_one_target',
+      sql`(${table.assessmentItemId} IS NOT NULL AND ${table.adjustmentId} IS NULL) OR (${table.assessmentItemId} IS NULL AND ${table.adjustmentId} IS NOT NULL)`
+    ),
     assessmentItemIndex: index('payment_allocations_assessment_item_idx').on(
       table.assessmentItemId
     ),
+    adjustmentIndex: index('payment_allocations_adjustment_idx').on(table.adjustmentId),
   })
 );
 
@@ -658,6 +669,7 @@ export const mockPaymentCheckouts = pgTable(
     paymentId: uuid('payment_id')
       .unique()
       .references(() => payments.id),
+    paymentChannel: text('payment_channel').default('GCash').notNull(),
     amountCentavos: integer('amount_centavos').notNull(),
     status: mockCheckoutStatusEnum('status').default('CREATED').notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
@@ -669,6 +681,10 @@ export const mockPaymentCheckouts = pgTable(
     amountPositive: check(
       'mock_payment_checkouts_amount_positive',
       sql`${table.amountCentavos} > 0`
+    ),
+    paymentChannelValid: check(
+      'mock_payment_checkouts_payment_channel_valid',
+      sql`${table.paymentChannel} IN ('GCash', 'Maya', 'CreditCard')`
     ),
     studentStatusCreatedIndex: index('mock_payment_checkouts_student_status_created_idx').on(
       table.studentId,

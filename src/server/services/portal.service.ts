@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { getDb, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import { getServerEnv } from '@/lib/env';
@@ -36,6 +36,11 @@ export interface PortalPaymentSummary {
   receiptId: string | null;
   receiptNumber: string | null;
   receiptStatus: string | null;
+  allocations: Array<{
+    targetType: 'ASSESSMENT_ITEM' | 'DEBIT_ADJUSTMENT';
+    name: string;
+    amountCentavos: number;
+  }>;
 }
 
 type PortalAssessments = Awaited<ReturnType<typeof getStudentAssessments>>;
@@ -217,6 +222,40 @@ export async function listOwnedPayments(
           .where(eq(schema.students.userId, userId))
           .orderBy(desc(schema.payments.createdAt));
 
+  const paymentIds = rows.map((row) => row.id);
+  const allocationRows =
+    paymentIds.length === 0
+      ? []
+      : await db
+          .select({
+            paymentId: schema.paymentAllocations.paymentId,
+            adjustmentId: schema.paymentAllocations.adjustmentId,
+            itemName: schema.assessmentItems.name,
+            adjustmentReason: schema.adjustments.reason,
+            amountCentavos: schema.paymentAllocations.amountCentavos,
+          })
+          .from(schema.paymentAllocations)
+          .leftJoin(
+            schema.assessmentItems,
+            eq(schema.assessmentItems.id, schema.paymentAllocations.assessmentItemId)
+          )
+          .leftJoin(
+            schema.adjustments,
+            eq(schema.adjustments.id, schema.paymentAllocations.adjustmentId)
+          )
+          .where(inArray(schema.paymentAllocations.paymentId, paymentIds))
+          .orderBy(asc(schema.paymentAllocations.createdAt));
+  const allocationsByPayment = new Map<string, PortalPaymentSummary['allocations']>();
+  for (const allocation of allocationRows) {
+    const current = allocationsByPayment.get(allocation.paymentId) ?? [];
+    current.push({
+      targetType: allocation.adjustmentId ? 'DEBIT_ADJUSTMENT' : 'ASSESSMENT_ITEM',
+      name: allocation.itemName ?? allocation.adjustmentReason ?? 'Debit adjustment',
+      amountCentavos: allocation.amountCentavos,
+    });
+    allocationsByPayment.set(allocation.paymentId, current);
+  }
+
   return rows.map((row) => ({
     id: row.id,
     studentId: row.studentId,
@@ -230,6 +269,7 @@ export async function listOwnedPayments(
     receiptId: row.receiptId,
     receiptNumber: row.receiptNumber,
     receiptStatus: row.receiptStatus,
+    allocations: allocationsByPayment.get(row.id) ?? [],
   }));
 }
 

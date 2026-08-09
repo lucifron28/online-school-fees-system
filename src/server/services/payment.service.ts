@@ -10,7 +10,7 @@ import {
   type ReversalPostInput,
 } from '@/lib/payments';
 import { addCentavos, formatCentavos, subtractCentavos } from '@/lib/utils/currency';
-import { AppError, NotFoundError, ValidationError } from '@/server/errors';
+import { AppError, ConflictError, NotFoundError, ValidationError } from '@/server/errors';
 import { calculateBalanceFromEntries } from './assessment.service';
 import { lockStudentForLedgerMutation } from './ledger.service';
 import { NotificationService, type EmailProvider } from './notification.service';
@@ -38,8 +38,27 @@ type AllocationItem = {
   paidCentavos: number;
 };
 
-type OutstandingItem = AllocationItem & {
+type PaymentObligation = AllocationItem & {
   assessmentId: string;
+  targetType: 'ASSESSMENT_ITEM' | 'DEBIT_ADJUSTMENT';
+  assessmentItemId: string | null;
+  adjustmentId: string | null;
+  createdAt: Date;
+  assessmentCreatedAt: Date;
+};
+
+type PaymentAllocation = {
+  assessmentItemId: string | null;
+  adjustmentId: string | null;
+  assessmentId: string;
+  targetType: 'ASSESSMENT_ITEM' | 'DEBIT_ADJUSTMENT';
+  name: string;
+  amountCentavos: number;
+};
+
+type AllocationGroup = {
+  assessmentId: string;
+  amountCentavos: number;
 };
 
 /**
@@ -64,6 +83,40 @@ export function allocatePaymentToItems(paymentAmountCentavos: number, items: All
     allocations.push({
       assessmentItemId: item.id,
       name: item.name,
+      amountCentavos: allocated,
+    });
+    remainingPayment = subtractCentavos(remainingPayment, allocated);
+  }
+
+  return allocations;
+}
+
+/**
+ * Allocate oldest-first across every persisted positive payment obligation.
+ * Assessment items and DEBIT adjustments are both payable targets; CREDIT
+ * adjustments never enter this list. The caller must provide database-derived
+ * obligations sorted by assessment creation, target creation, and target id.
+ */
+export function allocatePaymentToObligations(
+  paymentAmountCentavos: number,
+  obligations: PaymentObligation[]
+): PaymentAllocation[] {
+  let remainingPayment = paymentAmountCentavos;
+  const allocations: PaymentAllocation[] = [];
+
+  for (const obligation of obligations) {
+    if (remainingPayment <= 0) break;
+
+    const unpaidAmount = subtractCentavos(obligation.amountCentavos, obligation.paidCentavos);
+    if (unpaidAmount <= 0) continue;
+
+    const allocated = Math.min(remainingPayment, unpaidAmount);
+    allocations.push({
+      assessmentItemId: obligation.assessmentItemId,
+      adjustmentId: obligation.adjustmentId,
+      assessmentId: obligation.assessmentId,
+      targetType: obligation.targetType,
+      name: obligation.name,
       amountCentavos: allocated,
     });
     remainingPayment = subtractCentavos(remainingPayment, allocated);
@@ -97,68 +150,194 @@ function isUniqueViolation(error: unknown) {
 
 async function findPaymentByIdempotencyKey(idempotencyKey: string, db: DatabaseInstance) {
   return db
-    .select({ id: schema.payments.id })
+    .select({
+      id: schema.payments.id,
+      studentId: schema.payments.studentId,
+      amountCentavos: schema.payments.amountCentavos,
+      paymentMethod: schema.payments.paymentMethod,
+      referenceNumber: schema.payments.referenceNumber,
+    })
     .from(schema.payments)
     .where(eq(schema.payments.idempotencyKey, idempotencyKey))
     .limit(1);
 }
 
-async function selectOutstandingItems(studentId: string, db: DatabaseInstance) {
-  const items = await db
-    .select({
-      assessmentId: schema.studentAssessments.id,
-      assessmentItemId: schema.assessmentItems.id,
-      name: schema.assessmentItems.name,
-      amountCentavos: schema.assessmentItems.amountCentavos,
-      assessmentCreatedAt: schema.studentAssessments.createdAt,
-      itemCreatedAt: schema.assessmentItems.createdAt,
-    })
-    .from(schema.studentAssessments)
-    .innerJoin(
-      schema.assessmentItems,
-      eq(schema.assessmentItems.assessmentId, schema.studentAssessments.id)
-    )
-    .where(
-      and(
-        eq(schema.studentAssessments.studentId, studentId),
-        eq(schema.studentAssessments.status, 'POSTED')
-      )
-    )
-    .orderBy(asc(schema.studentAssessments.createdAt), asc(schema.assessmentItems.createdAt));
+function normalizeReferenceNumber(referenceNumber: string | null | undefined) {
+  const normalized = referenceNumber?.trim();
+  return normalized || null;
+}
 
-  if (items.length === 0) {
-    throw new ValidationError('The student has no posted assessment items available for payment.');
+function assertPaymentRequestCompatible(
+  existing: {
+    studentId: string;
+    amountCentavos: number;
+    paymentMethod: string;
+    referenceNumber: string | null;
+  },
+  requested: PaymentPostInput
+) {
+  const sameRequest =
+    existing.studentId === requested.studentId &&
+    existing.amountCentavos === requested.amountCentavos &&
+    existing.paymentMethod === requested.paymentMethod &&
+    normalizeReferenceNumber(existing.referenceNumber) ===
+      normalizeReferenceNumber(requested.referenceNumber);
+  if (!sameRequest) {
+    throw new ConflictError(
+      'The payment idempotency key was already used for a different student, amount, method, or reference.'
+    );
+  }
+}
+
+function groupAllocationsByAssessment(allocations: PaymentAllocation[]): AllocationGroup[] {
+  const groups = new Map<string, AllocationGroup>();
+  for (const allocation of allocations) {
+    const current = groups.get(allocation.assessmentId) ?? {
+      assessmentId: allocation.assessmentId,
+      amountCentavos: 0,
+    };
+    current.amountCentavos = addCentavos(current.amountCentavos, allocation.amountCentavos);
+    groups.set(allocation.assessmentId, current);
+  }
+  return [...groups.values()];
+}
+
+async function selectOutstandingObligations(
+  studentId: string,
+  db: DatabaseInstance
+): Promise<PaymentObligation[]> {
+  const [items, adjustments] = await Promise.all([
+    db
+      .select({
+        assessmentId: schema.studentAssessments.id,
+        assessmentItemId: schema.assessmentItems.id,
+        name: schema.assessmentItems.name,
+        amountCentavos: schema.assessmentItems.amountCentavos,
+        assessmentCreatedAt: schema.studentAssessments.createdAt,
+        itemCreatedAt: schema.assessmentItems.createdAt,
+      })
+      .from(schema.studentAssessments)
+      .innerJoin(
+        schema.assessmentItems,
+        eq(schema.assessmentItems.assessmentId, schema.studentAssessments.id)
+      )
+      .where(
+        and(
+          eq(schema.studentAssessments.studentId, studentId),
+          eq(schema.studentAssessments.status, 'POSTED')
+        )
+      ),
+    db
+      .select({
+        assessmentId: schema.studentAssessments.id,
+        adjustmentId: schema.adjustments.id,
+        name: schema.adjustments.reason,
+        amountCentavos: schema.adjustments.amountCentavos,
+        assessmentCreatedAt: schema.studentAssessments.createdAt,
+        adjustmentCreatedAt: schema.adjustments.createdAt,
+      })
+      .from(schema.adjustments)
+      .innerJoin(
+        schema.studentAssessments,
+        eq(schema.studentAssessments.id, schema.adjustments.assessmentId)
+      )
+      .where(
+        and(
+          eq(schema.adjustments.studentId, studentId),
+          eq(schema.studentAssessments.studentId, studentId),
+          eq(schema.adjustments.type, 'DEBIT'),
+          eq(schema.studentAssessments.status, 'POSTED')
+        )
+      ),
+  ]);
+
+  if (items.length === 0 && adjustments.length === 0) {
+    throw new ValidationError('The student has no posted payment obligations available.');
   }
 
   const itemIds = items.map((item) => item.assessmentItemId);
-  const allocations = await db
-    .select({
-      assessmentItemId: schema.paymentAllocations.assessmentItemId,
-      amountCentavos: schema.paymentAllocations.amountCentavos,
-    })
-    .from(schema.paymentAllocations)
-    .innerJoin(schema.payments, eq(schema.payments.id, schema.paymentAllocations.paymentId))
-    .where(
-      and(
-        inArray(schema.paymentAllocations.assessmentItemId, itemIds),
-        eq(schema.payments.status, 'POSTED')
-      )
-    );
+  const adjustmentIds = adjustments.map((adjustment) => adjustment.adjustmentId);
+  const [itemAllocations, adjustmentAllocations] = await Promise.all([
+    itemIds.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({
+            assessmentItemId: schema.paymentAllocations.assessmentItemId,
+            amountCentavos: schema.paymentAllocations.amountCentavos,
+          })
+          .from(schema.paymentAllocations)
+          .innerJoin(schema.payments, eq(schema.payments.id, schema.paymentAllocations.paymentId))
+          .where(
+            and(
+              inArray(schema.paymentAllocations.assessmentItemId, itemIds),
+              eq(schema.payments.status, 'POSTED')
+            )
+          ),
+    adjustmentIds.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({
+            adjustmentId: schema.paymentAllocations.adjustmentId,
+            amountCentavos: schema.paymentAllocations.amountCentavos,
+          })
+          .from(schema.paymentAllocations)
+          .innerJoin(schema.payments, eq(schema.payments.id, schema.paymentAllocations.paymentId))
+          .where(
+            and(
+              inArray(schema.paymentAllocations.adjustmentId, adjustmentIds),
+              eq(schema.payments.status, 'POSTED')
+            )
+          ),
+  ]);
   const paidByItem = new Map<string, number>();
-  for (const allocation of allocations) {
+  for (const allocation of itemAllocations) {
+    if (!allocation.assessmentItemId) continue;
     paidByItem.set(
       allocation.assessmentItemId,
       addCentavos(paidByItem.get(allocation.assessmentItemId) ?? 0, allocation.amountCentavos)
     );
   }
+  const paidByAdjustment = new Map<string, number>();
+  for (const allocation of adjustmentAllocations) {
+    if (!allocation.adjustmentId) continue;
+    paidByAdjustment.set(
+      allocation.adjustmentId,
+      addCentavos(paidByAdjustment.get(allocation.adjustmentId) ?? 0, allocation.amountCentavos)
+    );
+  }
 
-  return items.map<OutstandingItem>((item) => ({
-    id: item.assessmentItemId,
-    assessmentId: item.assessmentId,
-    name: item.name,
-    amountCentavos: item.amountCentavos,
-    paidCentavos: paidByItem.get(item.assessmentItemId) ?? 0,
-  }));
+  return [
+    ...items.map<PaymentObligation>((item) => ({
+      id: item.assessmentItemId,
+      assessmentId: item.assessmentId,
+      name: item.name,
+      amountCentavos: item.amountCentavos,
+      paidCentavos: paidByItem.get(item.assessmentItemId) ?? 0,
+      targetType: 'ASSESSMENT_ITEM',
+      assessmentItemId: item.assessmentItemId,
+      adjustmentId: null,
+      createdAt: item.itemCreatedAt,
+      assessmentCreatedAt: item.assessmentCreatedAt,
+    })),
+    ...adjustments.map<PaymentObligation>((adjustment) => ({
+      id: adjustment.adjustmentId,
+      assessmentId: adjustment.assessmentId,
+      name: adjustment.name,
+      amountCentavos: adjustment.amountCentavos,
+      paidCentavos: paidByAdjustment.get(adjustment.adjustmentId) ?? 0,
+      targetType: 'DEBIT_ADJUSTMENT',
+      assessmentItemId: null,
+      adjustmentId: adjustment.adjustmentId,
+      createdAt: adjustment.adjustmentCreatedAt,
+      assessmentCreatedAt: adjustment.assessmentCreatedAt,
+    })),
+  ].sort(
+    (left, right) =>
+      left.assessmentCreatedAt.getTime() - right.assessmentCreatedAt.getTime() ||
+      left.createdAt.getTime() - right.createdAt.getTime() ||
+      left.targetType.localeCompare(right.targetType) ||
+      left.id.localeCompare(right.id)
+  );
 }
 
 async function selectStudentLedger(studentId: string, db: DatabaseInstance) {
@@ -221,24 +400,41 @@ export async function getPayment(id: string, db: DatabaseInstance = getDb()) {
         id: schema.paymentAllocations.id,
         paymentId: schema.paymentAllocations.paymentId,
         assessmentItemId: schema.paymentAllocations.assessmentItemId,
+        adjustmentId: schema.paymentAllocations.adjustmentId,
         amountCentavos: schema.paymentAllocations.amountCentavos,
-        assessmentId: schema.assessmentItems.assessmentId,
+        itemAssessmentId: schema.assessmentItems.assessmentId,
         itemName: schema.assessmentItems.name,
         feeCategoryName: schema.feeCategories.name,
+        adjustmentAssessmentId: schema.adjustments.assessmentId,
+        adjustmentReason: schema.adjustments.reason,
       })
       .from(schema.paymentAllocations)
-      .innerJoin(
+      .leftJoin(
         schema.assessmentItems,
         eq(schema.assessmentItems.id, schema.paymentAllocations.assessmentItemId)
       )
-      .innerJoin(
+      .leftJoin(
         schema.feeCategories,
         eq(schema.feeCategories.id, schema.assessmentItems.feeCategoryId)
+      )
+      .leftJoin(
+        schema.adjustments,
+        eq(schema.adjustments.id, schema.paymentAllocations.adjustmentId)
       )
       .where(eq(schema.paymentAllocations.paymentId, id))
       .orderBy(asc(schema.paymentAllocations.createdAt)),
     selectStudentLedger(payment.studentId, db),
   ]);
+
+  const allocationDetails = allocations.map((allocation) => ({
+    ...allocation,
+    assessmentId: allocation.itemAssessmentId ?? allocation.adjustmentAssessmentId,
+    itemName: allocation.itemName ?? allocation.adjustmentReason ?? 'Debit adjustment',
+    feeCategoryName: allocation.feeCategoryName ?? 'Debit adjustment',
+    allocationType: allocation.adjustmentId
+      ? ('DEBIT_ADJUSTMENT' as const)
+      : ('ASSESSMENT_ITEM' as const),
+  }));
 
   return {
     ...payment,
@@ -251,7 +447,7 @@ export async function getPayment(id: string, db: DatabaseInstance = getDb()) {
           createdAt: payment.receiptCreatedAt,
         }
       : null,
-    allocations,
+    allocations: allocationDetails,
     remainingBalanceCentavos: ledger.balanceCentavos,
   };
 }
@@ -389,19 +585,25 @@ export class PaymentService {
     }
 
     const existing = await findPaymentByIdempotencyKey(values.idempotencyKey, db);
-    if (existing[0]) return getPayment(existing[0].id, db);
+    if (existing[0]) {
+      assertPaymentRequestCompatible(existing[0], values);
+      return getPayment(existing[0].id, db);
+    }
 
     try {
       const created = await db.transaction(async (tx) => {
         const transactionDb = tx as unknown as DatabaseInstance;
         const duplicate = await findPaymentByIdempotencyKey(values.idempotencyKey, transactionDb);
-        if (duplicate[0]) return duplicate[0];
+        if (duplicate[0]) {
+          assertPaymentRequestCompatible(duplicate[0], values);
+          return duplicate[0];
+        }
 
-        const student = await lockStudentForLedgerMutation(values.studentId, transactionDb);
+        await lockStudentForLedgerMutation(values.studentId, transactionDb);
 
-        const [ledger, outstandingItems] = await Promise.all([
+        const [ledger, outstandingObligations] = await Promise.all([
           selectStudentLedger(values.studentId, transactionDb),
-          selectOutstandingItems(values.studentId, transactionDb),
+          selectOutstandingObligations(values.studentId, transactionDb),
         ]);
         if (values.amountCentavos > ledger.balanceCentavos) {
           throw new ValidationError(
@@ -409,7 +611,10 @@ export class PaymentService {
           );
         }
 
-        const allocations = allocatePaymentToItems(values.amountCentavos, outstandingItems);
+        const allocations = allocatePaymentToObligations(
+          values.amountCentavos,
+          outstandingObligations
+        );
         const allocatedTotal = allocations.reduce(
           (total, allocation) => addCentavos(total, allocation.amountCentavos),
           0
@@ -420,17 +625,18 @@ export class PaymentService {
           );
         }
 
-        const firstAllocation = outstandingItems.find(
-          (item) => item.id === allocations[0]?.assessmentItemId
-        );
-        if (!firstAllocation)
-          throw new AppError('Payment allocation could not identify an assessment.');
+        if (allocations.length === 0) {
+          throw new ValidationError('The payment has no outstanding charge target to allocate.');
+        }
+        const allocationGroups = groupAllocationsByAssessment(allocations);
+        const paymentAssessmentId =
+          allocationGroups.length === 1 ? allocationGroups[0].assessmentId : null;
 
         const [payment] = await tx
           .insert(schema.payments)
           .values({
             studentId: values.studentId,
-            assessmentId: firstAllocation.assessmentId,
+            assessmentId: paymentAssessmentId,
             amountCentavos: values.amountCentavos,
             paymentMethod: values.paymentMethod,
             referenceNumber: values.referenceNumber ?? null,
@@ -445,18 +651,28 @@ export class PaymentService {
           allocations.map((allocation) => ({
             paymentId: payment.id,
             assessmentItemId: allocation.assessmentItemId,
+            adjustmentId: allocation.adjustmentId,
             amountCentavos: allocation.amountCentavos,
           }))
         );
-        await tx.insert(schema.ledgerEntries).values({
-          studentId: values.studentId,
-          assessmentId: firstAllocation.assessmentId,
-          entryType: 'PAYMENT',
-          debitCentavos: 0,
-          creditCentavos: values.amountCentavos,
-          balanceCentavos: subtractCentavos(ledger.balanceCentavos, values.amountCentavos),
-          description: `Payment ${payment.id}`,
-        });
+
+        for (const [groupIndex, group] of allocationGroups.entries()) {
+          await tx.insert(schema.ledgerEntries).values({
+            studentId: values.studentId,
+            assessmentId: group.assessmentId,
+            entryType: 'PAYMENT',
+            debitCentavos: 0,
+            creditCentavos: group.amountCentavos,
+            balanceCentavos: subtractCentavos(
+              ledger.balanceCentavos,
+              allocationGroups
+                .slice(0, groupIndex + 1)
+                .reduce((total, current) => addCentavos(total, current.amountCentavos), 0)
+            ),
+            description: `Payment ${payment.id}`,
+            createdAt: new Date(payment.createdAt.getTime() + groupIndex),
+          });
+        }
 
         const { receiptNumber } = await allocateReceiptNumber(transactionDb, payment.createdAt);
         const verificationIdentifier = `VER-${payment.id}`;
@@ -505,7 +721,10 @@ export class PaymentService {
     } catch (error) {
       if (isUniqueViolation(error)) {
         const replay = await findPaymentByIdempotencyKey(values.idempotencyKey, db);
-        if (replay[0]) return getPayment(replay[0].id, db);
+        if (replay[0]) {
+          assertPaymentRequestCompatible(replay[0], values);
+          return getPayment(replay[0].id, db);
+        }
       }
       throw error;
     }
@@ -524,7 +743,6 @@ export class PaymentService {
         .select({
           id: schema.payments.id,
           studentId: schema.payments.studentId,
-          assessmentId: schema.payments.assessmentId,
           amountCentavos: schema.payments.amountCentavos,
           status: schema.payments.status,
           receiptId: schema.receipts.id,
@@ -558,7 +776,53 @@ export class PaymentService {
       }
 
       const ledger = await selectStudentLedger(payment.studentId, transactionDb);
-      const nextBalance = addCentavos(ledger.balanceCentavos, payment.amountCentavos);
+      const originalAllocations = await tx
+        .select({
+          assessmentItemId: schema.paymentAllocations.assessmentItemId,
+          adjustmentId: schema.paymentAllocations.adjustmentId,
+          amountCentavos: schema.paymentAllocations.amountCentavos,
+          itemAssessmentId: schema.assessmentItems.assessmentId,
+          adjustmentAssessmentId: schema.adjustments.assessmentId,
+          itemName: schema.assessmentItems.name,
+          adjustmentReason: schema.adjustments.reason,
+        })
+        .from(schema.paymentAllocations)
+        .leftJoin(
+          schema.assessmentItems,
+          eq(schema.assessmentItems.id, schema.paymentAllocations.assessmentItemId)
+        )
+        .leftJoin(
+          schema.adjustments,
+          eq(schema.adjustments.id, schema.paymentAllocations.adjustmentId)
+        )
+        .where(eq(schema.paymentAllocations.paymentId, payment.id))
+        .orderBy(asc(schema.paymentAllocations.createdAt));
+      const reversalAllocations: PaymentAllocation[] = originalAllocations.map((allocation) => {
+        const assessmentId = allocation.itemAssessmentId ?? allocation.adjustmentAssessmentId;
+        if (!assessmentId) {
+          throw new AppError('The payment allocation is missing its assessment target.');
+        }
+        if ((allocation.assessmentItemId ? 1 : 0) + (allocation.adjustmentId ? 1 : 0) !== 1) {
+          throw new AppError('The payment allocation has an invalid target.');
+        }
+        return {
+          assessmentItemId: allocation.assessmentItemId,
+          adjustmentId: allocation.adjustmentId,
+          assessmentId,
+          targetType: allocation.adjustmentId ? 'DEBIT_ADJUSTMENT' : 'ASSESSMENT_ITEM',
+          name: allocation.itemName ?? allocation.adjustmentReason ?? 'Debit adjustment',
+          amountCentavos: allocation.amountCentavos,
+        };
+      });
+      const allocationTotal = reversalAllocations.reduce(
+        (total, allocation) => addCentavos(total, allocation.amountCentavos),
+        0
+      );
+      if (allocationTotal !== payment.amountCentavos) {
+        throw new AppError('The payment allocation total does not match the payment amount.');
+      }
+      const allocationGroups = groupAllocationsByAssessment(reversalAllocations);
+      const nextBalance = addCentavos(ledger.balanceCentavos, allocationTotal);
       const [reversal] = await tx
         .insert(schema.paymentReversals)
         .values({
@@ -578,15 +842,23 @@ export class PaymentService {
         .update(schema.receipts)
         .set({ status: 'VOIDED' })
         .where(eq(schema.receipts.id, payment.receiptId));
-      await tx.insert(schema.ledgerEntries).values({
-        studentId: payment.studentId,
-        assessmentId: payment.assessmentId,
-        entryType: 'REVERSAL',
-        debitCentavos: payment.amountCentavos,
-        creditCentavos: 0,
-        balanceCentavos: nextBalance,
-        description: `Reversal for payment ${payment.id}`,
-      });
+      for (const [groupIndex, group] of allocationGroups.entries()) {
+        await tx.insert(schema.ledgerEntries).values({
+          studentId: payment.studentId,
+          assessmentId: group.assessmentId,
+          entryType: 'REVERSAL',
+          debitCentavos: group.amountCentavos,
+          creditCentavos: 0,
+          balanceCentavos: addCentavos(
+            ledger.balanceCentavos,
+            allocationGroups
+              .slice(0, groupIndex + 1)
+              .reduce((total, current) => addCentavos(total, current.amountCentavos), 0)
+          ),
+          description: `Reversal for payment ${payment.id}`,
+          createdAt: new Date(reversal.createdAt.getTime() + groupIndex),
+        });
+      }
       await insertAuditLog(transactionDb, {
         userId: reversedByUserId,
         action: 'PAYMENT_REVERSED',

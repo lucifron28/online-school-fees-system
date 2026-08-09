@@ -36,6 +36,12 @@ export class ValidationError extends AppError {
   }
 }
 
+export class ConflictError extends AppError {
+  constructor(message: string = 'The requested operation conflicts with existing data.') {
+    super(message, 409, 'CONFLICT');
+  }
+}
+
 export function toErrorResponse(error: unknown): NextResponse {
   if (error instanceof ZodError) {
     return NextResponse.json(
