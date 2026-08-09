@@ -107,6 +107,7 @@ export interface OutstandingBalanceItem {
   studentId: string;
   studentNumber: string;
   studentName: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'WITHDRAWN' | 'GRADUATED';
   gradeLevelName: string | null;
   sectionName: string | null;
   outstandingBalanceCentavos: number;
@@ -147,6 +148,7 @@ export interface StudentStatement {
     sectionName: string | null;
   };
   dateRange: Pick<ReportDateRange, 'from' | 'to'> | null;
+  openingBalanceCentavos: number | null;
   entries: StatementEntry[];
   payments: CollectionReportItem[];
   closingBalanceCentavos: number;

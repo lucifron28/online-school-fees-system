@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: 11 - External-audit preparation
-- Branch: `main` (Phase 11 merged; external deployment evidence remains)
+- Phase: External Audit Repair Round 3
+- Branch: `fix/24-external-audit-round-3` (Round 3 hosted evidence verified in PR #15)
 - Phase 10 starting main commit: `960f107`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 0 through Phase 11 are merged into `main`; external Vercel/Neon preview evidence requires fictional deployment credentials.
+- Current state: Round 2 is verified through hosted Foundation run #111 and merged `main` `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`; Round 3 is verified through PR #15 and hosted Foundation run #122. External Vercel/Neon preview evidence remains a separate fictional deployment prerequisite.
 
 ## Completed phases
 
@@ -354,8 +354,18 @@ Phase 11 was implemented on `fix/21-external-audit-preparation` in commit `719df
 | Clean PostgreSQL migrations/seed/verifiers  | Passed in hosted CI #102 | Run #102 migrated, seeded, reset, and verified clean PostgreSQL databases before running the integration suite.                                                        |
 | Authenticated browser-only Round 1 scenario | Passed in hosted CI #102 | Run #102 passed the visible admin, finance, parent, and student browser workflow plus existing smoke coverage.                                                         |
 
-## External Audit Repair Round 2 implementation status
+## External Audit Repair Round 2 implementation status — verified
 
-Round 2 is implemented on `fix/23-external-audit-round-2` pending independent hosted verification and regular merge. The repair adds migration `0003_ambiguous_puma.sql`, payable debit-adjustment targets with exactly-one-target enforcement, grouped multi-assessment payment/reversal ledger entries, semantic payment and mock-checkout idempotency conflicts, transactional administrator and guardian invariants, fee-structure serialization, persisted checkout expiry/channel state, auth infrastructure-error propagation, finance role-aware navigation, and persisted allocation detail on parent/student receipts.
+Round 2 was implemented on `fix/23-external-audit-round-2` from starting main `52a165d403cfc6a313015d91ed729e8036996c24`, carried by PR [#14](https://github.com/lucifron28/online-school-fees-system/pull/14), and merged to main at `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`. Hosted Foundation run [#111](https://github.com/lucifron28/online-school-fees-system/actions/runs/31304545247) passed migrations, seed, all configured verifiers, integration, formatting, lint, typecheck, build, and Playwright; local unit count was 51. Only Vercel/Neon deployment evidence was not performed.
+
+The repair added migration `0003_ambiguous_puma.sql`, payable debit-adjustment targets with exactly-one-target enforcement, grouped multi-assessment payment/reversal ledger entries, semantic payment and mock-checkout idempotency conflicts, transactional administrator and guardian invariants, fee-structure serialization, persisted checkout expiry/channel state, auth infrastructure-error propagation, finance role-aware navigation, and persisted allocation detail on parent/student receipts.
 
 CodeGraph was used before editing to trace payment, gateway, ledger, administration, guardian, fee-structure, portal, and navigation blast radius. The focused integration suite is `tests/integration/external-audit-round-2.test.ts`; it is skipped locally when `TEST_DATABASE_URL` is absent and is intended to be authoritative in hosted CI. No production, real-provider, accounting, security-certification, tax-receipt, or deployment claim is made.
+
+## External Audit Repair Round 3 implementation status
+
+- Starting main: `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`; branch: `fix/24-external-audit-round-3`.
+- Added migration `0004_lumpy_bishop.sql` with nullable typed receipt issuance snapshots and safe legacy fallback.
+- Repaired assessment-level credit enforcement, credit-aware payment allocation, immutable receipt PDFs/portal/admin semantics, lifecycle-inclusive debt reporting, non-active settlement, Manila-ranged statements, terminal checkout callbacks, deterministic withdrawn demo debt, and browser-only coverage.
+- Added `tests/integration/external-audit-round-3.test.ts` with 28 PostgreSQL cases and `tests/unit/external-audit-round-3.test.ts` with six pure/schema cases. Local PostgreSQL cases are skipped without `TEST_DATABASE_URL`; that skip is not evidence of persistence.
+- Local checks passed: `pnpm.cmd typecheck`, `pnpm.cmd lint`, `pnpm.cmd test` (57 tests), `pnpm.cmd test:integration` reset-safety gate (3 tests; database cases skip without `TEST_DATABASE_URL`), production build, focused formatting, and diff checks. Hosted Foundation run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) passed clean migrations/seed/verifiers, formatting, lint, typecheck, 46 database integration tests, build, and Playwright. PR [#15](https://github.com/lucifron28/online-school-fees-system/pull/15) received self-review COMMENT `4892057781`; no blocker, high, or demo-critical medium findings remain.

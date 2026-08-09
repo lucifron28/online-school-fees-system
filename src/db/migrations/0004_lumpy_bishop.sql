@@ -1,0 +1,1 @@
+ALTER TABLE "receipts" ADD COLUMN "issuance_snapshot" jsonb;

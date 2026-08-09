@@ -124,7 +124,7 @@ describe('OTC Payments, Receipts & Reversals Logic', () => {
       studentName: 'Juan Dela Cruz Jr.',
       gradeAndSection: 'Grade 10 - A',
       amountReceivedCentavos: 1400000,
-      remainingBalanceCentavos: 0,
+      balanceAfterPaymentCentavos: 0,
       processedByName: 'Finance Staff',
       allocations: [{ name: 'Tuition Fee', amountCentavos: 1400000 }],
       institution: {

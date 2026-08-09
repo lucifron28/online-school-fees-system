@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import dotenv from 'dotenv';
 import path from 'path';
 import { createAuth } from '../../lib/auth/server';
+import { receiptSnapshotSchema } from '../../lib/receipt-snapshot';
 import { getDb, type DatabaseInstance } from '../index';
 import * as schema from '../schema';
 
@@ -324,7 +325,7 @@ async function ensureStudents(
       gradeLevelId: gradeMap.get(grade.code) ?? null,
       sectionId: sectionMap.get(`${grade.code}-${number % 2 === 0 ? 'B' : 'A'}`) ?? null,
       schoolYearId,
-      status: 'ACTIVE' as const,
+      status: number === 12 ? ('WITHDRAWN' as const) : ('ACTIVE' as const),
       updatedAt: DEMO_NOW,
     };
     const row = existing[0]
@@ -771,13 +772,70 @@ async function ensurePayment(
     createdAt: DEMO_NOW,
   });
 
+  const [settings, gradeRows, sectionRows, processorRows] = await Promise.all([
+    db.select().from(schema.schoolSettings).limit(1),
+    db
+      .select({ name: schema.gradeLevels.name })
+      .from(schema.gradeLevels)
+      .where(eq(schema.gradeLevels.id, student.gradeLevelId!))
+      .limit(1),
+    db
+      .select({ name: schema.sections.name })
+      .from(schema.sections)
+      .where(eq(schema.sections.id, student.sectionId!))
+      .limit(1),
+    db
+      .select({ name: schema.users.name })
+      .from(schema.users)
+      .where(eq(schema.users.id, financeUserId))
+      .limit(1),
+  ]);
+  const institution = settings[0];
+  const receiptNumber = `OSFS-DEMO-${student.studentNumber}`;
+  const verificationIdentifier = `VER-DEMO-${student.studentNumber}`;
+  const receiptSnapshot = receiptSnapshotSchema.parse({
+    version: 1,
+    issuedAt: DEMO_NOW.toISOString(),
+    receiptNumber,
+    verificationIdentifier,
+    institution: {
+      name: institution?.schoolName ?? 'Online School Fees Monitoring & Payment System',
+      address: institution?.address ?? 'Fictional capstone demonstration',
+      email: institution?.email ?? 'info@schoolfees.example.com',
+      phone: institution?.phone ?? '+63 (2) 8123-4567',
+      timezone: institution?.timezone ?? 'Asia/Manila',
+    },
+    student: {
+      studentNumber: student.studentNumber,
+      name: `${student.firstName} ${student.lastName}`,
+      gradeAndSection: [gradeRows[0]?.name ?? student.gradeCode, sectionRows[0]?.name]
+        .filter(Boolean)
+        .join(' - '),
+    },
+    payment: {
+      amountCentavos,
+      paymentMethod,
+      referenceNumber,
+      balanceAfterPaymentCentavos: currentBalance - amountCentavos,
+    },
+    processor: { name: processorRows[0]?.name ?? 'Finance staff' },
+    allocations: allocations.map((allocation) => ({
+      targetType: 'ASSESSMENT_ITEM' as const,
+      name:
+        assessmentItems.find((item) => item.id === allocation.assessmentItemId)?.name ??
+        'Assessment item',
+      amountCentavos: allocation.amountCentavos,
+    })),
+  });
+
   const [receipt] = await db
     .insert(schema.receipts)
     .values({
       paymentId: payment.id,
-      receiptNumber: `OSFS-DEMO-${student.studentNumber}`,
-      verificationIdentifier: `VER-DEMO-${student.studentNumber}`,
+      receiptNumber,
+      verificationIdentifier,
       status: 'ACTIVE',
+      issuanceSnapshot: receiptSnapshot,
       createdAt: DEMO_NOW,
     })
     .returning();

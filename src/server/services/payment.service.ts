@@ -9,9 +9,13 @@ import {
   type PaymentPostInput,
   type ReversalPostInput,
 } from '@/lib/payments';
+import { parseReceiptSnapshot, receiptSnapshotSchema } from '@/lib/receipt-snapshot';
 import { addCentavos, formatCentavos, subtractCentavos } from '@/lib/utils/currency';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '@/server/errors';
-import { calculateBalanceFromEntries } from './assessment.service';
+import {
+  assertStudentAssessmentReconciliation,
+  reconcileStudentAssessmentBalances,
+} from './assessment.service';
 import { lockStudentForLedgerMutation } from './ledger.service';
 import { NotificationService, type EmailProvider } from './notification.service';
 import { allocateReceiptNumber } from './receipt.service';
@@ -40,6 +44,7 @@ type AllocationItem = {
 
 type PaymentObligation = AllocationItem & {
   assessmentId: string;
+  assessmentBalanceCentavos?: number;
   targetType: 'ASSESSMENT_ITEM' | 'DEBIT_ADJUSTMENT';
   assessmentItemId: string | null;
   adjustmentId: string | null;
@@ -103,6 +108,7 @@ export function allocatePaymentToObligations(
 ): PaymentAllocation[] {
   let remainingPayment = paymentAmountCentavos;
   const allocations: PaymentAllocation[] = [];
+  const remainingAssessmentCapacity = new Map<string, number | undefined>();
 
   for (const obligation of obligations) {
     if (remainingPayment <= 0) break;
@@ -110,7 +116,19 @@ export function allocatePaymentToObligations(
     const unpaidAmount = subtractCentavos(obligation.amountCentavos, obligation.paidCentavos);
     if (unpaidAmount <= 0) continue;
 
-    const allocated = Math.min(remainingPayment, unpaidAmount);
+    if (!remainingAssessmentCapacity.has(obligation.assessmentId)) {
+      remainingAssessmentCapacity.set(
+        obligation.assessmentId,
+        obligation.assessmentBalanceCentavos
+      );
+    }
+    const assessmentCapacity = remainingAssessmentCapacity.get(obligation.assessmentId);
+    const allocatable =
+      assessmentCapacity === undefined
+        ? unpaidAmount
+        : Math.min(unpaidAmount, Math.max(0, assessmentCapacity));
+    const allocated = Math.min(remainingPayment, allocatable);
+    if (allocated <= 0) continue;
     allocations.push({
       assessmentItemId: obligation.assessmentItemId,
       adjustmentId: obligation.adjustmentId,
@@ -119,6 +137,12 @@ export function allocatePaymentToObligations(
       name: obligation.name,
       amountCentavos: allocated,
     });
+    if (assessmentCapacity !== undefined) {
+      remainingAssessmentCapacity.set(
+        obligation.assessmentId,
+        subtractCentavos(assessmentCapacity, allocated)
+      );
+    }
     remainingPayment = subtractCentavos(remainingPayment, allocated);
   }
 
@@ -204,7 +228,8 @@ function groupAllocationsByAssessment(allocations: PaymentAllocation[]): Allocat
 
 async function selectOutstandingObligations(
   studentId: string,
-  db: DatabaseInstance
+  db: DatabaseInstance,
+  assessmentBalances: Map<string, number>
 ): Promise<PaymentObligation[]> {
   const [items, adjustments] = await Promise.all([
     db
@@ -310,6 +335,7 @@ async function selectOutstandingObligations(
     ...items.map<PaymentObligation>((item) => ({
       id: item.assessmentItemId,
       assessmentId: item.assessmentId,
+      assessmentBalanceCentavos: assessmentBalances.get(item.assessmentId) ?? 0,
       name: item.name,
       amountCentavos: item.amountCentavos,
       paidCentavos: paidByItem.get(item.assessmentItemId) ?? 0,
@@ -322,6 +348,7 @@ async function selectOutstandingObligations(
     ...adjustments.map<PaymentObligation>((adjustment) => ({
       id: adjustment.adjustmentId,
       assessmentId: adjustment.assessmentId,
+      assessmentBalanceCentavos: assessmentBalances.get(adjustment.assessmentId) ?? 0,
       name: adjustment.name,
       amountCentavos: adjustment.amountCentavos,
       paidCentavos: paidByAdjustment.get(adjustment.adjustmentId) ?? 0,
@@ -340,18 +367,22 @@ async function selectOutstandingObligations(
   );
 }
 
-async function selectStudentLedger(studentId: string, db: DatabaseInstance) {
+async function selectStudentLedger(
+  studentId: string,
+  db: DatabaseInstance,
+  enforceReconciliation = false
+) {
   const entries = await db
     .select({
+      assessmentId: schema.ledgerEntries.assessmentId,
       debitCentavos: schema.ledgerEntries.debitCentavos,
       creditCentavos: schema.ledgerEntries.creditCentavos,
     })
     .from(schema.ledgerEntries)
     .where(eq(schema.ledgerEntries.studentId, studentId));
-  return {
-    entries,
-    balanceCentavos: calculateBalanceFromEntries(entries),
-  };
+  const reconciliation = reconcileStudentAssessmentBalances(entries);
+  if (enforceReconciliation) assertStudentAssessmentReconciliation(reconciliation);
+  return { entries, ...reconciliation, balanceCentavos: reconciliation.studentBalanceCentavos };
 }
 
 async function selectPaymentRow(id: string, db: DatabaseInstance) {
@@ -379,6 +410,7 @@ async function selectPaymentRow(id: string, db: DatabaseInstance) {
       verificationIdentifier: schema.receipts.verificationIdentifier,
       receiptStatus: schema.receipts.status,
       receiptCreatedAt: schema.receipts.createdAt,
+      receiptIssuanceSnapshot: schema.receipts.issuanceSnapshot,
     })
     .from(schema.payments)
     .innerJoin(schema.students, eq(schema.students.id, schema.payments.studentId))
@@ -435,6 +467,7 @@ export async function getPayment(id: string, db: DatabaseInstance = getDb()) {
       ? ('DEBIT_ADJUSTMENT' as const)
       : ('ASSESSMENT_ITEM' as const),
   }));
+  const receiptSnapshot = parseReceiptSnapshot(payment.receiptIssuanceSnapshot);
 
   return {
     ...payment,
@@ -445,10 +478,13 @@ export async function getPayment(id: string, db: DatabaseInstance = getDb()) {
           verificationIdentifier: payment.verificationIdentifier,
           status: payment.receiptStatus,
           createdAt: payment.receiptCreatedAt,
+          issuanceSnapshot: payment.receiptIssuanceSnapshot,
         }
       : null,
     allocations: allocationDetails,
     remainingBalanceCentavos: ledger.balanceCentavos,
+    receiptBalanceAfterPaymentCentavos:
+      receiptSnapshot?.payment.balanceAfterPaymentCentavos ?? null,
   };
 }
 
@@ -520,7 +556,12 @@ export async function getReceiptPdfData(receiptIdentifier: string, db: DatabaseI
     receiptIdentifier
   );
   const receipts = await db
-    .select({ id: schema.receipts.id, paymentId: schema.receipts.paymentId })
+    .select({
+      id: schema.receipts.id,
+      paymentId: schema.receipts.paymentId,
+      status: schema.receipts.status,
+      issuanceSnapshot: schema.receipts.issuanceSnapshot,
+    })
     .from(schema.receipts)
     .where(
       isUuid
@@ -529,6 +570,34 @@ export async function getReceiptPdfData(receiptIdentifier: string, db: DatabaseI
     )
     .limit(1);
   if (!receipts[0]) throw new NotFoundError('The receipt does not exist.');
+
+  const snapshot = parseReceiptSnapshot(receipts[0].issuanceSnapshot);
+  if (snapshot) {
+    const paymentDate = new Intl.DateTimeFormat('en-PH', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: snapshot.institution.timezone,
+    }).format(new Date(snapshot.issuedAt));
+    return {
+      receiptNumber: snapshot.receiptNumber,
+      verificationIdentifier: snapshot.verificationIdentifier,
+      status: receipts[0].status,
+      paymentDate,
+      paymentMethod: snapshot.payment.paymentMethod,
+      referenceNumber: snapshot.payment.referenceNumber ?? undefined,
+      studentNumber: snapshot.student.studentNumber,
+      studentName: snapshot.student.name,
+      gradeAndSection: snapshot.student.gradeAndSection,
+      amountReceivedCentavos: snapshot.payment.amountCentavos,
+      balanceAfterPaymentCentavos: snapshot.payment.balanceAfterPaymentCentavos,
+      processedByName: snapshot.processor.name,
+      allocations: snapshot.allocations.map((allocation) => ({
+        name: allocation.name,
+        amountCentavos: allocation.amountCentavos,
+      })),
+      institution: snapshot.institution,
+    };
+  }
 
   const [payment, settings] = await Promise.all([
     getPayment(receipts[0].paymentId, db),
@@ -558,7 +627,7 @@ export async function getReceiptPdfData(receiptIdentifier: string, db: DatabaseI
     gradeAndSection:
       [payment.gradeLevelName, payment.sectionName].filter(Boolean).join(' - ') || 'Not assigned',
     amountReceivedCentavos: payment.amountCentavos,
-    remainingBalanceCentavos: payment.remainingBalanceCentavos,
+    balanceAfterPaymentCentavos: null,
     processedByName: payment.processedByName ?? 'Finance staff',
     allocations: payment.allocations.map((allocation) => ({
       name: allocation.itemName,
@@ -601,10 +670,12 @@ export class PaymentService {
 
         await lockStudentForLedgerMutation(values.studentId, transactionDb);
 
-        const [ledger, outstandingObligations] = await Promise.all([
-          selectStudentLedger(values.studentId, transactionDb),
-          selectOutstandingObligations(values.studentId, transactionDb),
-        ]);
+        const ledger = await selectStudentLedger(values.studentId, transactionDb, true);
+        const outstandingObligations = await selectOutstandingObligations(
+          values.studentId,
+          transactionDb,
+          ledger.assessmentBalances
+        );
         if (values.amountCentavos > ledger.balanceCentavos) {
           throw new ValidationError(
             `Overpayment rejected. Payment amount (${formatCentavos(values.amountCentavos)}) exceeds current outstanding balance (${formatCentavos(ledger.balanceCentavos)}).`
@@ -648,11 +719,12 @@ export class PaymentService {
         if (!payment) throw new AppError('The payment could not be created.');
 
         await tx.insert(schema.paymentAllocations).values(
-          allocations.map((allocation) => ({
+          allocations.map((allocation, allocationIndex) => ({
             paymentId: payment.id,
             assessmentItemId: allocation.assessmentItemId,
             adjustmentId: allocation.adjustmentId,
             amountCentavos: allocation.amountCentavos,
+            createdAt: new Date(payment.createdAt.getTime() + allocationIndex),
           }))
         );
 
@@ -676,6 +748,47 @@ export class PaymentService {
 
         const { receiptNumber } = await allocateReceiptNumber(transactionDb, payment.createdAt);
         const verificationIdentifier = `VER-${payment.id}`;
+        const [paymentProfile, settings] = await Promise.all([
+          selectPaymentRow(payment.id, transactionDb),
+          tx.select().from(schema.schoolSettings).limit(1),
+        ]);
+        const institution = settings[0];
+        const receiptSnapshot = receiptSnapshotSchema.parse({
+          version: 1,
+          issuedAt: payment.createdAt.toISOString(),
+          receiptNumber,
+          verificationIdentifier,
+          institution: {
+            name: institution?.schoolName ?? 'Online School Fees Monitoring & Payment System',
+            address: institution?.address ?? 'Fictional capstone demonstration',
+            email: institution?.email ?? 'info@schoolfees.example.com',
+            phone: institution?.phone ?? '+63 (2) 8123-4567',
+            timezone: institution?.timezone ?? 'Asia/Manila',
+          },
+          student: {
+            studentNumber: paymentProfile.studentNumber,
+            name: `${paymentProfile.studentFirstName} ${paymentProfile.studentLastName}`,
+            gradeAndSection:
+              [paymentProfile.gradeLevelName, paymentProfile.sectionName]
+                .filter(Boolean)
+                .join(' - ') || 'Not assigned',
+          },
+          payment: {
+            amountCentavos: values.amountCentavos,
+            paymentMethod: values.paymentMethod,
+            referenceNumber: values.referenceNumber ?? null,
+            balanceAfterPaymentCentavos: subtractCentavos(
+              ledger.balanceCentavos,
+              values.amountCentavos
+            ),
+          },
+          processor: { name: paymentProfile.processedByName ?? 'Finance staff' },
+          allocations: allocations.map((allocation) => ({
+            targetType: allocation.targetType,
+            name: allocation.name,
+            amountCentavos: allocation.amountCentavos,
+          })),
+        });
         const [receipt] = await tx
           .insert(schema.receipts)
           .values({
@@ -683,6 +796,7 @@ export class PaymentService {
             receiptNumber,
             verificationIdentifier,
             status: 'ACTIVE',
+            issuanceSnapshot: receiptSnapshot,
           })
           .returning();
         if (!receipt) throw new AppError('The payment receipt could not be created.');
@@ -775,7 +889,7 @@ export class PaymentService {
         );
       }
 
-      const ledger = await selectStudentLedger(payment.studentId, transactionDb);
+      const ledger = await selectStudentLedger(payment.studentId, transactionDb, true);
       const originalAllocations = await tx
         .select({
           assessmentItemId: schema.paymentAllocations.assessmentItemId,

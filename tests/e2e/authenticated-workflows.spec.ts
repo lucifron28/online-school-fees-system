@@ -314,4 +314,63 @@ test.describe('authenticated financial workflow', () => {
       await Promise.all([financeContext.close(), parentContext.close(), studentContext.close()]);
     }
   });
+
+  test('browser-only UI settles withdrawn debt and preserves the first receipt balance', async ({
+    browser,
+  }) => {
+    test.setTimeout(120_000);
+    const suffix = Date.now();
+    const financeContext = await browser.newContext();
+
+    try {
+      const finance = await financeContext.newPage();
+      await login(finance, 'admin', 'finance@demo.school');
+      await finance.goto('/admin/payments/manual');
+
+      const studentSelect = finance.getByLabel('Student');
+      await expect(studentSelect).toBeVisible();
+      const withdrawnOption = studentSelect.locator('option').filter({ hasText: 'DEMO-0012' });
+      await expect(withdrawnOption).toHaveCount(1);
+      await expect(withdrawnOption).toContainText('WITHDRAWN');
+      const withdrawnStudentId = await withdrawnOption.getAttribute('value');
+      expect(withdrawnStudentId).toBeTruthy();
+      await studentSelect.selectOption(withdrawnStudentId!);
+      await expect(finance.getByText('Authoritative current balance')).toBeVisible();
+      await expect(finance.getByText('₱70,000.00')).toBeVisible();
+
+      await finance.getByLabel('Payment method').selectOption('CASH');
+      await finance.getByLabel('Amount received (PHP)').fill('10000.00');
+      await finance.getByLabel('Deposit/reference no. (optional)').fill(`R3-FIRST-${suffix}`);
+      await finance
+        .getByRole('button', { name: 'Post payment and issue receipt', exact: true })
+        .click();
+      await expect(finance.getByText('Payment posted', { exact: true })).toBeVisible();
+      await finance.getByRole('link', { name: 'View transaction', exact: true }).click();
+      await expect(finance).toHaveURL(/\/admin\/transactions\//, { timeout: 15_000 });
+      const firstTransactionUrl = finance.url();
+      await expect(
+        finance.getByText('Remaining Balance After Payment:', { exact: false }).locator('..')
+      ).toContainText('₱60,000.00');
+
+      await finance.goto('/admin/payments/manual');
+      await studentSelect.selectOption(withdrawnStudentId!);
+      await finance.getByLabel('Payment method').selectOption('CASH');
+      await finance.getByLabel('Amount received (PHP)').fill('5000.00');
+      await finance.getByLabel('Deposit/reference no. (optional)').fill(`R3-SECOND-${suffix}`);
+      await finance
+        .getByRole('button', { name: 'Post payment and issue receipt', exact: true })
+        .click();
+      await expect(finance.getByText('Payment posted', { exact: true })).toBeVisible();
+
+      await finance.goto(firstTransactionUrl);
+      await expect(finance.getByText('Current student balance:', { exact: false })).toContainText(
+        '₱55,000.00'
+      );
+      await expect(
+        finance.getByText('Remaining Balance After Payment:', { exact: false }).locator('..')
+      ).toContainText('₱60,000.00');
+    } finally {
+      await financeContext.close();
+    }
+  });
 });

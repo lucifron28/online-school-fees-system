@@ -12,6 +12,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import type { ReceiptSnapshot } from '../../lib/receipt-snapshot';
 
 // User Role Enum
 export const userRoleEnum = pgEnum('user_role', ['ADMIN', 'FINANCE_STAFF', 'PARENT', 'STUDENT']);
@@ -585,6 +586,7 @@ export const receipts = pgTable(
     receiptNumber: text('receipt_number').notNull().unique(), // e.g. 'OSFS-2026-000001'
     verificationIdentifier: text('verification_identifier').notNull().unique(),
     status: receiptStatusEnum('status').default('ACTIVE').notNull(),
+    issuanceSnapshot: jsonb('issuance_snapshot').$type<ReceiptSnapshot | null>(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({

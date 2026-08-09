@@ -56,6 +56,7 @@ type PaymentDetail = {
     amountCentavos: number;
   }>;
   remainingBalanceCentavos: number;
+  receiptBalanceAfterPaymentCentavos: number | null;
 };
 
 function statusClass(status: string) {
@@ -222,6 +223,15 @@ export default function AdminTransactionDetailsPage({
             </span>
             <span className="font-semibold text-slate-600 dark:text-slate-300">
               Current student balance: {formatCentavos(payment.remainingBalanceCentavos)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-500">Receipt-time historical balance</span>
+            <span className="font-semibold text-slate-600 dark:text-slate-300">
+              Remaining Balance After Payment:{' '}
+              {payment.receiptBalanceAfterPaymentCentavos === null
+                ? 'Unavailable for legacy receipt'
+                : formatCentavos(payment.receiptBalanceAfterPaymentCentavos)}
             </span>
           </div>
           {payment.referenceNumber && (

@@ -83,6 +83,17 @@ function eventTypeForStatus(status: MockCallbackInput['status']) {
   }[status] as (typeof schema.mockPaymentCallbackEvents.$inferInsert)['eventType'];
 }
 
+function callbackMatchesTerminalCheckout(
+  checkoutStatus: (typeof schema.mockPaymentCheckouts.$inferSelect)['status'],
+  callbackStatus: MockCallbackInput['status']
+) {
+  return (
+    (checkoutStatus === 'SUCCEEDED' && callbackStatus === 'SUCCESS') ||
+    (checkoutStatus === 'FAILED' && callbackStatus === 'FAILED') ||
+    (checkoutStatus === 'CANCELLED' && callbackStatus === 'CANCELLED')
+  );
+}
+
 async function selectCheckoutByReference(
   reference: string,
   db: DatabaseInstance,
@@ -297,6 +308,23 @@ export async function processMockCallback(
           .set({ processingStatus: 'FAILED', processedAt: new Date(), errorMessage: message })
           .where(eq(schema.mockPaymentCallbackEvents.id, event.id));
         return callbackResult(checkout, values, false, 'FAILED', message);
+      }
+
+      if (['SUCCEEDED', 'FAILED', 'CANCELLED'].includes(checkout.status)) {
+        const matches = callbackMatchesTerminalCheckout(checkout.status, values.status);
+        const message = matches
+          ? null
+          : 'The checkout is already terminal; its state and financial history cannot change.';
+        const processingStatus = matches ? 'PROCESSED' : 'FAILED';
+        await tx
+          .update(schema.mockPaymentCallbackEvents)
+          .set({
+            processingStatus,
+            processedAt: new Date(),
+            errorMessage: message,
+          })
+          .where(eq(schema.mockPaymentCallbackEvents.id, event.id));
+        return callbackResult(checkout, values, false, processingStatus, message);
       }
 
       if (checkout.status === 'SUCCEEDED' && values.status !== 'SUCCESS') {

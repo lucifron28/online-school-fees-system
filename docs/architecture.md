@@ -38,6 +38,15 @@ Client Components must not import server-only services. Financial rules must rem
 - The database schema describes users, academic records, students, guardians, fees, assessment periods, assessments, ledger entries, payments, receipts, receipt sequences, reversals, audit logs, persisted mock checkouts/callbacks, notification delivery, and notification attempt history.
 - `src/db/migrations/0000_good_ghost_rider.sql` and the committed follow-up migrations are the database contract; hosted CI applies them to clean PostgreSQL databases.
 - Financial event timestamps use PostgreSQL `timestamp with time zone`; monetary values use integer centavos with database checks.
+
+## External Audit Round 3 financial-history boundary
+
+- `assessment.service.ts` is the authoritative source for assessment-attributed ledger reconciliation. Credit adjustments are checked against the selected assessment's persisted net balance, not the student's aggregate balance.
+- `payment.service.ts` locks the student before reading ledger state, allocates oldest-first within each assessment's remaining net capacity, and groups payment/reversal ledger entries by assessment. A reconciliation helper rejects un-attributed or negative assessment residue before financial mutation.
+- Receipt issuance writes a versioned, Zod-validated JSONB snapshot in the same transaction as payment and receipt creation. Receipt PDFs and portal/admin historical labels read that snapshot; nullable legacy rows render a deterministic unavailable balance instead of fabricated history. Reversal changes receipt status to `VOIDED` without changing snapshot facts.
+- Outstanding debt is selected from persisted positive ledger balances for every lifecycle status, while dashboard `activeStudents` remains an `ACTIVE`-only count. The finance payment selector includes status labels and permits existing-debt settlement for non-active students; assessment generation remains active-only.
+- Student statements convert requested dates through the Manila calendar, use a start-inclusive/end-exclusive interval, calculate opening balance from pre-period entries, and recompute in-period running balances for the PDF.
+- Mock checkout statuses `SUCCEEDED`, `FAILED`, `CANCELLED`, and `EXPIRED` are terminal. Conflicting callbacks are retained as failed/ignored events and cannot create or reverse financial movement.
 - Localhost PostgreSQL URLs use node-postgres for seed/reset/integration tooling, while remote deployment URLs continue to use Neon.
 - Assessment generation, ledger balance calculation, OTC payment posting, portal ownership, mock online-payment completion, report aggregation, and notification history are PostgreSQL-backed. External deployment remains a later environment-dependent gate.
 - The mock payment gateway is allowed by scope. Its checkout records, callback events, and idempotency state are persisted, while no real payment-provider integration is claimed.

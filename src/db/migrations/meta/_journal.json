@@ -29,6 +29,13 @@
       "when": 1786260566914,
       "tag": "0003_ambiguous_puma",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786296019269,
+      "tag": "0004_lumpy_bishop",
+      "breakpoints": true
     }
   ]
 }

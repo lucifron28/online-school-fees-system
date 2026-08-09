@@ -67,8 +67,7 @@ export function ManualPaymentForm() {
 
   const studentsQuery = useQuery({
     queryKey: ['admin-payment-students'],
-    queryFn: () =>
-      requestJson<StudentListResponse>('/api/admin/students?page=1&pageSize=100&status=ACTIVE'),
+    queryFn: () => requestJson<StudentListResponse>('/api/admin/students?page=1&pageSize=100'),
   });
   const assessmentQuery = useQuery({
     queryKey: ['admin-payment-student-balance', selectedStudentId],
@@ -148,9 +147,7 @@ export function ManualPaymentForm() {
           <CardTitle className="text-base">Payment details</CardTitle>
         </CardHeader>
         <CardContent>
-          {studentsQuery.isLoading && (
-            <p className="text-sm text-slate-500">Loading active students…</p>
-          )}
+          {studentsQuery.isLoading && <p className="text-sm text-slate-500">Loading students…</p>}
           {studentsQuery.isError && (
             <div>
               <p className="text-sm text-red-600">{getClientErrorMessage(studentsQuery.error)}</p>
@@ -185,10 +182,11 @@ export function ManualPaymentForm() {
                         setSelectedStudentId(value);
                       }}
                     >
-                      <option value="">Select an active student</option>
+                      <option value="">Select a student</option>
                       {studentsQuery.data.data.map((student) => (
                         <option key={student.id} value={student.id}>
-                          {student.studentNumber} — {student.firstName} {student.lastName}
+                          {student.studentNumber} — {student.firstName} {student.lastName} —{' '}
+                          {student.status}
                         </option>
                       ))}
                     </select>

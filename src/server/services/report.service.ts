@@ -14,7 +14,7 @@ import {
 } from 'drizzle-orm';
 import { getDb, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
-import { addCentavos, formatCentavos } from '@/lib/utils/currency';
+import { addCentavos, formatCentavos, subtractCentavos } from '@/lib/utils/currency';
 import {
   addManilaMonths,
   formatReportDate,
@@ -330,13 +330,13 @@ export class ReportService {
           studentNumber: schema.students.studentNumber,
           firstName: schema.students.firstName,
           lastName: schema.students.lastName,
+          status: schema.students.status,
           gradeLevelName: schema.gradeLevels.name,
           sectionName: schema.sections.name,
         })
         .from(schema.students)
         .leftJoin(schema.gradeLevels, eq(schema.gradeLevels.id, schema.students.gradeLevelId))
         .leftJoin(schema.sections, eq(schema.sections.id, schema.students.sectionId))
-        .where(eq(schema.students.status, 'ACTIVE'))
         .orderBy(asc(schema.students.lastName), asc(schema.students.firstName)),
       db
         .select({
@@ -373,6 +373,7 @@ export class ReportService {
           studentId: student.id,
           studentNumber: student.studentNumber,
           studentName: `${student.firstName} ${student.lastName}`,
+          status: student.status,
           gradeLevelName: student.gradeLevelName,
           sectionName: student.sectionName,
           outstandingBalanceCentavos: Math.max(0, ledger.debit - ledger.credit),
@@ -470,12 +471,36 @@ export class ReportService {
     const hasDateFilter = Boolean(input.from || input.to);
     const dateRange = hasDateFilter ? resolveReportDateRange(input) : undefined;
     const paymentRows = await selectCollectionRows(db, { studentId, range: dateRange });
-    const statementEntries: StatementEntry[] = entries.map((entry) => ({
+    const allStatementEntries: StatementEntry[] = entries.map((entry) => ({
       ...entry,
       debitCentavos: Number(entry.debitCentavos),
       creditCentavos: Number(entry.creditCentavos),
       balanceCentavos: Number(entry.balanceCentavos),
     }));
+    const openingBalanceCentavos = dateRange
+      ? calculateBalanceFromEntries(
+          allStatementEntries.filter((entry) => entry.createdAt < dateRange.start)
+        )
+      : null;
+    const statementEntries = dateRange
+      ? (() => {
+          let runningBalance = openingBalanceCentavos ?? 0;
+          return allStatementEntries
+            .filter(
+              (entry) => entry.createdAt >= dateRange.start && entry.createdAt < dateRange.end
+            )
+            .map((entry) => {
+              runningBalance = addCentavos(
+                runningBalance,
+                subtractCentavos(entry.debitCentavos, entry.creditCentavos)
+              );
+              return { ...entry, balanceCentavos: runningBalance };
+            });
+        })()
+      : allStatementEntries;
+    const closingBalanceCentavos = dateRange
+      ? (statementEntries.at(-1)?.balanceCentavos ?? openingBalanceCentavos ?? 0)
+      : calculateBalanceFromEntries(statementEntries);
     const institution = settings[0];
 
     return {
@@ -488,9 +513,10 @@ export class ReportService {
         sectionName: students[0].sectionName,
       },
       dateRange: dateRange ? { from: dateRange.from, to: dateRange.to } : null,
+      openingBalanceCentavos,
       entries: statementEntries,
       payments: paymentRows.map(toCollectionItem),
-      closingBalanceCentavos: calculateBalanceFromEntries(statementEntries),
+      closingBalanceCentavos,
       institution: {
         name: institution?.schoolName ?? 'Online School Fees Monitoring & Payment System',
         address: institution?.address ?? 'Fictional capstone demonstration',
@@ -576,6 +602,7 @@ export class ReportService {
         [
           'Student Number',
           'Student Name',
+          'Status',
           'Grade Level',
           'Section',
           'Outstanding Balance (PHP)',
@@ -584,6 +611,7 @@ export class ReportService {
         rows.map((row) => [
           row.studentNumber,
           row.studentName,
+          row.status,
           row.gradeLevelName,
           row.sectionName,
           formatCentavos(row.outstandingBalanceCentavos).replace('₱', '').trim(),

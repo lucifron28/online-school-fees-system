@@ -114,6 +114,15 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - Delivery failures are recorded with attempt counts and retry timestamps. A provider failure is isolated from the already-committed financial transaction; manual retries use the persisted delivery row.
 - Due reminders are not generated because no confirmed due-date requirement or due-date field is in scope.
 
-## 17. Current prototype boundary
+## 17. External Audit Round 3 financial-history rules
 
-Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, Phase 5 assessment/ledger posting, Phase 6 OTC payment/receipt/reversal transactions, Phase 7 portal ownership/mock online-payment persistence, Phase 8 reports/reconciliation, Phase 9 notifications, Round 1 concurrency repair, and Round 2 financial-integrity repair are implemented in the repository. Hosted clean-PostgreSQL and authenticated browser evidence remain required for final disposition; deployment and a populated demo relationship seed remain fictional-demo boundaries. These assumptions must not be presented as production, provider, accounting, security-certification, tax-receipt, or deployment evidence.
+- Credit adjustments are assessment-scoped. A credit may not exceed the selected assessment's persisted net balance, even when another assessment leaves the student-wide total positive.
+- Payment allocation consumes each assessment's net capacity after credits, then applies deterministic oldest-first target ordering within that capacity. Concurrent payment, adjustment, and reversal mutations serialize on the student row.
+- Receipt issuance facts are immutable: version, issue time, receipt/verification identifiers, institution, student, payment, processor, allocations, and balance-after-payment are stored in a typed snapshot. Legacy receipts may have a null snapshot and must show an unavailable historical balance rather than a current balance.
+- Outstanding reports include positive persisted debt for `ACTIVE`, `INACTIVE`, `WITHDRAWN`, and `GRADUATED` students. Existing debt may be paid by non-active students; only new assessment posting is active-only.
+- Date-ranged statements use Manila boundaries and report opening balance, in-range activity, and closing balance. A statement without a range retains all-time behavior.
+- Mock checkout terminal states are immutable. Repeated matching callbacks are idempotent; conflicting callbacks are retained as ignored/failed events and do not move money.
+
+## 18. Current prototype boundary
+
+Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, Phase 5 assessment/ledger posting, Phase 6 OTC payment/receipt/reversal transactions, Phase 7 portal ownership/mock online-payment persistence, Phase 8 reports/reconciliation, Phase 9 notifications, Round 1 concurrency repair, and Round 2 financial-integrity repair are implemented and verified through hosted run #111. Round 3 is implemented and verified through hosted Foundation run #122, with PR #15 self-reviewed in COMMENT review `4892057781`. Deployment and all payment-provider behavior remain fictional-demo boundaries; these assumptions must not be presented as production, accounting, security-certification, tax-receipt, or deployment evidence.
