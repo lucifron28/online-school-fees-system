@@ -109,7 +109,10 @@ export function LoginForm({
       noValidate
     >
       <div>
-        <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+        <label
+          htmlFor={`${portal}-email`}
+          className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
+        >
           {portal === 'admin'
             ? 'Email / Admin ID'
             : portal === 'parent'
@@ -122,6 +125,7 @@ export function LoginForm({
             return (
               <>
                 <Input
+                  id={`${portal}-email`}
                   name={field.name}
                   type="email"
                   placeholder={portal === 'admin' ? 'admin@demo.school' : `${portal}@demo.school`}
@@ -141,7 +145,10 @@ export function LoginForm({
 
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+          <label
+            htmlFor={`${portal}-password`}
+            className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
+          >
             Password
           </label>
           <button
@@ -158,6 +165,7 @@ export function LoginForm({
             return (
               <>
                 <Input
+                  id={`${portal}-password`}
                   name={field.name}
                   type="password"
                   placeholder="Enter password"

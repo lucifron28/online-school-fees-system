@@ -73,6 +73,24 @@ jobs:
           TEST_DB_RESET_CONFIRMATION: RESET_TEST_DATABASE
         run: pnpm db:test:reset
 
+      - name: Re-run seed and verify PostgreSQL contracts
+        run: |
+          pnpm db:seed
+          pnpm db:verify:migrations
+          pnpm auth:verify
+          pnpm admin:verify
+          pnpm students-fees:verify
+          pnpm assessments-ledger:verify
+          pnpm payments-receipts:verify
+          pnpm portals-online:verify
+          pnpm reports-reconciliation:verify
+          pnpm notifications:verify
+
+      - name: Reset integration database before test suite
+        env:
+          TEST_DB_RESET_CONFIRMATION: RESET_TEST_DATABASE
+        run: pnpm db:test:reset
+
       - name: Check Formatting
         run: pnpm format:check
 

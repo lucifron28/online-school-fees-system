@@ -33,9 +33,26 @@ The previous internal-audit document is superseded. Its passing status described
 | AUD-023 | LOW                    | The reports verifier used `Math.random()` for a temporary fixture suffix.                                                        | Resolved in Phase 11 with `crypto.randomUUID()`; no production financial identifiers used `Math.random()`.                                                                                     |
 | AUD-024 | EXTERNAL BLOCKER       | The repository cannot prove a fictional Vercel/Neon preview without the required external credentials.                           | Code and clean PostgreSQL CI are complete; deployment evidence remains an environment prerequisite, not an unresolved application defect.                                                      |
 
-## Phase 11 audit disposition
+## Phase 11 preparation audit disposition
 
-No unresolved application blocker, high-severity defect, or demo-critical medium finding remains. Accepted low-scope limitations are the intentionally public health endpoint, the intentionally public simulated gateway callback boundary, and the local integration contract being skipped when `TEST_DATABASE_URL` is absent; Foundation CI exercises the isolated PostgreSQL path.
+That historical preparation round had no unresolved application blocker. Its accepted limitations were the intentionally public health endpoint, the intentionally public simulated gateway callback boundary, and the local integration contract being skipped when `TEST_DATABASE_URL` is absent; its hosted CI evidence is retained above.
+
+## External Audit Repair Round 1
+
+| ID      | Severity     | Finding                                                                                                                 | Repair-round resolution                                                                                                                                                                       |
+| ------- | ------------ | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AUD-025 | HIGH         | Student ledger mutations did not share one row-lock invariant across assessments, adjustments, payments, and reversals. | Shared student-row locks now protect every mutation path; clean PostgreSQL tests cover A-E concurrency cases and non-negative snapshots.                                                      |
+| AUD-026 | MEDIUM       | Receipt numbers were not a persisted, timezone-aware, concurrent sequence.                                              | Receipt allocation now uses school settings plus a PostgreSQL prefix/year sequence inside the payment transaction, with format, Manila-boundary, and concurrency tests.                       |
+| AUD-027 | MEDIUM       | Parent payment totals could include reversal-voided credits.                                                            | Parent/student account summaries now show net payments as payment credits less reversal debits, with unambiguous wording.                                                                     |
+| AUD-028 | MEDIUM       | Concurrent manual notification retries could double-send and lacked durable attempt history.                            | Atomic delivery claims, in-flight `RETRYING`, terminal `SENT`, persisted attempts, and fake-provider concurrency tests are implemented.                                                       |
+| AUD-029 | MEDIUM       | The end-to-end workflow lacked browser-only coverage for the requested role sequence.                                   | A visible Playwright scenario now covers admin student/assessment setup, finance CASH payment/receipt PDF, parent history, and student history.                                               |
+| AUD-030 | MEDIUM       | Missing `DATABASE_URL` did not have a clear runtime contract.                                                           | Database access now fails lazily with an explicit configuration error; imports/build remain safe without a placeholder connection.                                                            |
+| AUD-031 | MEDIUM       | Deterministic fictional seed, progress evidence, and required verifier gates were not fully documented.                 | Documentation and CI now describe/re-run the deterministic seed and execute the PostgreSQL verifiers; external deployment credentials remain pending.                                         |
+| AUD-032 | LOW / MEDIUM | Mock callback trust and replay boundaries needed explicit tests.                                                        | Callback payloads discard client financial fields; stored checkout data is authoritative; unknown references, cross-reference replay keys, duplicate events, and terminal states are guarded. |
+
+## Current Round 1 disposition
+
+Implementation and local non-database checks are complete on `fix/22-external-audit-round-1`. Hosted Foundation CI run [#102](https://github.com/lucifron28/online-school-fees-system/actions/runs/31296921264) passed clean PostgreSQL migrations, deterministic seed/verifiers, integration tests, production build, and the authenticated browser suite, so the application repair contracts for Round 1 are verified. Fictional Vercel/Neon deployment evidence remains pending. No production, payment-provider, accounting, security-certification, tax-receipt, or deployment claim is made.
 
 ## Audit rule
 

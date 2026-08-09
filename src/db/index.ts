@@ -7,7 +7,19 @@ import * as schema from './schema/index';
 export type DatabaseInstance = NeonHttpDatabase<typeof schema>;
 
 let _dbInstance: DatabaseInstance | null = null;
+let _missingDbInstance: DatabaseInstance | null = null;
 const localPoolInstances = new Map<string, Pool>();
+
+export const DATABASE_CONFIGURATION_ERROR =
+  'DATABASE_URL environment variable is missing. Runtime database access requires a valid PostgreSQL connection string. Configure DATABASE_URL in the environment or .env.local file.';
+
+function createMissingDatabaseClient(): DatabaseInstance {
+  return new Proxy({} as DatabaseInstance, {
+    get() {
+      throw new Error(DATABASE_CONFIGURATION_ERROR);
+    },
+  });
+}
 
 function shouldUseLocalPostgres(databaseUrl: string): boolean {
   if (process.env.DATABASE_DRIVER === 'pg') return true;
@@ -39,21 +51,18 @@ export function createDb(databaseUrl: string): DatabaseInstance {
 /**
  * Server-only database accessor.
  * Returns the Drizzle ORM database client initialized with Neon PostgreSQL.
- * Allows build-time initialization without requiring an active database connection.
- * Throws a clear configuration error if DATABASE_URL is not set when a database operation is actually invoked at runtime.
+ * Keeps module imports and Next.js build-time adapter construction safe without
+ * creating a network client. The returned lazy client throws the moment a
+ * runtime query method is accessed when DATABASE_URL is missing.
  */
 export function getDb(databaseUrlOverride?: string): DatabaseInstance {
   if (databaseUrlOverride) return createDb(databaseUrlOverride);
-  if (_dbInstance) return _dbInstance;
-
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    const placeholderUrl =
-      'postgresql://build_placeholder:build_placeholder@localhost:5432/build_placeholder';
-    const sql = neon(placeholderUrl);
-    _dbInstance = drizzle(sql, { schema });
-    return _dbInstance;
+    _missingDbInstance ??= createMissingDatabaseClient();
+    return _missingDbInstance;
   }
+  if (_dbInstance) return _dbInstance;
 
   _dbInstance = createDb(databaseUrl);
   return _dbInstance;
@@ -67,9 +76,7 @@ export const db = new Proxy({} as DatabaseInstance, {
   get(_target, prop, receiver) {
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) {
-      throw new Error(
-        'DATABASE_URL environment variable is missing. Database access requires a valid Neon PostgreSQL connection string. Please configure DATABASE_URL in your environment or .env.local file.'
-      );
+      throw new Error(DATABASE_CONFIGURATION_ERROR);
     }
     const client = getDb();
     const value = Reflect.get(client, prop, receiver);

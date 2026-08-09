@@ -87,6 +87,11 @@ export const notificationDeliveryStatusEnum = pgEnum('notification_delivery_stat
   'FAILED',
   'RETRYING',
 ]);
+export const notificationAttemptStatusEnum = pgEnum('notification_attempt_status', [
+  'RETRYING',
+  'SENT',
+  'FAILED',
+]);
 
 // ---------------------------------------------------------------------------
 // Better Auth Core Tables
@@ -576,6 +581,27 @@ export const receipts = pgTable(
   })
 );
 
+export const receiptNumberSequences = pgTable(
+  'receipt_number_sequences',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    prefix: text('prefix').notNull(),
+    year: integer('year').notNull(),
+    lastSequence: integer('last_sequence').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    prefixYearUnique: uniqueIndex('receipt_number_sequences_prefix_year_unique').on(
+      table.prefix,
+      table.year
+    ),
+    sequencePositive: check(
+      'receipt_number_sequences_last_sequence_positive',
+      sql`${table.lastSequence} > 0`
+    ),
+  })
+);
+
 export const paymentReversals = pgTable(
   'payment_reversals',
   {
@@ -732,6 +758,32 @@ export const notificationDeliveries = pgTable(
     attemptCountNonNegative: check(
       'notification_deliveries_attempt_count_non_negative',
       sql`${table.attemptCount} >= 0`
+    ),
+  })
+);
+
+export const notificationDeliveryAttempts = pgTable(
+  'notification_delivery_attempts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    deliveryId: uuid('delivery_id')
+      .notNull()
+      .references(() => notificationDeliveries.id, { onDelete: 'cascade' }),
+    attemptNumber: integer('attempt_number').notNull(),
+    status: notificationAttemptStatusEnum('status').default('RETRYING').notNull(),
+    providerMessageId: text('provider_message_id'),
+    errorMessage: text('error_message'),
+    attemptedAt: timestamp('attempted_at', { withTimezone: true }).defaultNow().notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => ({
+    deliveryAttemptUnique: uniqueIndex('notification_delivery_attempts_delivery_number_unique').on(
+      table.deliveryId,
+      table.attemptNumber
+    ),
+    attemptNumberPositive: check(
+      'notification_delivery_attempts_attempt_number_positive',
+      sql`${table.attemptNumber} > 0`
     ),
   })
 );

@@ -4,15 +4,15 @@
 
 ## Current status
 
-The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, persisted core administration, persisted student/guardian/fee administration, persisted assessment/ledger posting, persisted CASH/BANK_DEPOSIT payment, receipt, and reversal transactions, database-backed parent/student portal ownership with a mock online-payment flow, database-backed reports and reconciliation, and persisted notification history with configurable delivery providers. Deployment and populated demo relationship data remain intentionally staged for later phases.
+The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, persisted core administration, persisted student/guardian/fee administration, persisted assessment/ledger posting, serialized CASH/BANK_DEPOSIT/MOCK_ONLINE ledger mutations, database-backed receipt sequences, reversal-aware parent/student accounts, database-backed reports and reconciliation, and persisted notification history with atomic retry claims. The seed is deterministic fictional data with 20 students, 10 guardians, persisted links, financial fixtures, mock checkout outcomes, and notification history. External deployment remains pending configured fictional Vercel/Neon credentials.
 
-The following items remain intentionally incomplete at this stage:
+The following scope statements remain important:
 
 - Better Auth email/password sign-in, role-derived redirects, session logout, disabled-user rejection, protected layouts, and protected financial Route Handlers are implemented and verified against isolated PostgreSQL.
 - Administrator-only institution settings, school-year activation, grade levels, sections, real user management, supported account creation, role changes, and account activation/deactivation are persisted through PostgreSQL and verified against isolated PostgreSQL.
 - Student records, guardian records, parent/student account links, fee categories, and draft/active/archived fee structures are persisted through PostgreSQL and guarded for admin/finance access. Posted-assessment fee structures can only be archived.
 - CASH and BANK_DEPOSIT payment posting, oldest-item allocation, idempotency, receipts, reversals, ledger entries, and audit events are persisted through PostgreSQL and verified by `pnpm payments-receipts:verify`.
-- The committed Drizzle migration set creates a clean database and is verified against isolated PostgreSQL; notification delivery is implemented and verified, while deployment and a populated demo relationship seed remain incomplete.
+- The committed Drizzle migration set creates a clean database; hosted CI is the authoritative clean-PostgreSQL verification for the repair-round concurrency and browser suites.
 - Parent and student portal queries are filtered from authenticated database relationships. Mock checkout and callback state is persisted; only a server-verified successful callback can create a `MOCK_ONLINE` payment through the shared payment service.
 - The online payment flow is a mock demonstration only; it is not a GCash, Maya, card, banking, or payment-provider integration.
 - No production-readiness, accounting, security-certification, or tax-receipt claim is made.
@@ -107,7 +107,7 @@ The reset commands refuse production mode, missing confirmations, and unsafe dat
 
 ## Demo accounts
 
-The fictional seed accounts are `admin@demo.school`, `finance@demo.school`, `parent@demo.school`, and `student@demo.school`; all use `DemoPass123!`. Public registration is disabled, and each account is routed by its stored role after sign-in.
+The fictional seed accounts are `admin@demo.school`, `finance@demo.school`, `parent@demo.school`, and `student@demo.school`; all use `DemoPass123!`. Public registration is disabled, and each account is routed by its stored role after sign-in. The seed also creates 20 demo students, 10 guardians, guardian/student links, and linked student/parent walkthrough data.
 
 ## Architecture
 

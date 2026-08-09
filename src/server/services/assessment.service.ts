@@ -11,6 +11,7 @@ import {
 } from '@/lib/assessments';
 import { addCentavos, subtractCentavos } from '@/lib/utils/currency';
 import { AppError, NotFoundError, ValidationError } from '@/server/errors';
+import { lockStudentForLedgerMutation } from './ledger.service';
 import { NotificationService } from './notification.service';
 
 export type FeeItemInput = {
@@ -249,68 +250,69 @@ export class AssessmentService {
     if (!actorUserId) {
       throw new ValidationError('An authenticated user is required to post an assessment.');
     }
-    const student = await selectStudent(values.studentId, db);
-    if (student.status !== 'ACTIVE') {
-      throw new ValidationError('Only active students can receive a new assessment.');
-    }
+    const created = await db.transaction(async (tx) => {
+      const transactionDb = tx as unknown as DatabaseInstance;
+      const student = await lockStudentForLedgerMutation(values.studentId, transactionDb);
+      if (student.status !== 'ACTIVE') {
+        throw new ValidationError('Only active students can receive a new assessment.');
+      }
 
-    const structures = await db
-      .select({
-        id: schema.feeStructures.id,
-        schoolYearId: schema.feeStructures.schoolYearId,
-        gradeLevelId: schema.feeStructures.gradeLevelId,
-        assessmentPeriod: schema.feeStructures.assessmentPeriod,
-        name: schema.feeStructures.name,
-        status: schema.feeStructures.status,
-        schoolYearStatus: schema.schoolYears.status,
-      })
-      .from(schema.feeStructures)
-      .innerJoin(schema.schoolYears, eq(schema.schoolYears.id, schema.feeStructures.schoolYearId))
-      .where(eq(schema.feeStructures.id, values.feeStructureId))
-      .limit(1);
-    const structure = structures[0];
-    if (!structure) throw new NotFoundError('The selected fee structure does not exist.');
-    if (values.schoolYearId && values.schoolYearId !== structure.schoolYearId) {
-      throw new ValidationError('The fee structure does not belong to the selected school year.');
-    }
-    if (structure.status !== 'ACTIVE' || structure.schoolYearStatus !== 'ACTIVE') {
-      throw new ValidationError(
-        'Only an active fee structure in an active school year can be posted.'
-      );
-    }
-    if (student.schoolYearId && student.schoolYearId !== structure.schoolYearId) {
-      throw new ValidationError(
-        'The fee structure belongs to a different school year than the student.'
-      );
-    }
-    if (student.gradeLevelId && student.gradeLevelId !== structure.gradeLevelId) {
-      throw new ValidationError(
-        'The fee structure belongs to a different grade level than the student.'
-      );
-    }
+      const structures = await tx
+        .select({
+          id: schema.feeStructures.id,
+          schoolYearId: schema.feeStructures.schoolYearId,
+          gradeLevelId: schema.feeStructures.gradeLevelId,
+          assessmentPeriod: schema.feeStructures.assessmentPeriod,
+          name: schema.feeStructures.name,
+          status: schema.feeStructures.status,
+          schoolYearStatus: schema.schoolYears.status,
+        })
+        .from(schema.feeStructures)
+        .innerJoin(schema.schoolYears, eq(schema.schoolYears.id, schema.feeStructures.schoolYearId))
+        .where(eq(schema.feeStructures.id, values.feeStructureId))
+        .limit(1);
+      const structure = structures[0];
+      if (!structure) throw new NotFoundError('The selected fee structure does not exist.');
+      if (values.schoolYearId && values.schoolYearId !== structure.schoolYearId) {
+        throw new ValidationError('The fee structure does not belong to the selected school year.');
+      }
+      if (structure.status !== 'ACTIVE' || structure.schoolYearStatus !== 'ACTIVE') {
+        throw new ValidationError(
+          'Only an active fee structure in an active school year can be posted.'
+        );
+      }
+      if (student.schoolYearId && student.schoolYearId !== structure.schoolYearId) {
+        throw new ValidationError(
+          'The fee structure belongs to a different school year than the student.'
+        );
+      }
+      if (student.gradeLevelId && student.gradeLevelId !== structure.gradeLevelId) {
+        throw new ValidationError(
+          'The fee structure belongs to a different grade level than the student.'
+        );
+      }
 
-    const items = await db
-      .select({
-        feeCategoryId: schema.feeStructureItems.feeCategoryId,
-        name: schema.feeStructureItems.name,
-        amountCentavos: schema.feeStructureItems.amountCentavos,
-      })
-      .from(schema.feeStructureItems)
-      .innerJoin(
-        schema.feeCategories,
-        eq(schema.feeCategories.id, schema.feeStructureItems.feeCategoryId)
-      )
-      .where(eq(schema.feeStructureItems.feeStructureId, structure.id))
-      .orderBy(asc(schema.feeStructureItems.createdAt));
-    if (items.length === 0)
-      throw new ValidationError('The fee structure has no fee items to post.');
+      const items = await tx
+        .select({
+          feeCategoryId: schema.feeStructureItems.feeCategoryId,
+          name: schema.feeStructureItems.name,
+          amountCentavos: schema.feeStructureItems.amountCentavos,
+        })
+        .from(schema.feeStructureItems)
+        .innerJoin(
+          schema.feeCategories,
+          eq(schema.feeCategories.id, schema.feeStructureItems.feeCategoryId)
+        )
+        .where(eq(schema.feeStructureItems.feeStructureId, structure.id))
+        .orderBy(asc(schema.feeStructureItems.createdAt));
+      if (items.length === 0)
+        throw new ValidationError('The fee structure has no fee items to post.');
 
-    const totalAmountCentavos = items.reduce(
-      (total, item) => addCentavos(total, item.amountCentavos),
-      0
-    );
-    const transactionDb = db;
-    const created = await transactionDb.transaction(async (tx) => {
+      const totalAmountCentavos = items.reduce(
+        (total, item) => addCentavos(total, item.amountCentavos),
+        0
+      );
+
       const existing = await tx
         .select({ id: schema.studentAssessments.id })
         .from(schema.studentAssessments)
@@ -378,7 +380,7 @@ export class AssessmentService {
     });
 
     const assessment = await getAssessment(created.id, db);
-    await NotificationService.notifyAssessmentPosted(created.id);
+    await NotificationService.notifyAssessmentPosted(created.id, db);
     return assessment;
   }
 
@@ -388,12 +390,14 @@ export class AssessmentService {
     if (!actorUserId) {
       throw new ValidationError('An authenticated approver is required for an adjustment.');
     }
-    const assessment = await selectAssessment(values.assessmentId, db);
-    if (assessment.studentId !== values.studentId) {
-      throw new ValidationError('The adjustment student does not match the assessment.');
-    }
-
     const created = await db.transaction(async (tx) => {
+      const transactionDb = tx as unknown as DatabaseInstance;
+      await lockStudentForLedgerMutation(values.studentId, transactionDb);
+      const assessment = await selectAssessment(values.assessmentId, transactionDb);
+      if (assessment.studentId !== values.studentId) {
+        throw new ValidationError('The adjustment student does not match the assessment.');
+      }
+
       const entries = await tx
         .select({
           debitCentavos: schema.ledgerEntries.debitCentavos,

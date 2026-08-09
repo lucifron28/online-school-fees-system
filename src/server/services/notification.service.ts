@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { Resend } from 'resend';
 import { getDb, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
@@ -8,7 +8,9 @@ import { formatCentavos } from '@/lib/utils/currency';
 import { getServerEnv } from '@/lib/env';
 import { NotFoundError } from '@/server/errors';
 
-const MAX_AUTOMATIC_ATTEMPTS = 3;
+// There is no scheduler in this scope. This is the maximum persisted delivery
+// attempts shared by the initial dispatch and explicit manual retries.
+const MAX_DELIVERY_ATTEMPTS = 3;
 
 type NotificationChannel = (typeof schema.notificationChannelEnum.enumValues)[number];
 type NotificationStatus = (typeof schema.notificationDeliveryStatusEnum.enumValues)[number];
@@ -197,26 +199,46 @@ async function attemptDelivery(
   db: DatabaseInstance,
   provider: EmailProvider
 ) {
-  const attemptCount = delivery.attemptCount + 1;
   const attemptedAt = new Date();
-  const claimed = await db
-    .update(schema.notificationDeliveries)
-    .set({
-      status: 'RETRYING',
-      attemptCount,
-      lastAttemptAt: attemptedAt,
-      nextAttemptAt: null,
-      errorMessage: null,
-      updatedAt: attemptedAt,
-    })
-    .where(
-      and(
-        eq(schema.notificationDeliveries.id, delivery.id),
-        eq(schema.notificationDeliveries.status, 'PENDING')
+  const claim = await db.transaction(async (tx) => {
+    const claimed = await tx
+      .update(schema.notificationDeliveries)
+      .set({
+        status: 'RETRYING',
+        attemptCount: sql`${schema.notificationDeliveries.attemptCount} + 1`,
+        lastAttemptAt: attemptedAt,
+        nextAttemptAt: null,
+        updatedAt: attemptedAt,
+      })
+      .where(
+        and(
+          eq(schema.notificationDeliveries.id, delivery.id),
+          inArray(schema.notificationDeliveries.status, ['PENDING', 'FAILED']),
+          lt(schema.notificationDeliveries.attemptCount, MAX_DELIVERY_ATTEMPTS)
+        )
       )
-    )
-    .returning({ id: schema.notificationDeliveries.id });
-  if (claimed.length === 0) return selectDelivery(notification.id, db);
+      .returning({
+        id: schema.notificationDeliveries.id,
+        attemptCount: schema.notificationDeliveries.attemptCount,
+      });
+    if (!claimed[0]) return null;
+
+    const [attempt] = await tx
+      .insert(schema.notificationDeliveryAttempts)
+      .values({
+        deliveryId: claimed[0].id,
+        attemptNumber: claimed[0].attemptCount,
+        status: 'RETRYING',
+        attemptedAt,
+      })
+      .returning({ id: schema.notificationDeliveryAttempts.id });
+    if (!attempt) throw new Error('The notification delivery attempt could not be persisted.');
+    return {
+      attemptId: attempt.id,
+      attemptCount: claimed[0].attemptCount,
+    };
+  });
+  if (!claim) return selectDelivery(notification.id, db);
 
   try {
     const recipient = notification.userId ? await selectRecipient(notification.userId, db) : null;
@@ -228,29 +250,45 @@ async function attemptDelivery(
       text: notification.body,
     });
     const sentAt = new Date();
-    await db
-      .update(schema.notificationDeliveries)
-      .set({
-        status: 'SENT',
-        providerMessageId: result.providerMessageId ?? null,
-        sentAt,
-        nextAttemptAt: null,
-        errorMessage: null,
-        updatedAt: sentAt,
-      })
-      .where(eq(schema.notificationDeliveries.id, delivery.id));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(schema.notificationDeliveryAttempts)
+        .set({
+          status: 'SENT',
+          providerMessageId: result.providerMessageId ?? null,
+          completedAt: sentAt,
+        })
+        .where(eq(schema.notificationDeliveryAttempts.id, claim.attemptId));
+      await tx
+        .update(schema.notificationDeliveries)
+        .set({
+          status: 'SENT',
+          providerMessageId: result.providerMessageId ?? null,
+          sentAt,
+          nextAttemptAt: null,
+          errorMessage: null,
+          updatedAt: sentAt,
+        })
+        .where(eq(schema.notificationDeliveries.id, delivery.id));
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Notification delivery failed.';
     const status: NotificationStatus =
-      attemptCount >= MAX_AUTOMATIC_ATTEMPTS ? 'FAILED' : 'RETRYING';
+      claim.attemptCount >= MAX_DELIVERY_ATTEMPTS ? 'FAILED' : 'PENDING';
     const nextAttemptAt =
-      status === 'RETRYING'
-        ? new Date(attemptedAt.getTime() + 2 ** attemptCount * 60 * 1000)
+      status === 'PENDING'
+        ? new Date(attemptedAt.getTime() + 2 ** claim.attemptCount * 60 * 1000)
         : null;
-    await db
-      .update(schema.notificationDeliveries)
-      .set({ status, nextAttemptAt, errorMessage: message, updatedAt: new Date() })
-      .where(eq(schema.notificationDeliveries.id, delivery.id));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(schema.notificationDeliveryAttempts)
+        .set({ status: 'FAILED', errorMessage: message, completedAt: new Date() })
+        .where(eq(schema.notificationDeliveryAttempts.id, claim.attemptId));
+      await tx
+        .update(schema.notificationDeliveries)
+        .set({ status, nextAttemptAt, errorMessage: message, updatedAt: new Date() })
+        .where(eq(schema.notificationDeliveries.id, delivery.id));
+    });
   }
 
   return selectDelivery(notification.id, db);
@@ -301,7 +339,10 @@ export async function enqueueNotification(
   }
   if (!delivery) throw new Error('The notification delivery could not be persisted.');
 
-  if (delivery.status === 'PENDING') {
+  if (
+    delivery.status === 'PENDING' &&
+    (!delivery.nextAttemptAt || delivery.nextAttemptAt <= new Date())
+  ) {
     delivery = await attemptDelivery(notification, delivery, db, provider);
   }
 
@@ -554,10 +595,12 @@ export class NotificationService {
     if (!delivery) throw new Error('The notification has no delivery record.');
     if (delivery.status === 'SENT') return delivery;
 
-    await db
-      .update(schema.notificationDeliveries)
-      .set({ status: 'PENDING', nextAttemptAt: null, updatedAt: new Date() })
-      .where(eq(schema.notificationDeliveries.id, delivery.id));
-    return attemptDelivery(notification, { ...delivery, status: 'PENDING' }, db, provider);
+    if (
+      delivery.status === 'RETRYING' ||
+      (delivery.status === 'FAILED' && delivery.attemptCount >= MAX_DELIVERY_ATTEMPTS)
+    ) {
+      return delivery;
+    }
+    return attemptDelivery(notification, delivery, db, provider);
   }
 }

@@ -39,9 +39,11 @@ describe('Persisted mock payment input contracts', () => {
       status: 'SUCCESS',
       amountCentavos: 1,
       studentId: 'attacker-student',
+      paymentMethod: 'BANK_DEPOSIT',
     });
 
     expect(parsed).not.toHaveProperty('amountCentavos');
     expect(parsed).not.toHaveProperty('studentId');
+    expect(parsed).not.toHaveProperty('paymentMethod');
   });
 });

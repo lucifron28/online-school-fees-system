@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
@@ -63,6 +64,7 @@ async function main() {
   const createdAssessmentIds: string[] = [];
   const createdPaymentIds: string[] = [];
   const createdCheckoutIds: string[] = [];
+  const createdUserIds: string[] = [];
   const notificationEntityIds = new Set<string>();
 
   try {
@@ -98,6 +100,38 @@ async function main() {
       'The four demo users are required.'
     );
 
+    const verificationStudentUserId = randomUUID();
+    const [verificationStudentUser] = await db
+      .insert(schema.users)
+      .values({
+        id: verificationStudentUserId,
+        name: 'Notification verification student',
+        email: `notifications-student-${suffix}@example.com`,
+        role: 'STUDENT',
+        active: true,
+        emailVerified: true,
+      })
+      .returning({ id: schema.users.id });
+    if (!verificationStudentUser)
+      throw new Error('Notification verification student account could not be created.');
+    createdUserIds.push(verificationStudentUser.id);
+
+    const verificationParentUserId = randomUUID();
+    const [verificationParentUser] = await db
+      .insert(schema.users)
+      .values({
+        id: verificationParentUserId,
+        name: 'Notification verification parent',
+        email: `notifications-parent-${suffix}@example.com`,
+        role: 'PARENT',
+        active: true,
+        emailVerified: true,
+      })
+      .returning({ id: schema.users.id });
+    if (!verificationParentUser)
+      throw new Error('Notification verification parent account could not be created.');
+    createdUserIds.push(verificationParentUser.id);
+
     const category = await createFeeCategory(
       {
         name: `Phase Nine Tuition ${suffix}`,
@@ -128,7 +162,7 @@ async function main() {
         firstName: 'Phase Nine',
         lastName: 'Notification Student',
         email: `phase-nine-student-${suffix}@example.com`,
-        userId: studentUser.id,
+        userId: verificationStudentUser.id,
         gradeLevelId: gradeLevel.id,
         sectionId: null,
         schoolYearId: schoolYear.id,
@@ -146,7 +180,7 @@ async function main() {
         phone: '+63 900 000 0000',
         relationship: 'Parent',
         address: 'Fictional Phase 9 verification address',
-        userId: parentUser.id,
+        userId: verificationParentUser.id,
       },
       db
     );
@@ -201,9 +235,9 @@ async function main() {
     );
     assert(
       paymentNotifications.every(
-        (row) => row.deliveryChannel === 'EMAIL' && row.deliveryStatus === 'RETRYING'
+        (row) => row.deliveryChannel === 'EMAIL' && row.deliveryStatus === 'PENDING'
       ),
-      'Provider failures were not recorded as retryable email deliveries.'
+      'Provider failures were not recorded as pending retryable email deliveries.'
     );
 
     const failedDelivery = paymentNotifications.find((row) => row.type === 'PAYMENT_SUCCESSFUL');
@@ -248,7 +282,7 @@ async function main() {
       amountCentavos: 30000,
       paymentChannel: 'GCash',
       idempotencyKey: `phase-nine-checkout-${suffix}`,
-      parentUserId: parentUser.id,
+      parentUserId: verificationParentUser.id,
     });
     createdCheckoutIds.push(checkout.checkoutId);
     const callbackInput = {
@@ -335,6 +369,9 @@ async function main() {
     }
     if (createdStudentIds.length > 0) {
       await db.delete(schema.students).where(inArray(schema.students.id, createdStudentIds));
+    }
+    if (createdUserIds.length > 0) {
+      await db.delete(schema.users).where(inArray(schema.users.id, createdUserIds));
     }
     if (createdStructureIds.length > 0) {
       await db

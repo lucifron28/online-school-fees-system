@@ -32,14 +32,14 @@ Client Components must not import server-only services. Financial rules must rem
 
 ## Current implementation boundary
 
-- The App Router pages still contain visual prototype data in later financial screens, but the student, guardian, and fee-management screens now load persisted records and the portal layouts require authenticated stored roles.
+- The current student, guardian, fee, financial, portal, report, and notification workflows load persisted records; the portal layouts require authenticated stored roles.
 - Better Auth uses a Drizzle adapter with public sign-up disabled, server-only role/active fields, disabled-user rejection, and a reusable TanStack Form login flow. Admin/finance report and receipt Route Handlers require server-side authorization.
 - Core administration uses `src/server/services/administration.service.ts` behind administrator-only Route Handlers. Institution settings use a singleton key, school-year activation is transactional, and grade levels, sections, and user accounts are loaded from PostgreSQL rather than fixed page state.
-- The database schema describes users, academic records, students, guardians, fees, assessment periods, assessments, ledger entries, payments, receipts, reversals, audit logs, persisted mock checkouts/callbacks, and notification delivery.
-- `src/db/migrations/0000_good_ghost_rider.sql` is the committed initial migration and has been verified on a blank isolated PostgreSQL database.
+- The database schema describes users, academic records, students, guardians, fees, assessment periods, assessments, ledger entries, payments, receipts, receipt sequences, reversals, audit logs, persisted mock checkouts/callbacks, notification delivery, and notification attempt history.
+- `src/db/migrations/0000_good_ghost_rider.sql` and the committed follow-up migrations are the database contract; hosted CI applies them to clean PostgreSQL databases.
 - Financial event timestamps use PostgreSQL `timestamp with time zone`; monetary values use integer centavos with database checks.
 - Localhost PostgreSQL URLs use node-postgres for seed/reset/integration tooling, while remote deployment URLs continue to use Neon.
-- Assessment generation, ledger balance calculation, OTC payment posting, portal ownership, mock online-payment completion, report aggregation, and notification history are PostgreSQL-backed. Deployment remains a later vertical slice.
+- Assessment generation, ledger balance calculation, OTC payment posting, portal ownership, mock online-payment completion, report aggregation, and notification history are PostgreSQL-backed. External deployment remains a later environment-dependent gate.
 - The mock payment gateway is allowed by scope. Its checkout records, callback events, and idempotency state are persisted, while no real payment-provider integration is claimed.
 
 ## State ownership
@@ -91,6 +91,7 @@ The Phase 5 service enforces the following invariants:
 - the database uniqueness rule prevents two assessments for one student, school year, and period;
 - assessment, snapshot items, the assessment ledger entry, and the audit event are written in one transaction;
 - balances are recalculated from persisted debit/credit entries, and credit adjustments cannot make a balance negative;
+- every assessment posting and adjustment acquires the shared student row lock before reading or writing ledger state, matching the payment and reversal lock order;
 - every adjustment requires a reason and records the approving user and an audit event.
 
 ## Payment, receipt, and reversal boundary
@@ -102,9 +103,10 @@ The Phase 6 service enforces the following invariants:
 - the current student balance comes from persisted ledger entries, and overpayments are rejected;
 - payments allocate to the oldest outstanding posted-assessment items using database-derived item amounts and prior posted allocations;
 - payment, allocations, the payment ledger entry, receipt, and audit events are written in one transaction;
-- the database-generated payment UUID is used to derive receipt and verification identifiers; the required idempotency key prevents replayed and concurrent duplicate submissions;
+- receipt numbers are allocated inside the payment transaction from the persisted school prefix, Asia/Manila calendar year, and a database-backed prefix/year sequence; the required idempotency key prevents replayed and concurrent duplicate submissions;
 - a reversal preserves the original payment, voids its receipt, adds a compensating debit, and records the reason and actor; a second reversal is rejected;
-- receipt PDFs are generated from persisted receipt, payment, allocation, student, institution, and status data rather than browser-supplied or random financial values.
+- receipt PDFs are generated from persisted receipt, payment, allocation, student, institution, and status data rather than browser-supplied or random financial values;
+- parent-facing net payments are calculated as `PAYMENT` credits less `REVERSAL` debits, while reversal history remains separately visible.
 
 ## Parent/student portal and mock online-payment boundary
 
@@ -119,6 +121,7 @@ The Phase 7 invariants are:
 - `PENDING`, `FAILED`, and `CANCELLED` callbacks do not create payments, allocations, receipts, or ledger entries;
 - a verified `SUCCESS` callback calls the shared `PaymentService` with `MOCK_ONLINE`, then records the checkout payment ID;
 - duplicate callback events and repeated checkout idempotency keys return the existing persisted result without duplicate financial records;
+- callback input cannot choose the student, amount, payment method, or checkout ownership; unknown references fail, replay keys cannot cross checkout references, and terminal checkout states cannot be reopened;
 - a new gateway instance can verify the same checkout because state is not held in a module-level map.
 
 ## Reports and reconciliation boundary
@@ -143,6 +146,6 @@ The Phase 9 invariants are:
 - recipients are resolved from the persisted student-user and guardian-user relationships; caller-supplied recipient lists are not accepted;
 - notification dedupe keys include the persisted event entity and recipient user, while the delivery table enforces one channel row per notification;
 - Resend is selected only when its API key and sender address are configured; otherwise the console provider records a deterministic local/CI-safe delivery outcome;
-- delivery attempts record channel, status, attempt count, provider message ID, timestamps, and failure text, with automatic retry state and an authenticated admin/finance manual retry route;
+- delivery attempts record channel, status, attempt count, provider message ID, timestamps, and failure text, with an atomic database claim, persisted attempt history, and an authenticated admin/finance manual retry route; `SENT` is terminal and no scheduler claim is assumed in this scope;
 - duplicate payment idempotency requests and duplicate mock callback events do not create or deliver duplicate notification records;
 - no due reminder is emitted until due-date requirements are confirmed.
