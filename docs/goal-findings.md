@@ -52,7 +52,7 @@ Round 2 records the focused correctness and financial-integrity repairs requeste
 
 ## External Audit Repair Round 3
 
-Round 3 addresses the remaining financial-history and lifecycle gaps. Local implementation is on `fix/24-external-audit-round-3` from `main` `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`; hosted evidence is intentionally not recorded until the branch CI run completes.
+Round 3 addresses the remaining financial-history and lifecycle gaps. The implementation is on `fix/24-external-audit-round-3` from `main` `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f` through PR [#15](https://github.com/lucifron28/online-school-fees-system/pull/15). Hosted Foundation run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) passed the clean PostgreSQL, verifier, integration, formatting, lint, typecheck, build, and Playwright gates; self-review COMMENT review `4892057781` found no blocker, high, or demo-critical medium finding.
 
 | ID      | Severity | Finding                                                                                                                            | Repair status                                                                                                                  |
 | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |

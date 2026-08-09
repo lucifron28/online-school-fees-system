@@ -5,10 +5,10 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 ## Current execution state
 
 - Branch: `fix/24-external-audit-round-3`
-- Phase: External Audit Repair Round 3; local implementation and non-database checks are in progress, hosted PostgreSQL/browser evidence is still required
+- Phase: External Audit Repair Round 3; implementation and hosted CI evidence are complete, with fictional deployment evidence still external
 - Starting main: `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`
 - GitHub connector: required for PR creation, self-review comment, merge, and remote CI because the local `gh` token is invalid
-- Verification: local unit tests, typecheck, lint, focused formatting, and production build passed; hosted Foundation CI run #102 passed clean PostgreSQL migrations/seed/verifiers, integration tests, build, and authenticated browser coverage
+- Verification: local unit tests (57), typecheck, lint, focused formatting, integration harness, and production build passed; hosted Foundation run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) passed clean PostgreSQL migrations/seed/verifiers, formatting, lint, typecheck, 46 integration tests, build, and Playwright
 - Current scope: assessment-level credit capacity, net-capacity payment allocation, immutable receipt snapshots, lifecycle-inclusive debt reporting, non-active settlement, Manila-ranged statements, terminal checkout state, Round 3 PostgreSQL regressions, and browser-only financial-history checks
 
 ## Historical branches
@@ -29,9 +29,9 @@ For every phase, record the exact command, exit status, and relevant output in `
 - Hosted evidence: Foundation run [#111](https://github.com/lucifron28/online-school-fees-system/actions/runs/31304545247) passed migrations, seed, verifiers, integration, formatting, lint, typecheck, build, and Playwright. Local unit count was 51. Only fictional Vercel/Neon deployment evidence was not performed.
 - Limitations remain intentional: the checkout is a mock gateway, receipt output is a demonstration artifact, and deployment configuration is not production-readiness evidence.
 
-## External Audit Repair Round 3
+## External Audit Repair Round 3 — verified
 
 - Branch: `fix/24-external-audit-round-3`; starting main: `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`.
 - Added migration `0004_lumpy_bishop.sql` for nullable typed receipt issuance snapshots, with safe legacy fallback.
 - Added 28 PostgreSQL integration cases and six unit cases covering credit limits, net allocation, reconciliation, snapshots/reversals, lifecycle debt, non-active settlement, Manila statements, terminal checkout callbacks, and concurrency.
-- Hosted CI, self-review, PR, merge, and post-merge synchronization remain pending for this round. No deployment or production-readiness claim is made.
+- Hosted evidence: Foundation run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) passed; PR [#15](https://github.com/lucifron28/online-school-fees-system/pull/15) received self-review comment `4892057781` with no blocker, high, or demo-critical medium findings. No deployment or production-readiness claim is made.

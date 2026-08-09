@@ -3,10 +3,10 @@
 ## Current phase
 
 - Phase: External Audit Repair Round 3
-- Branch: `fix/24-external-audit-round-3` (Round 3 hosted evidence remains)
+- Branch: `fix/24-external-audit-round-3` (Round 3 hosted evidence verified in PR #15)
 - Phase 10 starting main commit: `960f107`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Round 2 is verified through hosted Foundation run #111 and merged `main` `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`; Round 3 is implemented locally and requires hosted PostgreSQL/browser evidence. External Vercel/Neon preview evidence remains a separate fictional deployment prerequisite.
+- Current state: Round 2 is verified through hosted Foundation run #111 and merged `main` `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`; Round 3 is verified through PR #15 and hosted Foundation run #122. External Vercel/Neon preview evidence remains a separate fictional deployment prerequisite.
 
 ## Completed phases
 
@@ -368,4 +368,4 @@ CodeGraph was used before editing to trace payment, gateway, ledger, administrat
 - Added migration `0004_lumpy_bishop.sql` with nullable typed receipt issuance snapshots and safe legacy fallback.
 - Repaired assessment-level credit enforcement, credit-aware payment allocation, immutable receipt PDFs/portal/admin semantics, lifecycle-inclusive debt reporting, non-active settlement, Manila-ranged statements, terminal checkout callbacks, deterministic withdrawn demo debt, and browser-only coverage.
 - Added `tests/integration/external-audit-round-3.test.ts` with 28 PostgreSQL cases and `tests/unit/external-audit-round-3.test.ts` with six pure/schema cases. Local PostgreSQL cases are skipped without `TEST_DATABASE_URL`; that skip is not evidence of persistence.
-- Local checks currently passed: `pnpm.cmd typecheck`, focused unit tests (13 tests), and the integration harness transformation (28 skipped without a database). Hosted clean-PostgreSQL, full repository checks, self-review, PR, merge, and main synchronization remain pending.
+- Local checks passed: `pnpm.cmd typecheck`, `pnpm.cmd lint`, `pnpm.cmd test` (57 tests), `pnpm.cmd test:integration` reset-safety gate (3 tests; database cases skip without `TEST_DATABASE_URL`), production build, focused formatting, and diff checks. Hosted Foundation run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) passed clean migrations/seed/verifiers, formatting, lint, typecheck, 46 database integration tests, build, and Playwright. PR [#15](https://github.com/lucifron28/online-school-fees-system/pull/15) received self-review COMMENT `4892057781`; no blocker, high, or demo-critical medium findings remain.
