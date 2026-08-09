@@ -129,6 +129,21 @@ async function main() {
     assertCheck(duplicateStudentRejected, 'Duplicate student numbers were accepted.');
     checks.push('student persistence, account link, and duplicate student-number rejection');
 
+    const verificationGuardianUserId = randomUUID();
+    const [verificationGuardianUser] = await db
+      .insert(schema.users)
+      .values({
+        id: verificationGuardianUserId,
+        name: 'Students and fees verification guardian',
+        email: `students-fees-guardian-${stamp}@example.com`,
+        role: 'PARENT',
+        active: true,
+        emailVerified: true,
+      })
+      .returning({ id: schema.users.id });
+    if (!verificationGuardianUser)
+      throw new Error('Verification guardian account could not be created.');
+    createdUserIds.push(verificationGuardianUser.id);
     const guardian = await createGuardian(
       {
         firstName: 'Phase Four',
@@ -137,7 +152,7 @@ async function main() {
         phone: '09170000000',
         relationship: 'Parent',
         address: 'Verification address',
-        userId: parentUser[0].id,
+        userId: verificationGuardianUser.id,
       },
       db
     );
@@ -148,7 +163,7 @@ async function main() {
     );
     const persistedGuardian = await getGuardian(guardian.id, db);
     assertCheck(
-      persistedGuardian.userId === parentUser[0].id,
+      persistedGuardian.userId === verificationGuardianUser.id,
       'Parent account link did not persist.'
     );
     assertCheck(
