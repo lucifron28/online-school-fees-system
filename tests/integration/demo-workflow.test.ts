@@ -284,7 +284,7 @@ databaseContract('deterministic demo database workflow', () => {
         verificationStatus: 'SUCCESS',
         checkoutStatus: 'SUCCEEDED',
       });
-      expect(callbackResult.error).toContain('cannot be downgraded');
+      expect(callbackResult.error).toContain('financial history cannot change');
     } finally {
       const createdPayments = await db
         .select({ id: schema.payments.id })
