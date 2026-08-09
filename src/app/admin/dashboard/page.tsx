@@ -105,7 +105,7 @@ export default function AdminDashboardPage() {
                 color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50',
               },
               {
-                title: 'Outstanding Balance',
+                title: 'Outstanding Balance (All Statuses)',
                 value: formatCentavos(data.outstandingBalanceCentavos),
                 subtext: `${data.postedTransactionsCount.toLocaleString()} posted transactions`,
                 icon: AlertCircle,

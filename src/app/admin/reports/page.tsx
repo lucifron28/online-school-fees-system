@@ -255,7 +255,7 @@ export default function AdminReportsPage() {
             <div>
               <CardTitle className="text-base">Outstanding-balance report</CardTitle>
               <p className="text-xs text-slate-500">
-                Active students with a positive ledger balance.
+                Every student with positive persisted ledger debt, regardless of lifecycle status.
               </p>
             </div>
             <a href="/api/reports/csv?kind=outstanding">
@@ -275,13 +275,14 @@ export default function AdminReportsPage() {
               />
             )}
             {outstanding.length === 0 && !outstandingQuery.isLoading && (
-              <p className="p-6 text-sm text-slate-500">No active outstanding balances.</p>
+              <p className="p-6 text-sm text-slate-500">No outstanding balances.</p>
             )}
             {outstanding.length > 0 && (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Student</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Grade</TableHead>
                     <TableHead>Balance</TableHead>
                     <TableHead />
@@ -296,6 +297,7 @@ export default function AdminReportsPage() {
                           {row.studentNumber}
                         </div>
                       </TableCell>
+                      <TableCell className="text-xs">{row.status}</TableCell>
                       <TableCell className="text-xs">
                         {row.gradeLevelName ?? 'Unassigned'}
                       </TableCell>

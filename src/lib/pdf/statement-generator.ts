@@ -63,23 +63,42 @@ export async function generateStatementPdf(statement: StudentStatement): Promise
   y -= 28;
   page.drawRectangle({
     x: 40,
-    y: y - 30,
+    y: y - (statement.dateRange ? 45 : 30),
     width: width - 80,
-    height: 40,
+    height: statement.dateRange ? 55 : 40,
     color: rgb(0.96, 0.98, 0.96),
     borderColor: rgb(0.8, 0.9, 0.8),
     borderWidth: 1,
   });
-  page.drawText('Closing Balance:', { x: 55, y: y - 10, size: 10, font: bold });
-  page.drawText(formatCentavosForPdf(statement.closingBalanceCentavos), {
-    x: 190,
-    y: y - 10,
-    size: 12,
-    font: bold,
-    color: rgb(0.1, 0.4, 0.1),
-  });
+  if (statement.dateRange) {
+    page.drawText('Opening Balance:', { x: 55, y: y - 12, size: 9, font: bold });
+    page.drawText(formatCentavosForPdf(statement.openingBalanceCentavos ?? 0), {
+      x: 170,
+      y: y - 12,
+      size: 10,
+      font: bold,
+      color: rgb(0.1, 0.4, 0.1),
+    });
+    page.drawText('Closing Balance:', { x: 320, y: y - 12, size: 9, font: bold });
+    page.drawText(formatCentavosForPdf(statement.closingBalanceCentavos), {
+      x: 435,
+      y: y - 12,
+      size: 10,
+      font: bold,
+      color: rgb(0.1, 0.4, 0.1),
+    });
+  } else {
+    page.drawText('Closing Balance:', { x: 55, y: y - 10, size: 10, font: bold });
+    page.drawText(formatCentavosForPdf(statement.closingBalanceCentavos), {
+      x: 190,
+      y: y - 10,
+      size: 12,
+      font: bold,
+      color: rgb(0.1, 0.4, 0.1),
+    });
+  }
 
-  y -= 62;
+  y -= statement.dateRange ? 77 : 62;
   page.drawText('Ledger Activity', { x: 40, y, size: 10, font: bold });
   y -= 15;
   page.drawRectangle({
