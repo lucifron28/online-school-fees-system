@@ -268,7 +268,8 @@ test.describe('authenticated financial workflow', () => {
       const studentRow = admin.getByRole('row').filter({ hasText: `BROWSER-${suffix}` });
       await expect(studentRow).toBeVisible();
       await studentRow.getByRole('link', { name: 'View student' }).click();
-      await expect(admin.getByRole('heading', { name: 'Student profile' })).toBeVisible();
+      await expect(admin).toHaveURL(/\/admin\/students\/[^/]+$/);
+      await expect(admin.getByText('Student profile', { exact: true })).toBeVisible();
       await admin.getByRole('button', { name: 'Post assessment', exact: true }).click();
       const structureSelect = admin.getByLabel('Active fee structure');
       await expect(structureSelect.locator('option')).toHaveCount(2, { timeout: 15_000 });
