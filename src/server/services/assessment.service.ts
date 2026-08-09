@@ -13,6 +13,7 @@ import { addCentavos, subtractCentavos } from '@/lib/utils/currency';
 import { AppError, NotFoundError, ValidationError } from '@/server/errors';
 import { lockStudentForLedgerMutation } from './ledger.service';
 import { NotificationService } from './notification.service';
+import { lockFeeStructureForMutation } from './students-fees.service';
 
 export type FeeItemInput = {
   feeCategoryId: string;
@@ -256,6 +257,8 @@ export class AssessmentService {
       if (student.status !== 'ACTIVE') {
         throw new ValidationError('Only active students can receive a new assessment.');
       }
+      // When both rows are needed, the invariant is student lock -> fee structure lock.
+      await lockFeeStructureForMutation(values.feeStructureId, transactionDb);
 
       const structures = await tx
         .select({

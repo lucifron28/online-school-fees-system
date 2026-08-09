@@ -100,6 +100,12 @@ function hasOwn<T extends object>(value: T, key: PropertyKey): boolean {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
+function isUniqueViolation(error: unknown, constraint?: string) {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return false;
+  if (error.code !== '23505') return false;
+  return !constraint || !('constraint' in error) || error.constraint === constraint;
+}
+
 async function assertUserRole(
   userId: string | null | undefined,
   role: 'PARENT' | 'STUDENT',
@@ -477,32 +483,51 @@ export async function linkGuardianStudent(
   db: DatabaseInstance = getDb()
 ) {
   const values = guardianStudentLinkInputSchema.parse(input);
-  await selectGuardian(values.guardianId, db);
-  await selectStudent(values.studentId, db);
+  try {
+    return await db.transaction(async (tx) => {
+      const transactionDb = tx as unknown as DatabaseInstance;
+      await selectGuardian(values.guardianId, transactionDb);
+      await transactionDb
+        .select({ id: schema.students.id })
+        .from(schema.students)
+        .where(eq(schema.students.id, values.studentId))
+        .for('update')
+        .limit(1)
+        .then((rows) => {
+          if (!rows[0]) throw new NotFoundError('The student record does not exist.');
+        });
 
-  const existing = await db
-    .select({ id: schema.guardianStudents.id })
-    .from(schema.guardianStudents)
-    .where(
-      and(
-        eq(schema.guardianStudents.guardianId, values.guardianId),
-        eq(schema.guardianStudents.studentId, values.studentId)
-      )
-    )
-    .limit(1);
-  if (existing[0]) throw new ValidationError('This guardian is already linked to the student.');
+      const existing = await tx
+        .select({ id: schema.guardianStudents.id })
+        .from(schema.guardianStudents)
+        .where(
+          and(
+            eq(schema.guardianStudents.guardianId, values.guardianId),
+            eq(schema.guardianStudents.studentId, values.studentId)
+          )
+        )
+        .limit(1);
+      if (existing[0]) throw new ValidationError('This guardian is already linked to the student.');
 
-  return db.transaction(async (tx) => {
-    if (values.isPrimary) {
-      await tx
-        .update(schema.guardianStudents)
-        .set({ isPrimary: false })
-        .where(eq(schema.guardianStudents.studentId, values.studentId));
+      if (values.isPrimary) {
+        await tx
+          .update(schema.guardianStudents)
+          .set({ isPrimary: false })
+          .where(eq(schema.guardianStudents.studentId, values.studentId));
+      }
+      const [created] = await tx.insert(schema.guardianStudents).values(values).returning();
+      if (!created) throw new AppError('The guardian-student link could not be created.');
+      return created;
+    });
+  } catch (error) {
+    if (isUniqueViolation(error, 'guardian_students_student_primary_unique')) {
+      throw new ValidationError('The student already has a primary guardian.');
     }
-    const [created] = await tx.insert(schema.guardianStudents).values(values).returning();
-    if (!created) throw new AppError('The guardian-student link could not be created.');
-    return created;
-  });
+    if (isUniqueViolation(error, 'guardian_students_guardian_student_unique')) {
+      throw new ValidationError('This guardian is already linked to the student.');
+    }
+    throw error;
+  }
 }
 
 export async function unlinkGuardianStudent(
@@ -698,6 +723,22 @@ async function selectFeeStructure(id: string, db: DatabaseInstance) {
   return rows[0];
 }
 
+/**
+ * Shared fee-structure serialization boundary. Assessment posting acquires
+ * this lock after the student lock; every fee-structure mutation acquires it
+ * before checking posted assessments or reading mutable definition data.
+ */
+export async function lockFeeStructureForMutation(id: string, db: DatabaseInstance) {
+  const rows = await db
+    .select()
+    .from(schema.feeStructures)
+    .where(eq(schema.feeStructures.id, id))
+    .for('update')
+    .limit(1);
+  if (!rows[0]) throw new NotFoundError('The fee structure does not exist.');
+  return rows[0];
+}
+
 async function selectFeeStructureItems(id: string, db: DatabaseInstance) {
   return db
     .select(feeStructureItemFields)
@@ -764,73 +805,79 @@ export async function updateFeeStructure(
   db: DatabaseInstance = getDb()
 ) {
   const values = feeStructureUpdateInputSchema.parse(input);
-  const current = await selectFeeStructure(id, db);
-  const posted = await hasPostedAssessment(id, db);
   const structuralChange =
     hasOwn(values, 'schoolYearId') ||
     hasOwn(values, 'gradeLevelId') ||
     hasOwn(values, 'assessmentPeriod') ||
     hasOwn(values, 'name') ||
     hasOwn(values, 'items');
+  const updated = await db.transaction(async (tx) => {
+    const transactionDb = tx as unknown as DatabaseInstance;
+    await lockFeeStructureForMutation(id, transactionDb);
+    const current = await selectFeeStructure(id, transactionDb);
+    const posted = await hasPostedAssessment(id, transactionDb);
 
-  if (posted && structuralChange) {
-    throw new ValidationError(
-      'This fee structure has posted assessments and can only be archived; its definition is locked.'
-    );
-  }
-  if (posted && values.status && values.status !== 'ARCHIVED' && values.status !== current.status) {
-    throw new ValidationError(
-      'A fee structure with posted assessments cannot be reactivated or reopened.'
-    );
-  }
+    if (posted && structuralChange) {
+      throw new ValidationError(
+        'This fee structure has posted assessments and can only be archived; its definition is locked.'
+      );
+    }
+    if (
+      posted &&
+      values.status &&
+      values.status !== 'ARCHIVED' &&
+      values.status !== current.status
+    ) {
+      throw new ValidationError(
+        'A fee structure with posted assessments cannot be reactivated or reopened.'
+      );
+    }
 
-  if (values.status === 'ARCHIVED' && !structuralChange) {
-    const [archived] = await db
-      .update(schema.feeStructures)
-      .set({ status: 'ARCHIVED', updatedAt: new Date() })
-      .where(eq(schema.feeStructures.id, id))
-      .returning();
-    if (!archived) throw new AppError('The fee structure could not be archived.');
-    return getFeeStructure(archived.id, db);
-  }
-
-  const next = {
-    schoolYearId: values.schoolYearId ?? current.schoolYearId,
-    gradeLevelId: values.gradeLevelId ?? current.gradeLevelId,
-    assessmentPeriod: values.assessmentPeriod ?? current.assessmentPeriod,
-    name: values.name ?? current.name,
-    status: values.status ?? current.status,
-  };
-  const currentItems = await selectFeeStructureItems(id, db);
-  const nextItems =
-    values.items ??
-    currentItems.map((item) => ({
-      feeCategoryId: item.feeCategoryId,
-      name: item.name,
-      amountCentavos: item.amountCentavos,
-    }));
-  await assertFeeStructureReferences({ ...next, items: nextItems }, db);
-
-  return db
-    .transaction(async (tx) => {
-      const [updated] = await tx
+    if (values.status === 'ARCHIVED' && !structuralChange) {
+      const [archived] = await tx
         .update(schema.feeStructures)
-        .set({ ...next, updatedAt: new Date() })
+        .set({ status: 'ARCHIVED', updatedAt: new Date() })
         .where(eq(schema.feeStructures.id, id))
         .returning();
-      if (!updated) throw new AppError('The fee structure could not be updated.');
+      if (!archived) throw new AppError('The fee structure could not be archived.');
+      return archived;
+    }
 
-      if (values.items) {
-        await tx
-          .delete(schema.feeStructureItems)
-          .where(eq(schema.feeStructureItems.feeStructureId, id));
-        await tx
-          .insert(schema.feeStructureItems)
-          .values(nextItems.map((item) => ({ ...item, feeStructureId: id })));
-      }
-      return updated;
-    })
-    .then((updated) => getFeeStructure(updated.id, db));
+    const next = {
+      schoolYearId: values.schoolYearId ?? current.schoolYearId,
+      gradeLevelId: values.gradeLevelId ?? current.gradeLevelId,
+      assessmentPeriod: values.assessmentPeriod ?? current.assessmentPeriod,
+      name: values.name ?? current.name,
+      status: values.status ?? current.status,
+    };
+    const currentItems = await selectFeeStructureItems(id, transactionDb);
+    const nextItems =
+      values.items ??
+      currentItems.map((item) => ({
+        feeCategoryId: item.feeCategoryId,
+        name: item.name,
+        amountCentavos: item.amountCentavos,
+      }));
+    await assertFeeStructureReferences({ ...next, items: nextItems }, transactionDb);
+
+    const [updatedStructure] = await tx
+      .update(schema.feeStructures)
+      .set({ ...next, updatedAt: new Date() })
+      .where(eq(schema.feeStructures.id, id))
+      .returning();
+    if (!updatedStructure) throw new AppError('The fee structure could not be updated.');
+
+    if (values.items) {
+      await tx
+        .delete(schema.feeStructureItems)
+        .where(eq(schema.feeStructureItems.feeStructureId, id));
+      await tx
+        .insert(schema.feeStructureItems)
+        .values(nextItems.map((item) => ({ ...item, feeStructureId: id })));
+    }
+    return updatedStructure;
+  });
+  return getFeeStructure(updated.id, db);
 }
 
 export async function addFeeStructureItem(
@@ -838,19 +885,22 @@ export async function addFeeStructureItem(
   input: FeeStructureItemInput,
   db: DatabaseInstance = getDb()
 ) {
-  await selectFeeStructure(structureId, db);
-  if (await hasPostedAssessment(structureId, db)) {
-    throw new ValidationError(
-      'Fee items are locked after an assessment is posted. Archive the structure instead.'
-    );
-  }
   const values = feeStructureItemInputSchema.parse(input);
-  await assertFeeStructureItemCategory(values.feeCategoryId, db);
-  const [created] = await db
-    .insert(schema.feeStructureItems)
-    .values({ ...values, feeStructureId: structureId })
-    .returning();
-  if (!created) throw new AppError('The fee item could not be created.');
+  await db.transaction(async (tx) => {
+    const transactionDb = tx as unknown as DatabaseInstance;
+    await lockFeeStructureForMutation(structureId, transactionDb);
+    if (await hasPostedAssessment(structureId, transactionDb)) {
+      throw new ValidationError(
+        'Fee items are locked after an assessment is posted. Archive the structure instead.'
+      );
+    }
+    await assertFeeStructureItemCategory(values.feeCategoryId, transactionDb);
+    const [created] = await tx
+      .insert(schema.feeStructureItems)
+      .values({ ...values, feeStructureId: structureId })
+      .returning();
+    if (!created) throw new AppError('The fee item could not be created.');
+  });
   return getFeeStructure(structureId, db);
 }
 
@@ -872,37 +922,40 @@ export async function updateFeeStructureItem(
   input: FeeStructureItemUpdateInput,
   db: DatabaseInstance = getDb()
 ) {
-  await selectFeeStructure(structureId, db);
-  if (await hasPostedAssessment(structureId, db)) {
-    throw new ValidationError(
-      'Fee items are locked after an assessment is posted. Archive the structure instead.'
-    );
-  }
   const values = feeStructureItemUpdateInputSchema.parse(input);
-  const current = await db
-    .select()
-    .from(schema.feeStructureItems)
-    .where(
-      and(
-        eq(schema.feeStructureItems.id, itemId),
-        eq(schema.feeStructureItems.feeStructureId, structureId)
+  await db.transaction(async (tx) => {
+    const transactionDb = tx as unknown as DatabaseInstance;
+    await lockFeeStructureForMutation(structureId, transactionDb);
+    if (await hasPostedAssessment(structureId, transactionDb)) {
+      throw new ValidationError(
+        'Fee items are locked after an assessment is posted. Archive the structure instead.'
+      );
+    }
+    const current = await tx
+      .select()
+      .from(schema.feeStructureItems)
+      .where(
+        and(
+          eq(schema.feeStructureItems.id, itemId),
+          eq(schema.feeStructureItems.feeStructureId, structureId)
+        )
       )
-    )
-    .limit(1);
-  if (!current[0]) throw new NotFoundError('The fee structure item does not exist.');
+      .limit(1);
+    if (!current[0]) throw new NotFoundError('The fee structure item does not exist.');
 
-  const next = {
-    feeCategoryId: values.feeCategoryId ?? current[0].feeCategoryId,
-    name: values.name ?? current[0].name,
-    amountCentavos: values.amountCentavos ?? current[0].amountCentavos,
-  };
-  await assertFeeStructureItemCategory(next.feeCategoryId, db);
-  const [updated] = await db
-    .update(schema.feeStructureItems)
-    .set(next)
-    .where(eq(schema.feeStructureItems.id, itemId))
-    .returning();
-  if (!updated) throw new AppError('The fee structure item could not be updated.');
+    const next = {
+      feeCategoryId: values.feeCategoryId ?? current[0].feeCategoryId,
+      name: values.name ?? current[0].name,
+      amountCentavos: values.amountCentavos ?? current[0].amountCentavos,
+    };
+    await assertFeeStructureItemCategory(next.feeCategoryId, transactionDb);
+    const [updated] = await tx
+      .update(schema.feeStructureItems)
+      .set(next)
+      .where(eq(schema.feeStructureItems.id, itemId))
+      .returning();
+    if (!updated) throw new AppError('The fee structure item could not be updated.');
+  });
   return getFeeStructure(structureId, db);
 }
 

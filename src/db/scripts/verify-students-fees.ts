@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
 import {
@@ -173,6 +173,34 @@ async function main() {
       'Guardian-student link did not persist as primary.'
     );
 
+    const replacementGuardian = await createGuardian(
+      {
+        firstName: 'Phase Four Replacement',
+        lastName: 'Guardian',
+        email: `phase-four-replacement-${stamp}@example.com`,
+        phone: '09170000001',
+        relationship: 'Parent',
+        address: 'Verification replacement address',
+        userId: null,
+      },
+      db
+    );
+    createdGuardianIds.push(replacementGuardian.id);
+    await linkGuardianStudent(
+      { guardianId: replacementGuardian.id, studentId: student.id, isPrimary: true },
+      db
+    );
+    const primaryLinks = await db
+      .select({ id: schema.guardianStudents.id })
+      .from(schema.guardianStudents)
+      .where(
+        and(
+          eq(schema.guardianStudents.studentId, student.id),
+          eq(schema.guardianStudents.isPrimary, true)
+        )
+      );
+    assertCheck(primaryLinks.length === 1, 'A student could have more than one primary guardian.');
+
     let duplicateLinkRejected = false;
     try {
       await linkGuardianStudent(
@@ -184,7 +212,7 @@ async function main() {
     }
     assertCheck(duplicateLinkRejected, 'Duplicate guardian-student links were accepted.');
     checks.push(
-      'guardian persistence, parent account link, primary link, and duplicate-link rejection'
+      'guardian persistence, parent account link, primary replacement, and duplicate-link rejection'
     );
 
     const category = await createFeeCategory(

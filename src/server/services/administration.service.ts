@@ -404,41 +404,59 @@ export async function updateUser(
   db: DatabaseInstance = getDb()
 ) {
   const values = userUpdateInputSchema.parse(input);
-  const existing = await db.select().from(schema.users).where(eq(schema.users.id, id)).limit(1);
-  if (!existing[0]) throw new NotFoundError('The user account does not exist.');
+  return db.transaction(async (tx) => {
+    const transactionDb = tx as unknown as DatabaseInstance;
+    // school_settings is the single shared PostgreSQL serialization row for
+    // administrator-role/status mutations. The count and update stay under
+    // this lock, so two last-admin decisions cannot both use a stale count.
+    const settings = await getOrCreateSchoolSettings(transactionDb);
+    await tx
+      .select({ id: schema.schoolSettings.id })
+      .from(schema.schoolSettings)
+      .where(eq(schema.schoolSettings.id, settings.id))
+      .for('update')
+      .limit(1);
 
-  const nextRole = values.role ?? existing[0].role;
-  const nextActive = values.active ?? existing[0].active;
+    const existing = await tx.select().from(schema.users).where(eq(schema.users.id, id)).limit(1);
+    if (!existing[0]) throw new NotFoundError('The user account does not exist.');
 
-  if (actorId === id && (nextRole !== 'ADMIN' || !nextActive)) {
-    throw new ForbiddenError('You cannot demote or disable your own administrator account.');
-  }
+    const nextRole = values.role ?? existing[0].role;
+    const nextActive = values.active ?? existing[0].active;
 
-  if (existing[0].role === 'ADMIN' && existing[0].active && (nextRole !== 'ADMIN' || !nextActive)) {
-    const activeAdmins = await db
-      .select({ id: schema.users.id })
-      .from(schema.users)
-      .where(and(eq(schema.users.role, 'ADMIN'), eq(schema.users.active, true)));
-    if (activeAdmins.length <= 1) {
-      throw new ForbiddenError('At least one active administrator must remain.');
+    if (actorId === id && (nextRole !== 'ADMIN' || !nextActive)) {
+      throw new ForbiddenError('You cannot demote or disable your own administrator account.');
     }
-  }
 
-  const [updated] = await db
-    .update(schema.users)
-    .set({ role: values.role, active: values.active, updatedAt: new Date() })
-    .where(eq(schema.users.id, id))
-    .returning({
-      id: schema.users.id,
-      name: schema.users.name,
-      email: schema.users.email,
-      role: schema.users.role,
-      active: schema.users.active,
-      createdAt: schema.users.createdAt,
-    });
+    if (
+      existing[0].role === 'ADMIN' &&
+      existing[0].active &&
+      (nextRole !== 'ADMIN' || !nextActive)
+    ) {
+      const activeAdmins = await tx
+        .select({ id: schema.users.id })
+        .from(schema.users)
+        .where(and(eq(schema.users.role, 'ADMIN'), eq(schema.users.active, true)));
+      if (activeAdmins.length <= 1) {
+        throw new ForbiddenError('At least one active administrator must remain.');
+      }
+    }
 
-  if (!updated) throw new AppError('The user account could not be updated.');
-  return updated;
+    const [updated] = await tx
+      .update(schema.users)
+      .set({ role: nextRole, active: nextActive, updatedAt: new Date() })
+      .where(eq(schema.users.id, id))
+      .returning({
+        id: schema.users.id,
+        name: schema.users.name,
+        email: schema.users.email,
+        role: schema.users.role,
+        active: schema.users.active,
+        createdAt: schema.users.createdAt,
+      });
+
+    if (!updated) throw new AppError('The user account could not be updated.');
+    return updated;
+  });
 }
 
 export function serializeAdministrationSnapshot(
