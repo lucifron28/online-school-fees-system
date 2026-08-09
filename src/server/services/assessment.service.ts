@@ -344,9 +344,15 @@ export class AssessmentService {
         .returning();
       if (!assessment) throw new AppError('The assessment could not be created.');
 
-      await tx
-        .insert(schema.assessmentItems)
-        .values(items.map((item) => ({ ...item, assessmentId: assessment.id })));
+      await tx.insert(schema.assessmentItems).values(
+        items.map((item, index) => ({
+          ...item,
+          assessmentId: assessment.id,
+          // Preserve fee-structure order when PostgreSQL assigns the same
+          // timestamp to items inserted in one transaction.
+          createdAt: new Date(assessment.createdAt.getTime() + index),
+        }))
+      );
       const priorEntries = await tx
         .select({
           debitCentavos: schema.ledgerEntries.debitCentavos,
