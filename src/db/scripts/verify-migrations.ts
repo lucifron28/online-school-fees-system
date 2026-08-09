@@ -19,12 +19,14 @@ const expectedTables = [
   'ledger_entries',
   'mock_payment_callback_events',
   'mock_payment_checkouts',
+  'notification_delivery_attempts',
   'notification_deliveries',
   'notifications',
   'payment_allocations',
   'payment_reversals',
   'payments',
   'receipts',
+  'receipt_number_sequences',
   'school_settings',
   'school_years',
   'sections',
@@ -46,6 +48,8 @@ const expectedIndexes = [
   'mock_payment_checkouts_idempotency_key_unique',
   'mock_payment_callback_events_event_id_unique',
   'mock_payment_callback_events_idempotency_key_unique',
+  'notification_delivery_attempts_delivery_number_unique',
+  'receipt_number_sequences_prefix_year_unique',
 ];
 
 const expectedChecks = [
@@ -59,6 +63,8 @@ const expectedChecks = [
   'payment_allocations_amount_positive',
   'mock_payment_checkouts_amount_positive',
   'notification_deliveries_attempt_count_non_negative',
+  'notification_delivery_attempts_attempt_number_positive',
+  'receipt_number_sequences_last_sequence_positive',
 ];
 
 const expectedEnumColumns = [
@@ -76,6 +82,7 @@ const expectedEnumColumns = [
   ['notifications', 'type', 'notification_type'],
   ['notification_deliveries', 'channel', 'notification_channel'],
   ['notification_deliveries', 'status', 'notification_delivery_status'],
+  ['notification_delivery_attempts', 'status', 'notification_attempt_status'],
 ] as const;
 
 const financialTimestampTables = [

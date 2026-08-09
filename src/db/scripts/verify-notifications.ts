@@ -201,9 +201,9 @@ async function main() {
     );
     assert(
       paymentNotifications.every(
-        (row) => row.deliveryChannel === 'EMAIL' && row.deliveryStatus === 'RETRYING'
+        (row) => row.deliveryChannel === 'EMAIL' && row.deliveryStatus === 'PENDING'
       ),
-      'Provider failures were not recorded as retryable email deliveries.'
+      'Provider failures were not recorded as pending retryable email deliveries.'
     );
 
     const failedDelivery = paymentNotifications.find((row) => row.type === 'PAYMENT_SUCCESSFUL');

@@ -285,6 +285,24 @@ async function main() {
     );
     const replay = await processMockCallback(successCallback, db);
     assertCheck(replay.isAlreadyProcessed, 'Duplicate callback was not detected.');
+    await expectRejected(
+      () =>
+        processMockCallback(
+          {
+            ...successCallback,
+            paymentReference: 'MOCK-unknown-reference',
+            eventId: `event-unknown-${stamp}`,
+            idempotencyKey: `callback-unknown-${stamp}`,
+          },
+          db
+        ),
+      'Callback accepted an unknown payment reference.'
+    );
+    await expectRejected(
+      () =>
+        processMockCallback({ ...successCallback, paymentReference: 'MOCK-foreign-reference' }, db),
+      'Callback replay key was accepted for another checkout.'
+    );
     assertCheck(
       (
         await db

@@ -87,8 +87,12 @@ async function selectExistingCallback(input: MockCallbackInput, db: DatabaseInst
         eq(schema.mockPaymentCallbackEvents.eventId, input.eventId),
         eq(schema.mockPaymentCallbackEvents.idempotencyKey, input.idempotencyKey)
       )
-    )
-    .limit(1);
+    );
+  if (rows.some((row) => row.checkout.checkoutReference !== input.paymentReference)) {
+    throw new ValidationError(
+      'The callback event or idempotency key was already used for another checkout.'
+    );
+  }
   return rows[0];
 }
 

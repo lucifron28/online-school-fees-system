@@ -141,8 +141,8 @@ async function main() {
     );
     assertCheck(payment.remainingBalanceCentavos === 70000, 'Payment balance did not reconcile.');
     assertCheck(
-      payment.receipt?.receiptNumber?.includes(payment.id) === true,
-      'Receipt number was not derived from the database payment identifier.'
+      /^[A-Za-z0-9]+-\d{4}-\d{6}$/.test(payment.receipt?.receiptNumber ?? ''),
+      'Receipt number did not use the configured human-facing sequence format.'
     );
     checks.push(
       'partial cash payment persistence, oldest-item allocation, receipt, and ledger balance'
