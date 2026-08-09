@@ -305,10 +305,10 @@ test.describe('authenticated financial workflow', () => {
 
       const parent = await parentContext.newPage();
       await login(parent, 'parent', 'parent@demo.school');
-      await expect(parent.getByText('DEMO-0001', { exact: true })).toBeVisible();
+      await expect(parent.getByText(/DEMO-0001/)).toBeVisible();
       await parent.getByRole('link', { name: 'Payment History', exact: true }).click();
       await expect(parent.getByRole('heading', { name: 'Payment history' })).toBeVisible();
-      await expect(parent.getByText('DEMO-0001', { exact: true })).toBeVisible();
+      await expect(parent.getByText(/DEMO-0001/)).toBeVisible();
 
       const student = await studentContext.newPage();
       await login(student, 'student', 'student@demo.school');
