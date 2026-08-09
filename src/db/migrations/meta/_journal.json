@@ -22,6 +22,13 @@
       "when": 1786243615858,
       "tag": "0002_moaning_tyger_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786260566914,
+      "tag": "0003_ambiguous_puma",
+      "breakpoints": true
     }
   ]
 }

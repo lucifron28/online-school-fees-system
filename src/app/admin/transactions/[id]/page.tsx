@@ -48,7 +48,9 @@ type PaymentDetail = {
   } | null;
   allocations: Array<{
     id: string;
-    assessmentItemId: string;
+    assessmentItemId: string | null;
+    adjustmentId: string | null;
+    allocationType: 'ASSESSMENT_ITEM' | 'DEBIT_ADJUSTMENT';
     itemName: string;
     feeCategoryName: string;
     amountCentavos: number;
@@ -187,7 +189,7 @@ export default function AdminTransactionDetailsPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fee item</TableHead>
+                  <TableHead>Charge target</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead className="text-right">Amount allocated</TableHead>
                 </TableRow>

@@ -270,6 +270,30 @@ async function main() {
       ).length === 1,
       'Checkout idempotency was not persisted.'
     );
+    let checkoutConflictRejected = false;
+    try {
+      await gateway.createCheckout({ ...checkoutInput, amountCentavos: 50001 });
+    } catch (error) {
+      checkoutConflictRejected =
+        typeof error === 'object' &&
+        error !== null &&
+        'statusCode' in error &&
+        error.statusCode === 409;
+    }
+    assertCheck(
+      checkoutConflictRejected,
+      'Checkout idempotency accepted changed amount semantics.'
+    );
+    const checkoutChannel = (
+      await db
+        .select({ paymentChannel: schema.mockPaymentCheckouts.paymentChannel })
+        .from(schema.mockPaymentCheckouts)
+        .where(eq(schema.mockPaymentCheckouts.id, checkout.checkoutId))
+    )[0];
+    assertCheck(
+      checkoutChannel?.paymentChannel === 'GCash',
+      'Checkout payment channel was not persisted.'
+    );
     const initialVerification = await new MockPaymentGateway(db).verifyPayment(
       checkout.paymentReference
     );
@@ -391,6 +415,35 @@ async function main() {
       },
       db
     );
+    const expiredCheckout = await gateway.createCheckout({
+      ...checkoutInput,
+      amountCentavos: 10000,
+      idempotencyKey: `portal-expired-${stamp}`,
+    });
+    createdCheckoutIds.push(expiredCheckout.checkoutId);
+    await db
+      .update(schema.mockPaymentCheckouts)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(schema.mockPaymentCheckouts.id, expiredCheckout.checkoutId));
+    const expiredState = await getMockCheckout(expiredCheckout.paymentReference, db);
+    assertCheck(
+      expiredState.status === 'EXPIRED',
+      'Expired checkout was not persisted as expired.'
+    );
+    const expiredCallback = await processMockCallback(
+      {
+        paymentReference: expiredCheckout.paymentReference,
+        eventId: `event-expired-${stamp}`,
+        idempotencyKey: `callback-expired-${stamp}`,
+        status: 'SUCCESS',
+      },
+      db
+    );
+    assertCheck(
+      expiredCallback.status === 'failed' && expiredCallback.paymentId === null,
+      'Expired checkout callback created a payment.'
+    );
+    checks.push('checkout semantic conflicts and persisted expiration before callback');
     const finalLedger = await getStudentLedger(linkedStudent.id, db);
     assertCheck(
       finalLedger.balanceCentavos === 150000,
@@ -401,7 +454,7 @@ async function main() {
       .from(schema.mockPaymentCallbackEvents)
       .where(inArray(schema.mockPaymentCallbackEvents.checkoutId, createdCheckoutIds));
     assertCheck(
-      Number(callbackCount[0]?.total ?? 0) === 4,
+      Number(callbackCount[0]?.total ?? 0) === 5,
       'Callback events were not persisted exactly once.'
     );
     const checkoutRecord = await getMockCheckout(checkout.paymentReference, db);

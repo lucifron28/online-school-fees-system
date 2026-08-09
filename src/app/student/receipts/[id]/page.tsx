@@ -117,6 +117,27 @@ export default function StudentReceiptPage({ params }: { params: Promise<{ id: s
                   {formatCentavos(payment.amountCentavos)}
                 </span>
               </div>
+              {payment.allocations.length > 0 && (
+                <div className="mt-4 border-t pt-3">
+                  <p className="text-xs font-semibold text-slate-600">Allocation breakdown</p>
+                  <div className="mt-2 space-y-1">
+                    {payment.allocations.map((allocation, index) => (
+                      <div
+                        key={`${allocation.targetType}-${allocation.name}-${index}`}
+                        className="flex justify-between gap-3 text-xs"
+                      >
+                        <span>
+                          {allocation.targetType === 'DEBIT_ADJUSTMENT' ? 'Debit adjustment: ' : ''}
+                          {allocation.name}
+                        </span>
+                        <span className="font-mono font-semibold">
+                          {formatCentavos(allocation.amountCentavos)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="border-t pt-4 text-center text-[10px] text-slate-400">

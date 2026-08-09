@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
-import { eq, inArray, or } from 'drizzle-orm';
+import { and, eq, inArray, or } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
 import {
@@ -157,6 +157,25 @@ async function main() {
     assertCheck(paymentCount.length === 1, 'Duplicate form submission created multiple payments.');
     checks.push('idempotent duplicate submission');
 
+    let semanticConflictRejected = false;
+    try {
+      await PaymentService.recordPayment(
+        { ...paymentInput, amountCentavos: 130001, referenceNumber: `CONFLICT-${stamp}` },
+        db
+      );
+    } catch (error) {
+      semanticConflictRejected =
+        typeof error === 'object' &&
+        error !== null &&
+        'statusCode' in error &&
+        error.statusCode === 409;
+    }
+    assertCheck(
+      semanticConflictRejected,
+      'A reused idempotency key accepted changed payment semantics.'
+    );
+    checks.push('semantic idempotency conflict rejection');
+
     let overpaymentRejected = false;
     try {
       await PaymentService.recordPayment(
@@ -233,6 +252,76 @@ async function main() {
       'Concurrent duplicate submissions created more than one payment.'
     );
     checks.push('concurrent idempotency and bank-deposit persistence');
+
+    const adjustmentStudent = await createStudent(
+      {
+        studentNumber: `VERIFY-DEBIT-${stamp}`,
+        firstName: 'Phase Six Debit',
+        lastName: 'Student',
+        email: `phase-six-debit-${stamp}@example.com`,
+        userId: null,
+        gradeLevelId: gradeLevel[0].id,
+        sectionId: null,
+        schoolYearId: activeSchoolYear[0].id,
+        status: 'ACTIVE',
+      },
+      db
+    );
+    createdStudentIds.push(adjustmentStudent.id);
+    const adjustmentAssessment = await AssessmentService.generateAssessment(
+      {
+        studentId: adjustmentStudent.id,
+        feeStructureId: structure.id,
+        actorUserId: adminUser[0].id,
+      },
+      db
+    );
+    createdAssessmentIds.push(adjustmentAssessment.id);
+    const debitAdjustment = await AssessmentService.applyAdjustment(
+      {
+        assessmentId: adjustmentAssessment.id,
+        studentId: adjustmentStudent.id,
+        type: 'DEBIT',
+        amountCentavos: 30000,
+        reason: 'Phase 6 debit adjustment payment target',
+        actorUserId: adminUser[0].id,
+      },
+      db
+    );
+    const debitPayment = await PaymentService.recordPayment(
+      {
+        studentId: adjustmentStudent.id,
+        amountCentavos: 230000,
+        paymentMethod: 'CASH',
+        referenceNumber: `DEBIT-${stamp}`,
+        idempotencyKey: `phase-six-debit-${stamp}`,
+        processedByUserId: adminUser[0].id,
+      },
+      db
+    );
+    assertCheck(
+      debitPayment.allocations.some(
+        (allocation) =>
+          allocation.adjustmentId === debitAdjustment.adjustment.id &&
+          allocation.allocationType === 'DEBIT_ADJUSTMENT' &&
+          allocation.amountCentavos === 30000
+      ),
+      'Debit adjustment was not a payable allocation target.'
+    );
+    const debitLedger = await db
+      .select({
+        entryType: schema.ledgerEntries.entryType,
+        assessmentId: schema.ledgerEntries.assessmentId,
+      })
+      .from(schema.ledgerEntries)
+      .where(eq(schema.ledgerEntries.studentId, adjustmentStudent.id));
+    assertCheck(
+      debitLedger
+        .filter((entry) => entry.entryType === 'PAYMENT')
+        .every((entry) => entry.assessmentId === adjustmentAssessment.id),
+      'Debit-target payment ledger attribution was not assessment-specific.'
+    );
+    checks.push('debit adjustment payment allocation and assessment attribution');
 
     const reversal = await PaymentService.reversePayment(
       {
@@ -327,7 +416,19 @@ async function main() {
             .where(inArray(schema.receipts.paymentId, paymentIds))
         : [];
     const receiptIds = receiptRows.map((receipt) => receipt.id);
-    const auditEntityIds = [...paymentIds, ...receiptIds, ...createdAssessmentIds];
+    const adjustmentRows =
+      createdStudentIds.length > 0
+        ? await db
+            .select({ id: schema.adjustments.id })
+            .from(schema.adjustments)
+            .where(inArray(schema.adjustments.studentId, createdStudentIds))
+        : [];
+    const auditEntityIds = [
+      ...paymentIds,
+      ...receiptIds,
+      ...createdAssessmentIds,
+      ...adjustmentRows.map((adjustment) => adjustment.id),
+    ];
 
     if (paymentIds.length > 0) {
       await db
@@ -343,6 +444,9 @@ async function main() {
       await db.delete(schema.auditLogs).where(inArray(schema.auditLogs.entityId, auditEntityIds));
     }
     if (createdStudentIds.length > 0) {
+      await db
+        .delete(schema.adjustments)
+        .where(inArray(schema.adjustments.studentId, createdStudentIds));
       await db
         .delete(schema.ledgerEntries)
         .where(inArray(schema.ledgerEntries.studentId, createdStudentIds));

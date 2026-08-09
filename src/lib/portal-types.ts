@@ -24,6 +24,11 @@ export interface PortalPayment {
   receiptId: string | null;
   receiptNumber: string | null;
   receiptStatus: string | null;
+  allocations: Array<{
+    targetType: 'ASSESSMENT_ITEM' | 'DEBIT_ADJUSTMENT';
+    name: string;
+    amountCentavos: number;
+  }>;
 }
 
 export interface PortalAssessmentItem {

@@ -39,9 +39,12 @@ const expectedTables = [
 
 const expectedIndexes = [
   'guardian_students_guardian_student_unique',
+  'guardian_students_student_primary_unique',
   'student_assessments_scope_unique',
   'receipts_payment_unique',
   'payment_reversals_payment_unique',
+  'payment_allocations_payment_adjustment_unique',
+  'payment_allocations_adjustment_idx',
   'payments_reference_number_unique',
   'payments_idempotency_key_unique',
   'mock_payment_checkouts_checkout_reference_unique',
@@ -65,7 +68,15 @@ const expectedChecks = [
   'notification_deliveries_attempt_count_non_negative',
   'notification_delivery_attempts_attempt_number_positive',
   'receipt_number_sequences_last_sequence_positive',
+  'payment_allocations_exactly_one_target',
+  'mock_payment_checkouts_payment_channel_valid',
 ];
+
+const expectedColumns = [
+  ['payment_allocations', 'assessment_item_id'],
+  ['payment_allocations', 'adjustment_id'],
+  ['mock_payment_checkouts', 'payment_channel'],
+] as const;
 
 const expectedEnumColumns = [
   ['users', 'role', 'user_role'],
@@ -162,7 +173,7 @@ async function verifyMigrationContract() {
     assertComplete(
       indexResult.rows.map((row) => row.indexname),
       expectedIndexes,
-      'Required unique indexes'
+      'Required indexes'
     );
 
     const checkResult = await client.query<{ conname: string }>(
@@ -176,6 +187,25 @@ async function verifyMigrationContract() {
       checkResult.rows.map((row) => row.conname),
       expectedChecks,
       'Monetary/check constraints'
+    );
+
+    const columnResult = await client.query<{
+      table_name: string;
+      column_name: string;
+    }>(
+      `SELECT table_name, column_name
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND (table_name, column_name) IN (
+           SELECT value->>0, value->>1
+           FROM jsonb_array_elements($1::jsonb) AS value
+         )`,
+      [JSON.stringify(expectedColumns)]
+    );
+    assertComplete(
+      columnResult.rows.map((row) => `${row.table_name}:${row.column_name}`),
+      expectedColumns.map((value) => value.join(':')),
+      'Round 2 payment columns'
     );
 
     const enumResult = await client.query<{

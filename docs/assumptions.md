@@ -11,7 +11,7 @@ These are conservative assumptions for the fictional, single-school capstone dem
 
 ## 2. Payment allocation
 
-Payments are allocated to the oldest outstanding assessment item first, in itemized order. The rule belongs in the server payment service and must be applied to authoritative database values.
+Payments are allocated oldest-first across every positive outstanding obligation for the student. Assessment items and `DEBIT` adjustments are payable targets; `CREDIT` adjustments are never payment targets. The rule belongs in the server payment service and must be applied to authoritative database values. Each allocation stores exactly one assessment-item or debit-adjustment target.
 
 ## 3. Overpayments
 
@@ -65,8 +65,8 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - `ADMIN` and `FINANCE_STAFF` may manage student, guardian, and fee records; parent and student accounts cannot enumerate these administrative records.
 - Student numbers are case-normalized uppercase identifiers and must be unique.
 - A student account link must reference a `STUDENT` user; a guardian account link must reference a `PARENT` user.
-- A guardian/student pair may be linked once. A primary link is unique per student by transactionally clearing prior primary flags.
-- Fee structures start as `DRAFT`, may become `ACTIVE` only for an active school year, and are archived instead of deleted.
+- A guardian/student pair may be linked once. A primary link is unique per student by transactionally locking the student, clearing prior primary flags, and enforcing a partial unique database index.
+- Fee structures start as `DRAFT`, may become `ACTIVE` only for an active school year, and are archived instead of deleted. Posting and every fee-structure mutation use a common fee-structure row lock; assessment posting acquires locks in student-then-structure order.
 - Fee categories used by a fee structure must be active at the time of assignment.
 - Once a student assessment is `POSTED`, the fee structure definition and items are immutable; archiving remains allowed.
 
@@ -83,7 +83,8 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - CASH and BANK_DEPOSIT payments are posted only by `ADMIN` or `FINANCE_STAFF` users.
 - The server calculates the current ledger balance and allocates a payment to the oldest outstanding assessment items; browser-supplied balances and allocation values are ignored.
 - A payment, its allocations, payment ledger entry, receipt, and audit events are committed in one transaction. The database-generated payment UUID is the source for receipt and verification identifiers.
-- The idempotency key is required and unique. Replayed or concurrent duplicate submissions return the original persisted payment rather than creating another financial record.
+- The idempotency key is required and unique. Replayed or concurrent submissions return the original persisted payment only when student, amount, method, and normalized reference match; semantic conflicts return a conflict response rather than silently replaying.
+- Payments spanning multiple assessments set the nullable `payments.assessment_id` convenience field only when one assessment is represented, while ledger entries and reversal entries are grouped per represented assessment.
 - Overpayments are rejected. Reversals preserve the original payment, create a compensating debit, void the linked receipt, and record the reversal reason and actor; double reversal is rejected.
 - Receipt PDFs are generated from stored payment, allocation, receipt, student, institution, and status data. A reversed receipt is visibly marked voided.
 
@@ -91,7 +92,7 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 
 - A parent may view only students linked through the persisted guardian-to-student relationship for the authenticated `PARENT` user.
 - A student may view only the student row linked to the authenticated `STUDENT` user. Caller-supplied student IDs, child lists, balances, and receipt ownership are not authorization evidence.
-- Mock checkout state, callback events, and idempotency keys are persisted in PostgreSQL. The stored checkout is authoritative for student and amount; the browser return URL cannot mark a payment successful.
+- Mock checkout state, callback events, payment channel, expiry, and idempotency keys are persisted in PostgreSQL. The stored checkout is authoritative for student, assessment binding, amount, and channel; the browser return URL cannot mark a payment successful. An unpaid `CREATED` checkout is changed to `EXPIRED` under a row lock before callback processing once its expiry time passes.
 - `SUCCESS` callbacks are server-verified and use the same `PaymentService` transaction as other payments with method `MOCK_ONLINE`. `PENDING`, `FAILED`, and `CANCELLED` outcomes do not change the ledger.
 - Replayed callback events and repeated checkout idempotency keys return the existing persisted result and do not create duplicate payments, allocations, receipts, or audit events.
 - The online flow is intentionally a mock demonstration. It does not connect to GCash, Maya, card networks, banks, or a real payment provider.
@@ -115,4 +116,4 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 
 ## 17. Current prototype boundary
 
-Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, Phase 5 assessment/ledger posting, Phase 6 OTC payment/receipt/reversal transactions, Phase 7 portal ownership/mock online-payment persistence, Phase 8 reports/reconciliation, and Phase 9 notifications are implemented and verified on isolated local PostgreSQL databases. Deployment and a populated demo relationship seed remain incomplete until their later phase gates pass. These assumptions must not be presented as already implemented until verified by integration and browser tests.
+Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Phase 4 student/guardian/fee administration, Phase 5 assessment/ledger posting, Phase 6 OTC payment/receipt/reversal transactions, Phase 7 portal ownership/mock online-payment persistence, Phase 8 reports/reconciliation, Phase 9 notifications, Round 1 concurrency repair, and Round 2 financial-integrity repair are implemented in the repository. Hosted clean-PostgreSQL and authenticated browser evidence remain required for final disposition; deployment and a populated demo relationship seed remain fictional-demo boundaries. These assumptions must not be presented as production, provider, accounting, security-certification, tax-receipt, or deployment evidence.

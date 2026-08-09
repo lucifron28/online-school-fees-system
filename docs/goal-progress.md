@@ -353,3 +353,9 @@ Phase 11 was implemented on `fix/21-external-audit-preparation` in commit `719df
 | `pnpm.cmd test:e2e`                         | Not accepted locally     | The first run reused a stale local server; the clean-server attempt could not complete because the Windows pnpm web-server process recreated/removed dependency links. |
 | Clean PostgreSQL migrations/seed/verifiers  | Passed in hosted CI #102 | Run #102 migrated, seeded, reset, and verified clean PostgreSQL databases before running the integration suite.                                                        |
 | Authenticated browser-only Round 1 scenario | Passed in hosted CI #102 | Run #102 passed the visible admin, finance, parent, and student browser workflow plus existing smoke coverage.                                                         |
+
+## External Audit Repair Round 2 implementation status
+
+Round 2 is implemented on `fix/23-external-audit-round-2` pending independent hosted verification and regular merge. The repair adds migration `0003_ambiguous_puma.sql`, payable debit-adjustment targets with exactly-one-target enforcement, grouped multi-assessment payment/reversal ledger entries, semantic payment and mock-checkout idempotency conflicts, transactional administrator and guardian invariants, fee-structure serialization, persisted checkout expiry/channel state, auth infrastructure-error propagation, finance role-aware navigation, and persisted allocation detail on parent/student receipts.
+
+CodeGraph was used before editing to trace payment, gateway, ledger, administration, guardian, fee-structure, portal, and navigation blast radius. The focused integration suite is `tests/integration/external-audit-round-2.test.ts`; it is skipped locally when `TEST_DATABASE_URL` is absent and is intended to be authoritative in hosted CI. No production, real-provider, accounting, security-certification, tax-receipt, or deployment claim is made.

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { allocatePaymentToItems, PaymentService } from '@/server/services/payment.service';
+import {
+  allocatePaymentToItems,
+  allocatePaymentToObligations,
+  PaymentService,
+} from '@/server/services/payment.service';
 import { paymentPostInputSchema, reversalPostInputSchema } from '@/lib/payments';
 import { generateReceiptPdf } from '@/lib/pdf/receipt-generator';
 
@@ -26,6 +30,54 @@ describe('OTC Payments, Receipts & Reversals Logic', () => {
       name: 'Miscellaneous Fee',
       amountCentavos: 100000,
     });
+  });
+
+  it('allocates across assessment items and debit adjustments while preserving target identity', () => {
+    const allocations = allocatePaymentToObligations(1_300_00, [
+      {
+        id: 'item-1',
+        assessmentId: 'assessment-1',
+        targetType: 'ASSESSMENT_ITEM',
+        assessmentItemId: 'item-1',
+        adjustmentId: null,
+        name: 'Tuition Fee',
+        amountCentavos: 1_000_00,
+        paidCentavos: 0,
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        assessmentCreatedAt: new Date('2026-01-01T00:00:00Z'),
+      },
+      {
+        id: 'adjustment-1',
+        assessmentId: 'assessment-1',
+        targetType: 'DEBIT_ADJUSTMENT',
+        assessmentItemId: null,
+        adjustmentId: 'adjustment-1',
+        name: 'Late enrollment charge',
+        amountCentavos: 500_00,
+        paidCentavos: 0,
+        createdAt: new Date('2026-01-02T00:00:00Z'),
+        assessmentCreatedAt: new Date('2026-01-01T00:00:00Z'),
+      },
+    ]);
+
+    expect(allocations).toEqual([
+      {
+        assessmentId: 'assessment-1',
+        assessmentItemId: 'item-1',
+        adjustmentId: null,
+        targetType: 'ASSESSMENT_ITEM',
+        name: 'Tuition Fee',
+        amountCentavos: 1_000_00,
+      },
+      {
+        assessmentId: 'assessment-1',
+        assessmentItemId: null,
+        adjustmentId: 'adjustment-1',
+        targetType: 'DEBIT_ADJUSTMENT',
+        name: 'Late enrollment charge',
+        amountCentavos: 300_00,
+      },
+    ]);
   });
 
   it('validates an OTC payment request without accepting client balances', () => {

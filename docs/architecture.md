@@ -96,14 +96,14 @@ The Phase 5 service enforces the following invariants:
 
 ## Payment, receipt, and reversal boundary
 
-`src/server/services/payment.service.ts` owns CASH and BANK_DEPOSIT posting, allocation, receipt creation, payment listing/detail queries, receipt PDF data, and compensating reversals. Payment Route Handlers accept only `ADMIN` and `FINANCE_STAFF` sessions; all financial values and identifiers are derived server-side.
+`src/server/services/payment.service.ts` owns CASH and BANK_DEPOSIT posting, oldest-obligation allocation, receipt creation, payment listing/detail queries, receipt PDF data, and compensating reversals. Payment Route Handlers accept only `ADMIN` and `FINANCE_STAFF` sessions; all financial values and identifiers are derived server-side.
 
 The Phase 6 service enforces the following invariants:
 
 - the current student balance comes from persisted ledger entries, and overpayments are rejected;
-- payments allocate to the oldest outstanding posted-assessment items using database-derived item amounts and prior posted allocations;
-- payment, allocations, the payment ledger entry, receipt, and audit events are written in one transaction;
-- receipt numbers are allocated inside the payment transaction from the persisted school prefix, Asia/Manila calendar year, and a database-backed prefix/year sequence; the required idempotency key prevents replayed and concurrent duplicate submissions;
+- payments allocate oldest-first across database-derived posted assessment items and positive `DEBIT` adjustments using prior posted allocations; `CREDIT` adjustments never become targets and each allocation satisfies an exactly-one-target database check;
+- payment, allocations, one ledger entry per represented assessment, receipt, and audit events are written in one transaction; the nullable payment assessment field is a convenience value only when one assessment is represented;
+- receipt numbers are allocated inside the payment transaction from the persisted school prefix, Asia/Manila calendar year, and a database-backed prefix/year sequence; the required idempotency key prevents replayed and concurrent duplicate submissions and rejects mismatched student, amount, method, or normalized reference semantics with a conflict;
 - a reversal preserves the original payment, voids its receipt, adds a compensating debit, and records the reason and actor; a second reversal is rejected;
 - receipt PDFs are generated from persisted receipt, payment, allocation, student, institution, and status data rather than browser-supplied or random financial values;
 - parent-facing net payments are calculated as `PAYMENT` credits less `REVERSAL` debits, while reversal history remains separately visible.
@@ -112,16 +112,16 @@ The Phase 6 service enforces the following invariants:
 
 `src/server/services/portal.service.ts` owns portal queries and derives access from the authenticated user's persisted relationship: a parent reaches students through `guardians.userId -> guardianStudents -> students`, while a student reaches only the `students.userId` row. Portal Route Handlers never accept caller-supplied child lists or student ownership claims.
 
-`src/server/services/payment-gateway.service.ts` owns the mock checkout and callback boundary. Checkout rows and callback events are persisted in PostgreSQL, with unique idempotency keys and callback event identifiers. The stored checkout is authoritative for the student and amount; browser return URLs and callback bodies cannot mark a payment successful or change its financial values.
+`src/server/services/payment-gateway.service.ts` owns the mock checkout and callback boundary. Checkout rows and callback events are persisted in PostgreSQL, with unique idempotency keys, callback event identifiers, payment-channel binding, and an expiry state. The stored checkout is authoritative for the student, assessment binding, amount, and channel; browser return URLs and callback bodies cannot mark a payment successful or change its financial values.
 
 The Phase 7 invariants are:
 
 - parent and student list/detail/payment/receipt queries are filtered by authenticated database ownership;
-- checkout creation is idempotent and rejects amounts above the student's persisted ledger balance;
+- checkout creation is idempotent and rejects amounts above the student's persisted ledger balance; replay conflicts are checked against student, assessment, amount, and channel;
 - `PENDING`, `FAILED`, and `CANCELLED` callbacks do not create payments, allocations, receipts, or ledger entries;
 - a verified `SUCCESS` callback calls the shared `PaymentService` with `MOCK_ONLINE`, then records the checkout payment ID;
 - duplicate callback events and repeated checkout idempotency keys return the existing persisted result without duplicate financial records;
-- callback input cannot choose the student, amount, payment method, or checkout ownership; unknown references fail, replay keys cannot cross checkout references, and terminal checkout states cannot be reopened;
+- callback input cannot choose the student, amount, payment method, or checkout ownership; unknown references fail, replay keys cannot cross checkout references, expired `CREATED` checkouts cannot create payments, and terminal checkout states cannot be reopened;
 - a new gateway instance can verify the same checkout because state is not held in a module-level map.
 
 ## Reports and reconciliation boundary
