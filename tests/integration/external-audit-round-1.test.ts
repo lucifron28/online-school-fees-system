@@ -344,8 +344,8 @@ databaseContract('external audit round 1 regressions', () => {
         .map((entry) => entry.balanceCentavos)
         .sort((a, b) => a - b);
       expect([
-        [5_000_0, 7_000_0],
-        [7_000_0, 12_000_0],
+        [5_000_00, 7_000_00],
+        [7_000_00, 12_000_00],
       ]).toContainEqual(mutationSnapshots);
       expect(debitPaymentEntries.every((entry) => entry.balanceCentavos >= 0)).toBe(true);
 
