@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { eq, or } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import { getDb, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import { mockCallbackInputSchema, type MockCallbackInput } from '@/lib/portal';
-import { AppError, NotFoundError, ValidationError } from '@/server/errors/index';
+import { AppError, ConflictError, NotFoundError, ValidationError } from '@/server/errors/index';
 import { NotificationService } from './notification.service';
 import { PaymentService } from './payment.service';
 
@@ -41,6 +41,32 @@ function isUniqueViolation(error: unknown) {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
 }
 
+function normalizeAssessmentId(assessmentId: string | null | undefined) {
+  return assessmentId ?? null;
+}
+
+function assertCheckoutCompatible(
+  existing: {
+    studentId: string;
+    assessmentId: string | null;
+    amountCentavos: number;
+    paymentChannel: string;
+  },
+  requested: CheckoutInput
+) {
+  const sameRequest =
+    existing.studentId === requested.studentId &&
+    normalizeAssessmentId(existing.assessmentId) ===
+      normalizeAssessmentId(requested.assessmentId) &&
+    existing.amountCentavos === requested.amountCentavos &&
+    existing.paymentChannel === requested.paymentChannel;
+  if (!sameRequest) {
+    throw new ConflictError(
+      'The checkout idempotency key was already used for a different student, assessment, amount, or payment channel.'
+    );
+  }
+}
+
 function statusForCheckout(status: (typeof schema.mockPaymentCheckouts.$inferSelect)['status']) {
   if (status === 'SUCCEEDED') return 'SUCCESS' as const;
   if (status === 'FAILED') return 'FAILED' as const;
@@ -69,6 +95,28 @@ async function selectCheckoutByReference(
   const rows = lockForUpdate ? await query.for('update').limit(1) : await query.limit(1);
   if (!rows[0]) throw new NotFoundError('The mock payment checkout does not exist.');
   return rows[0];
+}
+
+async function expireCheckoutIfNeeded(
+  checkout: typeof schema.mockPaymentCheckouts.$inferSelect,
+  db: DatabaseInstance,
+  now: Date
+) {
+  if (checkout.status !== 'CREATED' || !checkout.expiresAt || checkout.expiresAt > now) {
+    return checkout;
+  }
+
+  const [expired] = await db
+    .update(schema.mockPaymentCheckouts)
+    .set({ status: 'EXPIRED', updatedAt: now })
+    .where(
+      and(
+        eq(schema.mockPaymentCheckouts.id, checkout.id),
+        eq(schema.mockPaymentCheckouts.status, 'CREATED')
+      )
+    )
+    .returning();
+  return expired ?? { ...checkout, status: 'EXPIRED' as const, updatedAt: now };
 }
 
 async function selectExistingCallback(input: MockCallbackInput, db: DatabaseInstance) {
@@ -129,14 +177,7 @@ export class MockPaymentGateway implements PaymentGateway {
       .where(eq(schema.mockPaymentCheckouts.idempotencyKey, input.idempotencyKey))
       .limit(1);
     if (existing[0]) {
-      if (
-        existing[0].studentId !== input.studentId ||
-        existing[0].amountCentavos !== input.amountCentavos
-      ) {
-        throw new ValidationError(
-          'The checkout idempotency key was already used for another payment.'
-        );
-      }
+      assertCheckoutCompatible(existing[0], input);
       return this.checkoutResult(existing[0]);
     }
 
@@ -148,6 +189,7 @@ export class MockPaymentGateway implements PaymentGateway {
           idempotencyKey: input.idempotencyKey,
           studentId: input.studentId,
           assessmentId: input.assessmentId ?? null,
+          paymentChannel: input.paymentChannel,
           amountCentavos: input.amountCentavos,
           status: 'CREATED',
           expiresAt: new Date(Date.now() + 30 * 60 * 1000),
@@ -162,14 +204,17 @@ export class MockPaymentGateway implements PaymentGateway {
           .from(schema.mockPaymentCheckouts)
           .where(eq(schema.mockPaymentCheckouts.idempotencyKey, input.idempotencyKey))
           .limit(1);
-        if (replay[0]) return this.checkoutResult(replay[0]);
+        if (replay[0]) {
+          assertCheckoutCompatible(replay[0], input);
+          return this.checkoutResult(replay[0]);
+        }
       }
       throw error;
     }
   }
 
   async verifyPayment(paymentReference: string): Promise<PaymentVerification> {
-    const checkout = await selectCheckoutByReference(paymentReference, this.db);
+    const checkout = await getMockCheckout(paymentReference, this.db);
     return {
       paymentReference: checkout.checkoutReference,
       status: statusForCheckout(checkout.status),
@@ -193,7 +238,11 @@ export class MockPaymentGateway implements PaymentGateway {
 }
 
 export async function getMockCheckout(paymentReference: string, db: DatabaseInstance = getDb()) {
-  return selectCheckoutByReference(paymentReference, db);
+  return db.transaction(async (tx) => {
+    const transactionDb = tx as unknown as DatabaseInstance;
+    const checkout = await selectCheckoutByReference(paymentReference, transactionDb, true);
+    return expireCheckoutIfNeeded(checkout, transactionDb, new Date());
+  });
 }
 
 export async function processMockCallback(
@@ -226,11 +275,7 @@ export async function processMockCallback(
         );
       }
 
-      const checkout = await selectCheckoutByReference(
-        values.paymentReference,
-        transactionDb,
-        true
-      );
+      let checkout = await selectCheckoutByReference(values.paymentReference, transactionDb, true);
       const [event] = await tx
         .insert(schema.mockPaymentCallbackEvents)
         .values({
@@ -243,6 +288,16 @@ export async function processMockCallback(
         })
         .returning();
       if (!event) throw new AppError('The mock callback event could not be recorded.');
+
+      checkout = await expireCheckoutIfNeeded(checkout, transactionDb, new Date());
+      if (checkout.status === 'EXPIRED') {
+        const message = 'The mock checkout expired before callback processing.';
+        await tx
+          .update(schema.mockPaymentCallbackEvents)
+          .set({ processingStatus: 'FAILED', processedAt: new Date(), errorMessage: message })
+          .where(eq(schema.mockPaymentCallbackEvents.id, event.id));
+        return callbackResult(checkout, values, false, 'FAILED', message);
+      }
 
       if (checkout.status === 'SUCCEEDED' && values.status !== 'SUCCESS') {
         const message = 'A successfully completed checkout cannot be downgraded.';
