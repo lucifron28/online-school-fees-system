@@ -57,3 +57,7 @@ Implementation and local non-database checks are complete on `fix/22-external-au
 ## Audit rule
 
 No phase may be marked complete solely because formatting, lint, type checking, mocked unit tests, or a production build passes. Completion requires the acceptance evidence in `docs/goal-progress.md`.
+
+## External Audit Repair Round 2 disposition
+
+Round 2 implementation is pending independent hosted evidence. The required final disposition must record the starting and ending `main` SHAs, branch, PR and merge commit, commits and migration, clean-PostgreSQL verifier/integration counts, authenticated Playwright result, self-review comment, and any remaining Vercel/Neon limitation. Until those checks pass, this document does not claim production readiness, a real payment provider, official receipt issuance, accounting approval, security certification, or deployment success.

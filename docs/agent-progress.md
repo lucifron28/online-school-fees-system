@@ -18,3 +18,12 @@ The repository contains historical branches through `fix/09-final-internal-audit
 ## Verification policy
 
 For every phase, record the exact command, exit status, and relevant output in `docs/goal-progress.md`. Do not describe mocked or static checks as proof of database persistence, authentication, authorization, or deployment behavior.
+
+## External Audit Repair Round 2
+
+- Branch: `fix/23-external-audit-round-2`
+- Starting main: `52a165d403cfc6a313015d91ed729e8036996c24`
+- Scope: payable debit-adjustment obligations, multi-assessment ledger grouping, semantic payment/checkout idempotency, serialized administrator and guardian invariants, checkout expiration, fee-structure mutation locks, auth infrastructure error classification, finance navigation, and cross-role browser evidence.
+- Local verification: frozen-lockfile dependency install, typecheck, lint, targeted formatting, unit tests (51 passed), integration harness (PostgreSQL cases skipped without `TEST_DATABASE_URL`), production build, and diff checks passed.
+- Hosted PostgreSQL and Playwright evidence: pending PR CI; local skips are not treated as database or browser proof.
+- Limitations remain intentional: the checkout is a mock gateway, receipt output is a demonstration artifact, and deployment configuration is not production-readiness evidence.
