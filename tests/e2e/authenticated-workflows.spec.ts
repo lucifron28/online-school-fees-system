@@ -300,7 +300,6 @@ test.describe('authenticated financial workflow', () => {
         finance.waitForEvent('popup'),
         receiptLink.click(),
       ]);
-      await receiptPopup.waitForLoadState('domcontentloaded');
       await expect(receiptPopup).toHaveURL(/\/api\/receipts\/.*\/pdf/);
       await receiptPopup.close();
 
