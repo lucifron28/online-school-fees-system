@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { randomUUID } from 'node:crypto';
 import { count, eq, inArray } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
@@ -44,6 +45,7 @@ async function main() {
   const createdAssessmentIds: string[] = [];
   const createdCheckoutIds: string[] = [];
   const createdGuardianIds: string[] = [];
+  const createdUserIds: string[] = [];
 
   const activeSchoolYear = await db
     .select({ id: schema.schoolYears.id })
@@ -76,6 +78,38 @@ async function main() {
   assertCheck(Boolean(studentUser), 'Seed data must include the demo student account.');
 
   try {
+    const verificationStudentUserId = randomUUID();
+    const [verificationStudentUser] = await db
+      .insert(schema.users)
+      .values({
+        id: verificationStudentUserId,
+        name: 'Portal verification student',
+        email: `portal-student-${stamp}@example.com`,
+        role: 'STUDENT',
+        active: true,
+        emailVerified: true,
+      })
+      .returning({ id: schema.users.id });
+    if (!verificationStudentUser)
+      throw new Error('Portal verification student account could not be created.');
+    createdUserIds.push(verificationStudentUser.id);
+
+    const verificationParentUserId = randomUUID();
+    const [verificationParentUser] = await db
+      .insert(schema.users)
+      .values({
+        id: verificationParentUserId,
+        name: 'Portal verification parent',
+        email: `portal-parent-${stamp}@example.com`,
+        role: 'PARENT',
+        active: true,
+        emailVerified: true,
+      })
+      .returning({ id: schema.users.id });
+    if (!verificationParentUser)
+      throw new Error('Portal verification parent account could not be created.');
+    createdUserIds.push(verificationParentUser.id);
+
     const tuitionCategory = await createFeeCategory(
       {
         name: `Phase Seven Tuition ${stamp}`,
@@ -118,7 +152,7 @@ async function main() {
         firstName: 'Phase Seven',
         lastName: 'Linked Student',
         email: `phase-seven-linked-${stamp}@example.com`,
-        userId: studentUser!.id,
+        userId: verificationStudentUser.id,
         gradeLevelId: gradeLevel[0].id,
         sectionId: null,
         schoolYearId: activeSchoolYear[0].id,
@@ -151,7 +185,7 @@ async function main() {
         phone: '+63 900 000 0000',
         relationship: 'Parent',
         address: 'Fictional portal verification address',
-        userId: parentUser!.id,
+        userId: verificationParentUser.id,
       },
       db
     );
@@ -171,7 +205,7 @@ async function main() {
     );
     createdAssessmentIds.push(linkedAssessment.id);
 
-    const parentChildren = await getParentChildren(parentUser!.id, db);
+    const parentChildren = await getParentChildren(verificationParentUser.id, db);
     assertCheck(
       parentChildren.length === 1,
       'Parent ownership query returned an unlinked student.'
@@ -182,7 +216,7 @@ async function main() {
       'Parent child summary did not use the linked student ledger.'
     );
     const parentAccount = await getStudentAccountForUser(
-      parentUser!.id,
+      verificationParentUser.id,
       'PARENT',
       linkedStudent.id,
       db
@@ -196,7 +230,7 @@ async function main() {
       'Parent accessed an unlinked child.'
     );
     const studentAccount = await getStudentAccountForUser(
-      studentUser!.id,
+      verificationStudentUser.id,
       'STUDENT',
       undefined,
       db
@@ -206,7 +240,7 @@ async function main() {
       'Student account did not resolve through students.user_id.'
     );
     await expectRejected(
-      () => getStudentAccountForUser(studentUser!.id, 'STUDENT', unlinkedStudent.id, db),
+      () => getStudentAccountForUser(verificationStudentUser.id, 'STUDENT', unlinkedStudent.id, db),
       'Student accessed another student.'
     );
     checks.push('database-backed parent and student ownership');
@@ -218,7 +252,7 @@ async function main() {
       amountCentavos: 50000,
       paymentChannel: 'GCash' as const,
       idempotencyKey: `portal-checkout-${stamp}`,
-      parentUserId: parentUser!.id,
+      parentUserId: verificationParentUser.id,
     };
     const checkout = await gateway.createCheckout(checkoutInput);
     createdCheckoutIds.push(checkout.checkoutId);
@@ -319,8 +353,8 @@ async function main() {
       restartVerification.status === 'SUCCESS' && restartVerification.isAlreadyProcessed === true,
       'Mock payment state did not survive a new gateway instance.'
     );
-    const parentPayments = await listOwnedPayments(parentUser!.id, 'PARENT', db);
-    const studentPayments = await listOwnedPayments(studentUser!.id, 'STUDENT', db);
+    const parentPayments = await listOwnedPayments(verificationParentUser.id, 'PARENT', db);
+    const studentPayments = await listOwnedPayments(verificationStudentUser.id, 'STUDENT', db);
     assertCheck(
       parentPayments.length === 1 && studentPayments.length === 1,
       'Portal payment lists lost ownership filtering.'
@@ -437,6 +471,9 @@ async function main() {
     }
     for (const studentId of createdStudentIds) {
       await db.delete(schema.students).where(eq(schema.students.id, studentId));
+    }
+    for (const userId of createdUserIds) {
+      await db.delete(schema.users).where(eq(schema.users.id, userId));
     }
     for (const structureId of createdStructureIds) {
       await db
