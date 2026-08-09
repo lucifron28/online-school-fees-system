@@ -326,30 +326,30 @@ Phase 11 was implemented on `fix/21-external-audit-preparation` in commit `719df
 
 ## External Audit Repair Round 1 findings and disposition
 
-| Finding                                                          | Severity     | Disposition on this branch                                                                           |
-| ---------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
-| Student-row serialization across all ledger mutations            | HIGH         | Implemented; clean PostgreSQL concurrency evidence pending hosted CI.                                |
-| Database-backed, Manila-year receipt sequence                    | MEDIUM       | Implemented with migration, unit tests, and clean PostgreSQL concurrency evidence pending hosted CI. |
-| Reversal-aware parent net payments                               | MEDIUM       | Implemented and unit/integration covered; hosted workflow evidence pending.                          |
-| Atomic notification retry claiming and attempt history           | MEDIUM       | Implemented and fake-provider covered; hosted PostgreSQL evidence pending.                           |
-| Browser-only authenticated admin/finance/parent/student workflow | MEDIUM       | Implemented in Playwright; hosted browser evidence pending.                                          |
-| Missing `DATABASE_URL` runtime behavior                          | MEDIUM       | Implemented and focused-tested locally.                                                              |
-| Deterministic seed/documentation/CI verifier coverage            | MEDIUM       | Implemented; CI rerun is pending.                                                                    |
-| Mock callback trust-boundary and replay safety                   | LOW / MEDIUM | Implemented with schema, service, verifier, and unit coverage; hosted database evidence pending.     |
+| Finding                                                          | Severity     | Disposition on this branch                                                                         |
+| ---------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------- |
+| Student-row serialization across all ledger mutations            | HIGH         | Implemented; clean PostgreSQL concurrency cases passed in hosted Foundation CI run #102.           |
+| Database-backed, Manila-year receipt sequence                    | MEDIUM       | Implemented with migration, unit tests, and clean PostgreSQL concurrency cases passed in run #102. |
+| Reversal-aware parent net payments                               | MEDIUM       | Implemented; unit, integration, and hosted workflow coverage passed in run #102.                   |
+| Atomic notification retry claiming and attempt history           | MEDIUM       | Implemented; fake-provider, integration, and hosted PostgreSQL coverage passed in run #102.        |
+| Browser-only authenticated admin/finance/parent/student workflow | MEDIUM       | Implemented; authenticated browser workflow passed in hosted run #102.                             |
+| Missing `DATABASE_URL` runtime behavior                          | MEDIUM       | Implemented and focused-tested locally.                                                            |
+| Deterministic seed/documentation/CI verifier coverage            | MEDIUM       | Implemented; migration, seed, reset, and verifier gates passed in hosted run #102.                 |
+| Mock callback trust-boundary and replay safety                   | LOW / MEDIUM | Implemented; schema, service, verifier, unit, integration, and hosted coverage passed in run #102. |
 
 ## External Audit Repair Round 1 commands and actual results
 
-| Command / check                             | Result                  | Notes                                                                                                                                                                              |
-| ------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CodeGraph audit queries                     | Passed                  | Traced ledger mutations, receipt allocation, notification retry, callback, portal ownership, and CI blast radius before editing.                                                   |
-| `pnpm.cmd install --frozen-lockfile`        | Passed                  | Frozen lockfile install completed; a later local E2E attempt exposed a Windows pnpm link-recreation issue and required disposable dependency recovery.                             |
-| Focused Prettier check                      | Passed                  | Changed source, test, migration metadata, workflow, README, and audit files were formatted; full repository formatting remains a Windows newline-baseline issue.                   |
-| `pnpm.cmd lint`                             | Passed                  | ESLint exited 0 after the Round 1 callback and migration-verifier changes.                                                                                                         |
-| `pnpm.cmd typecheck`                        | Passed                  | Strict TypeScript exited 0.                                                                                                                                                        |
-| `pnpm.cmd test`                             | Passed                  | 16 unit/component files and 49 tests passed, including receipt/net-payment, missing-database, and callback trust-boundary coverage.                                                |
-| `pnpm.cmd test:integration`                 | Passed with local skips | Three reset-safety tests passed; eight PostgreSQL workflow tests were skipped because `TEST_DATABASE_URL` is not configured locally.                                               |
-| `pnpm.cmd build`                            | Passed                  | Next.js production build generated 51 routes; local output included expected Better Auth default-secret warnings because no secret is configured.                                  |
-| `pnpm.cmd format:check`                     | Baseline failure        | Prettier reported 131 existing repository files with Windows newline/style differences; the focused changed-file check passed.                                                     |
-| `pnpm.cmd test:e2e`                         | Not accepted locally    | The first run reused a stale local server; the clean-server attempt could not complete because the Windows pnpm web-server process recreated/removed dependency links.             |
-| Clean PostgreSQL migrations/seed/verifiers  | Pending hosted CI       | No usable local PostgreSQL/Docker/test URL is available. The workflow now migrates, seeds twice, runs all contract verifiers, resets the test DB, and then runs integration tests. |
-| Authenticated browser-only Round 1 scenario | Pending hosted CI       | The Playwright scenario is present; CI must execute it against the seeded database.                                                                                                |
+| Command / check                             | Result                   | Notes                                                                                                                                                                  |
+| ------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CodeGraph audit queries                     | Passed                   | Traced ledger mutations, receipt allocation, notification retry, callback, portal ownership, and CI blast radius before editing.                                       |
+| `pnpm.cmd install --frozen-lockfile`        | Passed                   | Frozen lockfile install completed; a later local E2E attempt exposed a Windows pnpm link-recreation issue and required disposable dependency recovery.                 |
+| Focused Prettier check                      | Passed                   | Changed source, test, migration metadata, workflow, README, and audit files were formatted; full repository formatting remains a Windows newline-baseline issue.       |
+| `pnpm.cmd lint`                             | Passed                   | ESLint exited 0 after the Round 1 callback and migration-verifier changes.                                                                                             |
+| `pnpm.cmd typecheck`                        | Passed                   | Strict TypeScript exited 0.                                                                                                                                            |
+| `pnpm.cmd test`                             | Passed                   | 16 unit/component files and 49 tests passed, including receipt/net-payment, missing-database, and callback trust-boundary coverage.                                    |
+| `pnpm.cmd test:integration`                 | Passed with local skips  | Three reset-safety tests passed; eight PostgreSQL workflow tests were skipped because `TEST_DATABASE_URL` is not configured locally.                                   |
+| `pnpm.cmd build`                            | Passed                   | Next.js production build generated 51 routes; local output included expected Better Auth default-secret warnings because no secret is configured.                      |
+| `pnpm.cmd format:check`                     | Baseline failure         | Prettier reported 131 existing repository files with Windows newline/style differences; the focused changed-file check passed.                                         |
+| `pnpm.cmd test:e2e`                         | Not accepted locally     | The first run reused a stale local server; the clean-server attempt could not complete because the Windows pnpm web-server process recreated/removed dependency links. |
+| Clean PostgreSQL migrations/seed/verifiers  | Passed in hosted CI #102 | Run #102 migrated, seeded, reset, and verified clean PostgreSQL databases before running the integration suite.                                                        |
+| Authenticated browser-only Round 1 scenario | Passed in hosted CI #102 | Run #102 passed the visible admin, finance, parent, and student browser workflow plus existing smoke coverage.                                                         |

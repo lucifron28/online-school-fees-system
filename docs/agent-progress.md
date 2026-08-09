@@ -5,10 +5,10 @@ This file is a historical handoff, not a completion certificate. Earlier phase n
 ## Current execution state
 
 - Branch: `fix/22-external-audit-round-1`
-- Phase: External Audit Repair Round 1; PR, review, merge, and main synchronization remain pending
+- Phase: External Audit Repair Round 1; hosted evidence passed in Foundation CI run #102, with PR #13 carrying the integration record
 - Starting main: `3960ef1ccf71234f4d768615b19a614f3f474a63`; current branch includes the repair-round changes
 - GitHub connector: required for PR creation, self-review comment, merge, and remote CI because the local `gh` token is invalid
-- Local verification: unit tests, typecheck, lint, focused formatting, and production build have passed; PostgreSQL integration and browser evidence require the hosted CI database/browser environment on this branch
+- Verification: local unit tests, typecheck, lint, focused formatting, and production build passed; hosted Foundation CI run #102 passed clean PostgreSQL migrations/seed/verifiers, integration tests, build, and authenticated browser coverage
 - Current scope: student-row serialization, database-backed receipt sequences, reversal-aware net payments, atomic notification retry claims, authenticated browser workflows, clear missing-database runtime errors, callback trust-boundary tests, deterministic seed documentation, and CI contract verification
 
 ## Historical branches

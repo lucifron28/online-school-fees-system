@@ -52,7 +52,7 @@ That historical preparation round had no unresolved application blocker. Its acc
 
 ## Current Round 1 disposition
 
-Implementation and local non-database checks are complete on `fix/22-external-audit-round-1`. Hosted CI must still provide clean PostgreSQL concurrency/verifier results and the authenticated browser run before this round can be marked verified. No production, payment-provider, accounting, security-certification, tax-receipt, or deployment claim is made.
+Implementation and local non-database checks are complete on `fix/22-external-audit-round-1`. Hosted Foundation CI run [#102](https://github.com/lucifron28/online-school-fees-system/actions/runs/31296921264) passed clean PostgreSQL migrations, deterministic seed/verifiers, integration tests, production build, and the authenticated browser suite, so the application repair contracts for Round 1 are verified. Fictional Vercel/Neon deployment evidence remains pending. No production, payment-provider, accounting, security-certification, tax-receipt, or deployment claim is made.
 
 ## Audit rule
 

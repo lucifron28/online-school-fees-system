@@ -24,7 +24,7 @@ This log records inaccurate prior completion claims and the evidence-based corre
 
 ## External Audit Repair Round 1
 
-These findings are the repair-round contract. The implementation is on `fix/22-external-audit-round-1`; clean PostgreSQL concurrency, verifier, and browser evidence remains pending until the branch runs in hosted CI.
+These findings are the repair-round contract. The implementation is on `fix/22-external-audit-round-1`; hosted Foundation CI run [#102](https://github.com/lucifron28/online-school-fees-system/actions/runs/31296921264) passed clean PostgreSQL concurrency/verifier, integration, and authenticated browser evidence. Fictional external deployment evidence remains pending.
 
 | ID      | Severity     | Finding                                                                                                                 | Repair status                                                                                                                                                                                    |
 | ------- | ------------ | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
