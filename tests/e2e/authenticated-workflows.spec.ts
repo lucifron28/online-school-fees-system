@@ -253,13 +253,14 @@ test.describe('authenticated financial workflow', () => {
       await expect(finance.getByText('FINANCE STAFF', { exact: true })).toBeVisible();
       await expect(finance.getByRole('link', { name: 'Users', exact: true })).toHaveCount(0);
       await expect(finance.getByRole('link', { name: 'Settings', exact: true })).toHaveCount(0);
-      const studentSelect = finance.getByLabel('Student');
-      await expect(studentSelect).toBeVisible();
-      const seededStudentOption = studentSelect.locator('option').filter({ hasText: 'DEMO-0001' });
-      await expect(seededStudentOption).toHaveCount(1);
-      const seededStudentId = await seededStudentOption.getAttribute('value');
-      expect(seededStudentId).toBeTruthy();
-      await studentSelect.selectOption(seededStudentId!);
+      const studentSearch = finance.getByLabel('Search students');
+      await expect(studentSearch).toBeVisible();
+      await studentSearch.fill('DEMO-0001');
+      await expect(finance.getByRole('option', { name: /DEMO-0001/ }).first()).toBeVisible();
+      await finance
+        .getByRole('option', { name: /DEMO-0001/ })
+        .first()
+        .click();
       await expect(finance.getByText('Authoritative current balance')).toBeVisible();
       await finance.getByLabel('Payment method').selectOption('CASH');
       await finance.getByLabel('Amount received (PHP)').fill('10.00');
@@ -327,14 +328,13 @@ test.describe('authenticated financial workflow', () => {
       await login(finance, 'admin', 'finance@demo.school');
       await finance.goto('/admin/payments/manual');
 
-      const studentSelect = finance.getByLabel('Student');
-      await expect(studentSelect).toBeVisible();
-      const withdrawnOption = studentSelect.locator('option').filter({ hasText: 'DEMO-0012' });
-      await expect(withdrawnOption).toHaveCount(1);
+      const studentSearch = finance.getByLabel('Search students');
+      await expect(studentSearch).toBeVisible();
+      await studentSearch.fill('DEMO-0012');
+      const withdrawnOption = finance.getByRole('option', { name: /DEMO-0012/ }).first();
+      await expect(withdrawnOption).toBeVisible();
       await expect(withdrawnOption).toContainText('WITHDRAWN');
-      const withdrawnStudentId = await withdrawnOption.getAttribute('value');
-      expect(withdrawnStudentId).toBeTruthy();
-      await studentSelect.selectOption(withdrawnStudentId!);
+      await withdrawnOption.click();
       await expect(finance.getByText('Authoritative current balance')).toBeVisible();
       await expect(finance.getByText('₱70,000.00')).toBeVisible();
 
@@ -353,7 +353,11 @@ test.describe('authenticated financial workflow', () => {
       ).toContainText('₱60,000.00');
 
       await finance.goto('/admin/payments/manual');
-      await studentSelect.selectOption(withdrawnStudentId!);
+      await finance.getByLabel('Search students').fill('DEMO-0012');
+      await finance
+        .getByRole('option', { name: /DEMO-0012/ })
+        .first()
+        .click();
       await finance.getByLabel('Payment method').selectOption('CASH');
       await finance.getByLabel('Amount received (PHP)').fill('5000.00');
       await finance.getByLabel('Deposit/reference no. (optional)').fill(`R3-SECOND-${suffix}`);
