@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import dotenv from 'dotenv';
 import path from 'path';
+import { logSanitizedError } from '../../server/logging';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -22,7 +23,7 @@ async function checkDatabaseConnection() {
     console.log('Timestamp:', result[0]?.current_time);
     console.log('Version:', result[0]?.version);
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
+    logSanitizedError('database.connection_check', error);
     process.exit(1);
   }
 }

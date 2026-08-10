@@ -2,9 +2,10 @@ import { and, eq } from 'drizzle-orm';
 import dotenv from 'dotenv';
 import path from 'path';
 import { createAuth } from '../../lib/auth/server';
-import { receiptSnapshotSchema } from '../../lib/receipt-snapshot';
+import { getReceiptProcessorName, receiptSnapshotSchema } from '../../lib/receipt-snapshot';
 import { getDb, type DatabaseInstance } from '../index';
 import * as schema from '../schema';
+import { logSanitizedError } from '../../server/logging';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -818,7 +819,9 @@ async function ensurePayment(
       referenceNumber,
       balanceAfterPaymentCentavos: currentBalance - amountCentavos,
     },
-    processor: { name: processorRows[0]?.name ?? 'Finance staff' },
+    processor: {
+      name: getReceiptProcessorName(paymentMethod, processorRows[0]?.name),
+    },
     allocations: allocations.map((allocation) => ({
       targetType: 'ASSESSMENT_ITEM' as const,
       name:
@@ -1152,7 +1155,7 @@ if (process.argv[1]?.includes('seed.ts')) {
   seedDemoData()
     .then(() => process.exit(0))
     .catch((error: unknown) => {
-      console.error('❌ Seeding failed:', error);
+      logSanitizedError('database.seed', error);
       process.exit(1);
     });
 }

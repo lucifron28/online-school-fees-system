@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
+import { logSanitizedError } from '../../server/logging';
 import {
   createFeeCategory,
   createFeeStructure,
@@ -392,6 +393,6 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error('Notifications verification failed:', error);
+    logSanitizedError('verification.notifications', error);
     process.exit(1);
   });

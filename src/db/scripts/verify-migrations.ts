@@ -1,6 +1,7 @@
 import { Client } from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
+import { logSanitizedError } from '../../server/logging';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -307,6 +308,6 @@ async function verifyMigrationContract() {
 }
 
 verifyMigrationContract().catch((error: unknown) => {
-  console.error('Migration contract verification failed:', error);
+  logSanitizedError('verification.migrations', error);
   process.exit(1);
 });

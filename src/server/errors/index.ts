@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
+import { logSanitizedError } from '@/server/logging';
 
 export class AppError extends Error {
   constructor(
@@ -68,7 +69,7 @@ export function toErrorResponse(error: unknown): NextResponse {
     );
   }
 
-  console.error('Unhandled administration request error', error);
+  logSanitizedError('admin.request', error);
   return NextResponse.json(
     { error: 'Unexpected server error.', code: 'INTERNAL_SERVER_ERROR' },
     { status: 500 }

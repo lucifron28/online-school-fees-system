@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { createDb, DatabaseInstance } from '../index';
 import * as schema from '../schema';
+import { logSanitizedError } from '../../server/logging';
 import { seedDemoData } from './seed';
 import {
   assertSafeDatabaseReset,
@@ -86,7 +87,7 @@ if (process.argv[1]?.includes('reset-demo.ts')) {
   resetDemoDatabase()
     .then(() => process.exit(0))
     .catch((error: unknown) => {
-      console.error('Database reset refused or failed:', error);
+      logSanitizedError('demo.reset', error);
       console.error(
         `Use ${DEMO_RESET_CONFIRMATION} for demo resets or ${TEST_RESET_CONFIRMATION} for test resets, and never point both database URLs at the same database.`
       );

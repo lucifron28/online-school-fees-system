@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth/server';
 import { getServerEnv } from '@/lib/env';
 import { getRoleLoginPath, parseUserRole, type UserRole } from '@/lib/auth/roles';
 import { isStudentPortalEnabled } from '@/server/services/administration.service';
+import { logSanitizedError } from '@/server/logging';
 import { NextResponse } from 'next/server';
 
 export type { UserRole } from '@/lib/auth/roles';
@@ -46,10 +47,7 @@ export async function getCurrentUser(
       active,
     };
   } catch (error) {
-    console.error('Authentication session lookup failed.', {
-      name: error instanceof Error ? error.name : 'UnknownError',
-      message: error instanceof Error ? error.message : 'Unknown authentication error',
-    });
+    logSanitizedError('auth.session_lookup', error);
     throw error;
   }
 }

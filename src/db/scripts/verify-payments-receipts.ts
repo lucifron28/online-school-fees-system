@@ -3,6 +3,7 @@ import path from 'path';
 import { and, eq, inArray, or } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
+import { logSanitizedError } from '../../server/logging';
 import {
   createFeeCategory,
   createFeeStructure,
@@ -477,6 +478,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Payments, receipts, and reversals verification failed:', error);
+  logSanitizedError('verification.payments_receipts', error);
   process.exitCode = 1;
 });

@@ -15,7 +15,7 @@ export default function GlobalError({
         <div className="max-w-md space-y-4 text-center">
           <h1 className="text-2xl font-bold">Critical Application Error</h1>
           <p className="rounded bg-slate-800 p-3 text-left font-mono text-xs text-slate-400">
-            {error.message || 'Fatal error rendering root layout'}
+            Unexpected application error. Please try again.
           </p>
           <button
             onClick={() => reset()}

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
 import { getDb } from '@/db';
 import * as schema from '@/db/schema';
+import { logSanitizedError } from '../../server/logging';
 import { generateStatementPdf } from '@/lib/pdf/statement-generator';
 import { getManilaDateString } from '@/lib/reports';
 import { ReportService } from '@/server/services/report.service';
@@ -319,6 +320,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Reports and reconciliation verification failed:', error);
+  logSanitizedError('verification.reports_reconciliation', error);
   process.exitCode = 1;
 });

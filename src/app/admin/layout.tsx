@@ -3,6 +3,8 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { requirePortalUser } from '@/server/auth/guards';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePortalUser(['ADMIN', 'FINANCE_STAFF'], '/login/admin');
   const userRole = user.role === 'FINANCE_STAFF' ? 'Finance Staff' : 'Administrator';

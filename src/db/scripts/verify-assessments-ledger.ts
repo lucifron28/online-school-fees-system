@@ -3,6 +3,7 @@ import path from 'path';
 import { and, eq, inArray, or } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
+import { logSanitizedError } from '../../server/logging';
 import {
   createFeeCategory,
   createFeeStructure,
@@ -323,6 +324,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Assessments and ledger verification failed:', error);
+  logSanitizedError('verification.assessments_ledger', error);
   process.exitCode = 1;
 });

@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
+import { logSanitizedError } from '../../server/logging';
 import {
   createFeeCategory,
   createFeeStructure,
@@ -337,6 +338,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Students and fees verification failed:', error);
+  logSanitizedError('verification.students_fees', error);
   process.exitCode = 1;
 });

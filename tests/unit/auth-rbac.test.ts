@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { UserRole } from '@/server/auth/guards';
 import { routeErrorResponse } from '@/server/http';
 
@@ -53,11 +53,18 @@ describe('Auth & RBAC Logic Tests', () => {
   });
 
   it('keeps authentication infrastructure failures as server errors', async () => {
-    const response = routeErrorResponse(new Error('database connection string leaked'));
-    expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({
-      error: 'Unexpected server error.',
-      code: 'INTERNAL_SERVER_ERROR',
-    });
+    const secret = 'database-password-must-not-be-logged';
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const response = routeErrorResponse(new Error(secret));
+      expect(response.status).toBe(500);
+      await expect(response.json()).resolves.toEqual({
+        error: 'Unexpected server error.',
+        code: 'INTERNAL_SERVER_ERROR',
+      });
+      expect(JSON.stringify(consoleError.mock.calls)).not.toContain(secret);
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });

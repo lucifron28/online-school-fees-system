@@ -3,6 +3,7 @@ import path from 'path';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
+import { logSanitizedError } from '../../server/logging';
 import type { SchoolSettingsInput } from '../../lib/administration';
 import {
   activateSchoolYear,
@@ -295,6 +296,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Administration verification failed:', error);
+  logSanitizedError('verification.administration', error);
   process.exitCode = 1;
 });

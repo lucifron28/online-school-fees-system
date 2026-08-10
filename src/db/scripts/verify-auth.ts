@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
 import { createAuth } from '../../lib/auth/server';
+import { logSanitizedError } from '../../server/logging';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -132,6 +133,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Auth verification failed:', error);
+  logSanitizedError('verification.auth', error);
   process.exitCode = 1;
 });
