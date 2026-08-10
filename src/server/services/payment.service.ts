@@ -9,7 +9,11 @@ import {
   type PaymentPostInput,
   type ReversalPostInput,
 } from '@/lib/payments';
-import { parseReceiptSnapshot, receiptSnapshotSchema } from '@/lib/receipt-snapshot';
+import {
+  getReceiptProcessorName,
+  parseReceiptSnapshot,
+  receiptSnapshotSchema,
+} from '@/lib/receipt-snapshot';
 import { addCentavos, formatCentavos, subtractCentavos } from '@/lib/utils/currency';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '@/server/errors';
 import {
@@ -628,7 +632,7 @@ export async function getReceiptPdfData(receiptIdentifier: string, db: DatabaseI
       [payment.gradeLevelName, payment.sectionName].filter(Boolean).join(' - ') || 'Not assigned',
     amountReceivedCentavos: payment.amountCentavos,
     balanceAfterPaymentCentavos: null,
-    processedByName: payment.processedByName ?? 'Finance staff',
+    processedByName: getReceiptProcessorName(payment.paymentMethod, payment.processedByName),
     allocations: payment.allocations.map((allocation) => ({
       name: allocation.itemName,
       amountCentavos: allocation.amountCentavos,
@@ -782,7 +786,9 @@ export class PaymentService {
               values.amountCentavos
             ),
           },
-          processor: { name: paymentProfile.processedByName ?? 'Finance staff' },
+          processor: {
+            name: getReceiptProcessorName(values.paymentMethod, paymentProfile.processedByName),
+          },
           allocations: allocations.map((allocation) => ({
             targetType: allocation.targetType,
             name: allocation.name,
