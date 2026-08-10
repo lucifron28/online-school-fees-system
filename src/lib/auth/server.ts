@@ -13,6 +13,15 @@ export interface AuthFactoryOptions {
 export function createAuth({ allowSignUp = false, database }: AuthFactoryOptions = {}) {
   const env = getServerEnv();
   const baseURL = env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseOrigin = new URL(baseURL).origin;
+  const trustedOrigins = Array.from(
+    new Set([
+      baseOrigin,
+      ...(env.NODE_ENV === 'production'
+        ? []
+        : ['http://localhost:3000', 'http://127.0.0.1:3000']),
+    ])
+  );
   const buildSecret =
     process.env.NEXT_PHASE === 'phase-production-build'
       ? 'osfs-build-placeholder-secret-only-for-static-build-2026'
@@ -25,6 +34,7 @@ export function createAuth({ allowSignUp = false, database }: AuthFactoryOptions
   return betterAuth({
     appName: 'Online School Fees System',
     baseURL,
+    trustedOrigins,
     secret,
     database: drizzleAdapter(database ?? getDb(), {
       provider: 'pg',
