@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: External Audit Repair Round 3
-- Branch: `fix/24-external-audit-round-3` (Round 3 hosted evidence verified in PR #15)
+- Phase: Final pre-deployment hardening
+- Branch: `fix/25-predeployment-hardening`
 - Phase 10 starting main commit: `960f107`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Round 2 is verified through hosted Foundation run #111 and merged `main` `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`; Round 3 is verified through PR #15 and hosted Foundation run #122. External Vercel/Neon preview evidence remains a separate fictional deployment prerequisite.
+- Current state: Round 2 is verified through hosted Foundation run #111 and merged `main` `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`; final Round 3 head is verified through PR #15 and hosted Foundation run #123, while historical run #122 remains retained. External Vercel/Neon preview evidence remains a separate fictional deployment prerequisite.
 
 ## Completed phases
 
@@ -369,3 +369,11 @@ CodeGraph was used before editing to trace payment, gateway, ledger, administrat
 - Repaired assessment-level credit enforcement, credit-aware payment allocation, immutable receipt PDFs/portal/admin semantics, lifecycle-inclusive debt reporting, non-active settlement, Manila-ranged statements, terminal checkout callbacks, deterministic withdrawn demo debt, and browser-only coverage.
 - Added `tests/integration/external-audit-round-3.test.ts` with 28 PostgreSQL cases and `tests/unit/external-audit-round-3.test.ts` with six pure/schema cases. Local PostgreSQL cases are skipped without `TEST_DATABASE_URL`; that skip is not evidence of persistence.
 - Local checks passed: `pnpm.cmd typecheck`, `pnpm.cmd lint`, `pnpm.cmd test` (57 tests), `pnpm.cmd test:integration` reset-safety gate (3 tests; database cases skip without `TEST_DATABASE_URL`), production build, focused formatting, and diff checks. Hosted Foundation run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) passed clean migrations/seed/verifiers, formatting, lint, typecheck, 46 database integration tests, build, and Playwright. PR [#15](https://github.com/lucifron28/online-school-fees-system/pull/15) received self-review COMMENT `4892057781`; no blocker, high, or demo-critical medium findings remain.
+
+## Final pre-deployment hardening
+
+- Branch: `fix/25-predeployment-hardening`; starting main: `9ab5caa93245f2d9da541ae22b37e4a70bdf5ab2`.
+- Implemented complete multi-page statement and receipt PDFs, sanitized server error logging, dynamic protected layouts/build-phase auth handling, debounced bounded OTC student search, and payment-origin processor snapshots.
+- Added regressions for 0/1/24/25/60+/61 statement entries, long receipt allocation tables, bounded PDF text, secret-free error logs, >100-student search, CASH/BANK_DEPOSIT/MOCK_ONLINE processor semantics, and snapshot rename immutability.
+- Local checks: 66 unit tests passed; integration harness passed 3 reset-safety tests and skipped 45 database cases without `TEST_DATABASE_URL`; typecheck, ESLint, and production build passed. Changed files were formatted; full repository Prettier remains a pre-existing 143-file baseline failure. Hosted current-branch CI and external deployment evidence remain pending.
+- Final Round 3 hosted evidence is Foundation run [#123](https://github.com/lucifron28/online-school-fees-system/actions/runs/31328129030), with historical run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) retained; #123 passed migration/seed/reset/verifiers, formatting, lint, typecheck, 57 unit tests, 46 integration tests, build, and 7 Playwright tests. No production-readiness or deployment claim is made.
