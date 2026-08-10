@@ -33,7 +33,7 @@ export default function StudentAccountPage() {
             <ArrowLeft className="mr-1 h-4 w-4" /> Dashboard
           </Button>
         </Link>
-        <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700">
+        <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">
           Student account
         </Badge>
       </div>
@@ -66,9 +66,9 @@ export default function StudentAccountPage() {
                   {account.student.schoolYearName ?? 'No school year'}
                 </p>
               </div>
-              <div className="rounded-xl border border-purple-100 bg-purple-50 p-4 text-right">
-                <span className="text-xs font-semibold text-purple-700">Outstanding balance</span>
-                <p className="mt-1 text-2xl font-extrabold text-purple-700">
+              <div className="rounded-xl border border-sky-100 bg-sky-50 p-4 text-right">
+                <span className="text-xs font-semibold text-sky-700">Outstanding balance</span>
+                <p className="mt-1 text-2xl font-extrabold text-sky-700">
                   {formatCentavos(account.ledger.balanceCentavos)}
                 </p>
               </div>

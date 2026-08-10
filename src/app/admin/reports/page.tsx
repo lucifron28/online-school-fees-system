@@ -127,15 +127,15 @@ export default function AdminReportsPage() {
         {[
           [
             'Net collections',
-            collections ? formatCentavos(collections.totals.netCollectionsCentavos) : '—',
+            collections ? formatCentavos(collections.totals.netCollectionsCentavos) : 'Not available',
           ],
           [
             'Reversed amount',
-            collections ? formatCentavos(collections.totals.reversedCentavos) : '—',
+            collections ? formatCentavos(collections.totals.reversedCentavos) : 'Not available',
           ],
           [
             'Posted transactions',
-            collections?.totals.postedTransactionCount.toLocaleString() ?? '—',
+            collections?.totals.postedTransactionCount.toLocaleString() ?? 'Not available',
           ],
           [
             'Outstanding balances',
@@ -209,7 +209,7 @@ export default function AdminReportsPage() {
                 {collections.items.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="whitespace-nowrap text-xs text-slate-500">
-                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-PH') : '—'}
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-PH') : 'Not available'}
                     </TableCell>
                     <TableCell>
                       <div className="text-xs font-semibold">{item.studentName}</div>

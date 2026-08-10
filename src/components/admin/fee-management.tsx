@@ -551,7 +551,7 @@ export function FeeManagement() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
-            Screen #4 · ADMIN - FEES MANAGEMENT
+            Fee structures
           </Badge>
           <h2 className="mt-1 text-2xl font-bold tracking-tight">Fees Management</h2>
           <p className="text-xs text-slate-500">

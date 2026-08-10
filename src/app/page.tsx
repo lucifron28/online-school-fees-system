@@ -1,305 +1,331 @@
-'use client';
-
-import React from 'react';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
-  Shield,
-  Users,
+  ArrowRight,
+  ArrowUpRight,
+  CheckCircle2,
+  CreditCard,
+  FileText,
   GraduationCap,
   LayoutDashboard,
-  CreditCard,
   Receipt,
-  FileText,
+  Shield,
+  Users,
   Wallet,
-  ArrowRight,
-  Monitor,
-  CheckCircle2,
-  Building2,
-  ExternalLink,
 } from 'lucide-react';
 
-export default function HomeHubPage() {
-  const categories = [
-    {
-      role: 'Authentication & Logins',
-      color: 'bg-slate-900 text-white',
-      badgeColor: 'bg-slate-100 text-slate-800 border-slate-200',
-      icon: Monitor,
-      items: [
-        {
-          num: 1,
-          title: 'ADMIN LOGIN',
-          desc: 'Split-screen admin login with campus building illustration placeholder',
-          href: '/login/admin',
-          icon: Shield,
-        },
-        {
-          num: 9,
-          title: 'PARENT LOGIN',
-          desc: 'Split-screen parent login with family illustration placeholder',
-          href: '/login/parent',
-          icon: Users,
-        },
-        {
-          num: 15,
-          title: 'STUDENT LOGIN',
-          desc: 'Split-screen student login with student character illustration placeholder',
-          href: '/login/student',
-          icon: GraduationCap,
-        },
-      ],
-    },
-    {
-      role: 'Admin & Finance Portal',
-      color: 'bg-blue-600 text-white',
-      badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
-      icon: Shield,
-      items: [
-        {
-          num: 2,
-          title: 'ADMIN DASHBOARD',
-          desc: 'Metrics summary, collection line chart, and recent transactions',
-          href: '/admin/dashboard',
-          icon: LayoutDashboard,
-        },
-        {
-          num: 3,
-          title: 'ADMIN STUDENT LIST',
-          desc: 'Directory table, grade filter, search, and Add Student modal',
-          href: '/admin/students',
-          icon: Users,
-        },
-        {
-          num: 4,
-          title: 'ADMIN FEES MANAGEMENT',
-          desc: 'Fee structure template list, applicability rules, and creation form',
-          href: '/admin/fees',
-          icon: CreditCard,
-        },
-        {
-          num: 5,
-          title: 'ADMIN MAKE PAYMENT (MANUAL)',
-          desc: 'Over-The-Counter cashier payment processing form and balance breakdown',
-          href: '/admin/payments/manual',
-          icon: Wallet,
-        },
-        {
-          num: 6,
-          title: 'ADMIN TRANSACTIONS',
-          desc: 'Financial transactions log with date range and payment method filters',
-          href: '/admin/transactions',
-          icon: Receipt,
-        },
-        {
-          num: 7,
-          title: 'ADMIN REPORTS',
-          desc: 'Grid of institutional financial reports with PDF/CSV export actions',
-          href: '/admin/reports',
-          icon: FileText,
-        },
-        {
-          num: 8,
-          title: 'ADMIN STUDENT PROFILE',
-          desc: 'Select a persisted student to view the profile, assessment, and payment history',
-          href: '/admin/students',
-          icon: Users,
-        },
-        {
-          num: 20,
-          title: 'LAST TRANSACTION DETAILS',
-          desc: 'Select a persisted transaction to view details and print its acknowledgment',
-          href: '/admin/transactions',
-          icon: Receipt,
-        },
-      ],
-    },
-    {
-      role: 'Parent Portal',
-      color: 'bg-emerald-600 text-white',
-      badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      icon: Users,
-      items: [
-        {
-          num: 10,
-          title: 'PARENT DASHBOARD',
-          desc: 'Outstanding balance highlight, total paid metrics, and children list',
-          href: '/parent/dashboard',
-          icon: LayoutDashboard,
-        },
-        {
-          num: 11,
-          title: 'CHILD ACCOUNT DETAILS',
-          desc: 'Select a linked child to view itemized fees, payments, and balance status',
-          href: '/parent/dashboard',
-          icon: Users,
-        },
-        {
-          num: 12,
-          title: 'MAKE PAYMENT (ONLINE)',
-          desc: 'Simulated digital payment gateway selection (GCash, Maya, Card)',
-          href: '/parent/pay',
-          icon: CreditCard,
-        },
-        {
-          num: 13,
-          title: 'PARENT PAYMENT RECEIPT',
-          desc: 'Select a persisted acknowledgment receipt from payment history',
-          href: '/parent/history',
-          icon: Receipt,
-        },
-        {
-          num: 14,
-          title: 'PARENT PAYMENT HISTORY',
-          desc: 'Full history of completed online and over-the-counter payments',
-          href: '/parent/history',
-          icon: Receipt,
-        },
-      ],
-    },
-    {
-      role: 'Student Portal',
-      color: 'bg-purple-600 text-white',
-      badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
-      icon: GraduationCap,
-      items: [
-        {
-          num: 16,
-          title: 'STUDENT DASHBOARD',
-          desc: 'Student welcome card, outstanding balance highlight, and quick link',
-          href: '/student/dashboard',
-          icon: LayoutDashboard,
-        },
-        {
-          num: 17,
-          title: 'STUDENT ACCOUNT DETAILS',
-          desc: 'Detailed fee assessment list and current balance statement',
-          href: '/student/account',
-          icon: GraduationCap,
-        },
-        {
-          num: 18,
-          title: 'STUDENT PAYMENT HISTORY',
-          desc: 'Personal payment transaction history table',
-          href: '/student/history',
-          icon: Receipt,
-        },
-        {
-          num: 19,
-          title: 'STUDENT PAYMENT RECEIPT',
-          desc: 'Select a persisted acknowledgment receipt from payment history',
-          href: '/student/history',
-          icon: Receipt,
-        },
-      ],
-    },
-  ];
+type WorkspaceLink = {
+  title: string;
+  description: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
 
+const portalLinks = [
+  {
+    title: 'Administrator and finance',
+    description: 'Manage students, assessments, payments, reports, and access.',
+    href: '/login/admin',
+    icon: Shield,
+    className: 'lg:col-span-6',
+    tone: 'border-blue-200 bg-blue-50/70 hover:border-blue-400 dark:border-blue-900/70 dark:bg-blue-950/30',
+    iconTone: 'bg-blue-600 text-white',
+  },
+  {
+    title: 'Parent or guardian',
+    description: 'View linked children, balances, payments, and receipts.',
+    href: '/login/parent',
+    icon: Users,
+    className: 'lg:col-span-3',
+    tone: 'border-teal-200 bg-teal-50/70 hover:border-teal-400 dark:border-teal-900/70 dark:bg-teal-950/30',
+    iconTone: 'bg-teal-600 text-white',
+  },
+  {
+    title: 'Student',
+    description: 'Review your account, balance, payment history, and receipts.',
+    href: '/login/student',
+    icon: GraduationCap,
+    className: 'lg:col-span-3',
+    tone: 'border-sky-200 bg-sky-50/70 hover:border-sky-400 dark:border-sky-900/70 dark:bg-sky-950/30',
+    iconTone: 'bg-sky-600 text-white',
+  },
+];
+
+const workspaceGroups: Array<{
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  className: string;
+  links: WorkspaceLink[];
+}> = [
+  {
+    title: 'Admin and finance workspace',
+    description: 'Operational tools for the school finance team.',
+    icon: Shield,
+    className: 'lg:col-span-7',
+    links: [
+      {
+        title: 'Dashboard',
+        description: 'Collections, balances, and recent transactions',
+        href: '/admin/dashboard',
+        icon: LayoutDashboard,
+      },
+      {
+        title: 'Student directory',
+        description: 'Search records and manage student accounts',
+        href: '/admin/students',
+        icon: Users,
+      },
+      {
+        title: 'Fees management',
+        description: 'Maintain fee structures and applicability rules',
+        href: '/admin/fees',
+        icon: CreditCard,
+      },
+      {
+        title: 'Record a payment',
+        description: 'Post an over-the-counter cashier payment',
+        href: '/admin/payments/manual',
+        icon: Wallet,
+      },
+      {
+        title: 'Transactions',
+        description: 'Review payment and reversal activity',
+        href: '/admin/transactions',
+        icon: Receipt,
+      },
+      {
+        title: 'Reports',
+        description: 'Export financial reports and reconciliations',
+        href: '/admin/reports',
+        icon: FileText,
+      },
+      {
+        title: 'Student profile',
+        description: 'Open a student record from the directory',
+        href: '/admin/students',
+        icon: Users,
+      },
+      {
+        title: 'Transaction details',
+        description: 'Open a transaction from the ledger',
+        href: '/admin/transactions',
+        icon: Receipt,
+      },
+    ],
+  },
+  {
+    title: 'Parent workspace',
+    description: 'Family account views and payment actions.',
+    icon: Users,
+    className: 'lg:col-span-5',
+    links: [
+      {
+        title: 'Dashboard',
+        description: 'Linked children and current balances',
+        href: '/parent/dashboard',
+        icon: LayoutDashboard,
+      },
+      {
+        title: 'Child account details',
+        description: 'Itemized fees and balance status',
+        href: '/parent/dashboard',
+        icon: Users,
+      },
+      {
+        title: 'Make a payment',
+        description: 'Choose an online payment method',
+        href: '/parent/pay',
+        icon: CreditCard,
+      },
+      {
+        title: 'Payment history',
+        description: 'Completed payments and receipts',
+        href: '/parent/history',
+        icon: Receipt,
+      },
+    ],
+  },
+  {
+    title: 'Student workspace',
+    description: 'Personal finance records and receipts.',
+    icon: GraduationCap,
+    className: 'lg:col-span-12',
+    links: [
+      {
+        title: 'Dashboard',
+        description: 'Balance overview and account shortcuts',
+        href: '/student/dashboard',
+        icon: LayoutDashboard,
+      },
+      {
+        title: 'My account',
+        description: 'Detailed assessment and balance statement',
+        href: '/student/account',
+        icon: GraduationCap,
+      },
+      {
+        title: 'Payment history',
+        description: 'Personal payment transaction history',
+        href: '/student/history',
+        icon: Receipt,
+      },
+      {
+        title: 'Payment receipt',
+        description: 'Open a receipt from payment history',
+        href: '/student/history',
+        icon: Receipt,
+      },
+    ],
+  },
+];
+
+function PortalLink({
+  title,
+  description,
+  href,
+  icon: Icon,
+  className,
+  tone,
+  iconTone,
+}: (typeof portalLinks)[number]) {
   return (
-    <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-      {/* Top Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 p-8 text-white shadow-xl">
-        <div className="relative z-10 max-w-3xl space-y-4">
-          <div className="flex items-center space-x-2">
-            <span className="inline-flex items-center rounded-full border border-blue-400/30 bg-blue-500/20 px-3 py-1 font-mono text-xs font-semibold text-blue-300">
-              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-blue-400" />
-              20 / 20 Reference Screens Scaffolded
-            </span>
+    <Link
+      href={href}
+      className={`group flex min-h-40 flex-col justify-between rounded-2xl border p-5 transition-[border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md ${tone} ${className}`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-sm ${iconTone}`}>
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <ArrowUpRight className="h-5 w-5 text-muted-foreground transition-transform duration-150 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
+      </div>
+      <div className="mt-8">
+        <h2 className="text-base font-semibold tracking-tight text-foreground">{title}</h2>
+        <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">{description}</p>
+      </div>
+    </Link>
+  );
+}
+
+export default function HomeHubPage() {
+  return (
+    <div className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+      <section className="overflow-hidden rounded-2xl bg-slate-950 text-white shadow-xl dark:border dark:border-slate-800">
+        <div className="grid gap-10 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:p-12">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-200">
+              <CheckCircle2 className="h-3.5 w-3.5 text-blue-300" aria-hidden="true" />
+              Clear records for every school account
+            </div>
+            <h1 className="mt-5 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+              Keep every fee, payment, and receipt in one clear record.
+            </h1>
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+              A focused school finance portal for administrators, finance staff, parents, and
+              students. Choose your portal to continue.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/login/admin"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 active:scale-[0.98]"
+              >
+                Open administrator portal
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <Link
+                href="#workspace-map"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-700 px-4 text-sm font-semibold text-slate-100 transition-colors duration-150 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 active:scale-[0.98]"
+              >
+                Explore workspace map
+              </Link>
+            </div>
           </div>
 
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-            Online School Fees Monitoring & Payment System
-          </h1>
-
-          <p className="text-sm leading-relaxed text-slate-300">
-            Full UI scaffold matching the 20-screen reference architecture guide. Includes
-            role-based layouts, dark mode sidebar, image placeholders, itemized fee tables, cashier
-            payment workflows, and digital receipt generation.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <Link href="/login/admin">
-              <Button className="h-9 bg-blue-600 text-xs font-semibold text-white hover:bg-blue-500">
-                <span>Start Demo (Admin Login)</span>
-                <ArrowRight className="ml-1.5 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/admin/dashboard">
-              <Button
-                variant="outline"
-                className="h-9 border-slate-700 bg-slate-800/80 text-xs text-white hover:bg-slate-700"
-              >
-                <span>Direct to Admin Dashboard</span>
-              </Button>
-            </Link>
+          <div className="border-t border-slate-800 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Built for clarity</p>
+            <ul className="mt-5 space-y-5 text-sm text-slate-300">
+              <li className="flex gap-3">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" aria-hidden="true" />
+                <span>Role-based access for each type of account</span>
+              </li>
+              <li className="flex gap-3">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" aria-hidden="true" />
+                <span>Balances and assessments that are easy to verify</span>
+              </li>
+              <li className="flex gap-3">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" aria-hidden="true" />
+                <span>Receipts and transaction records in one place</span>
+              </li>
+            </ul>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Screen Categories Grid */}
-      <div className="space-y-10">
-        {categories.map((cat) => {
-          const CatIcon = cat.icon;
-          return (
-            <div key={cat.role} className="space-y-4">
-              <div className="flex items-center space-x-3 border-b border-slate-200 pb-3 dark:border-slate-800">
-                <div className={`rounded-lg p-2 ${cat.color}`}>
-                  <CatIcon className="h-5 w-5" />
+      <section aria-labelledby="portal-heading">
+        <div className="mb-4 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Choose a portal</p>
+            <h2 id="portal-heading" className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+              Start from the account you use.
+            </h2>
+          </div>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-12">
+          {portalLinks.map((portal) => (
+            <PortalLink key={portal.title} {...portal} />
+          ))}
+        </div>
+      </section>
+
+      <section id="workspace-map" aria-labelledby="workspace-heading" className="scroll-mt-6">
+        <div className="mb-5 max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Workspace map</p>
+          <h2 id="workspace-heading" className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+            Explore the main views.
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Use these links to preview the available workflows before signing in with a configured account.
+          </p>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-12">
+          {workspaceGroups.map((group) => {
+            const GroupIcon = group.icon;
+            return (
+              <section key={group.title} className={`rounded-2xl border border-border bg-card p-5 shadow-sm ${group.className}`}>
+                <div className="flex items-start gap-3 border-b border-border pb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <GroupIcon className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold tracking-tight text-foreground">{group.title}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">{group.description}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                    {cat.role}
-                  </h2>
-                  <p className="text-xs text-slate-500">{cat.items.length} Screens</p>
+                <div className="mt-3 divide-y divide-border">
+                  {group.links.map((link) => {
+                    const LinkIcon = link.icon;
+                    return (
+                      <Link
+                        key={`${link.title}-${link.href}`}
+                        href={link.href}
+                        className="group flex min-h-14 items-center gap-3 py-3 transition-colors duration-150 first:pt-2 last:pb-2 hover:text-primary"
+                      >
+                        <LinkIcon className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-foreground group-hover:text-primary">{link.title}</span>
+                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">{link.description}</span>
+                        </span>
+                        <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
+                      </Link>
+                    );
+                  })}
                 </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {cat.items.map((screen) => {
-                  const Icon = screen.icon;
-                  return (
-                    <Card
-                      key={screen.num}
-                      className="group flex flex-col justify-between border-slate-200 shadow-sm transition-all hover:border-blue-300 hover:shadow-md dark:border-slate-800"
-                    >
-                      <CardHeader className="p-4 pb-2">
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="font-mono text-xs font-bold text-slate-500 transition-colors group-hover:text-blue-600">
-                            Screen #{screen.num}
-                          </span>
-                          <div className="rounded-md bg-slate-100 p-1.5 text-slate-600 transition-colors group-hover:bg-blue-50 group-hover:text-blue-600 dark:bg-slate-800 dark:text-slate-300">
-                            <Icon className="h-4 w-4" />
-                          </div>
-                        </div>
-                        <CardTitle className="text-sm font-bold leading-tight text-slate-900 dark:text-slate-100">
-                          {screen.title}
-                        </CardTitle>
-                        <CardDescription className="mt-1 line-clamp-2 text-xs text-slate-500">
-                          {screen.desc}
-                        </CardDescription>
-                      </CardHeader>
-
-                      <CardContent className="p-4 pt-2">
-                        <Link href={screen.href}>
-                          <Button
-                            variant="outline"
-                            className="h-8 w-full justify-between text-xs font-medium transition-colors group-hover:border-blue-600 group-hover:bg-blue-600 group-hover:text-white"
-                          >
-                            <span>Open View</span>
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              </section>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }

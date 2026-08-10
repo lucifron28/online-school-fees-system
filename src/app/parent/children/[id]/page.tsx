@@ -155,7 +155,7 @@ export default function ParentChildDetailsPage({ params }: { params: Promise<{ i
                               {payment.receiptNumber}
                             </Link>
                           ) : (
-                            '—'
+                            'No receipt'
                           )}
                         </TableCell>
                         <TableCell className="text-xs text-slate-500">

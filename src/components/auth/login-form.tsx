@@ -42,7 +42,7 @@ function authErrorMessage(error: unknown): string {
     const message = String(error.message);
     if (message.toLowerCase().includes('disabled')) return 'This account is disabled.';
     if (message.toLowerCase().includes('invalid')) return 'Invalid email or password.';
-    return message;
+    return 'Unable to sign in. Check your credentials and try again.';
   }
   return 'Unable to sign in. Check your credentials and try again.';
 }
@@ -132,7 +132,7 @@ export function LoginForm({
                   value={field.state.value}
                   onChange={(event) => field.handleChange(event.target.value)}
                   onBlur={field.handleBlur}
-                  className={`h-10 text-sm ${focusClass}`}
+                  className={`h-11 text-sm ${focusClass}`}
                   autoComplete="username"
                   aria-invalid={Boolean(error)}
                 />
@@ -154,7 +154,7 @@ export function LoginForm({
           <button
             type="button"
             onClick={() => setFormError('Password reset is managed by the School Administrator.')}
-            className={`text-xs ${linkClass} hover:underline`}
+            className={`min-h-10 rounded-md px-2 text-xs ${linkClass} hover:bg-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
           >
             Forgot Password?
           </button>
@@ -172,7 +172,7 @@ export function LoginForm({
                   value={field.state.value}
                   onChange={(event) => field.handleChange(event.target.value)}
                   onBlur={field.handleBlur}
-                  className={`h-10 text-sm ${focusClass}`}
+                  className={`h-11 text-sm ${focusClass}`}
                   autoComplete="current-password"
                   aria-invalid={Boolean(error)}
                 />
@@ -191,7 +191,7 @@ export function LoginForm({
               id={`${portal}-remember`}
               checked={field.state.value}
               onChange={(event) => field.handleChange(event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             />
             <label
               htmlFor={`${portal}-remember`}
@@ -215,7 +215,7 @@ export function LoginForm({
       <Button
         type="submit"
         disabled={isSubmitting}
-        className={`h-10 w-full text-sm font-medium text-white shadow-md ${accentClass}`}
+        className={`h-11 w-full text-sm font-medium text-white shadow-sm ${accentClass}`}
       >
         <span>{isSubmitting ? 'Signing in…' : buttonLabel}</span>
         <ArrowRight className="ml-2 h-4 w-4" />
