@@ -13,6 +13,8 @@ export function LoadingState({ label = 'Loading...', className, ...props }: Load
         'flex flex-col items-center justify-center space-y-3 p-8 text-center',
         className
       )}
+      role="status"
+      aria-live="polite"
       {...props}
     >
       <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-400" />
