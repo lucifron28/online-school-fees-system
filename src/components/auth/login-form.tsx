@@ -3,7 +3,7 @@
 import { useForm } from '@tanstack/react-form';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import { signIn, signOut } from '@/lib/auth/client';
 import { getRoleLandingPath, parseUserRole } from '@/lib/auth/roles';
 import { Button } from '@/components/ui/button';

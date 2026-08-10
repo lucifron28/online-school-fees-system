@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import { USER_ROLES, type UserRole } from '@/lib/auth/roles';
 
 const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;

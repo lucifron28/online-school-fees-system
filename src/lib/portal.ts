@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v3';
 
 export const mockPaymentChannelSchema = z.enum(['GCash', 'Maya', 'CreditCard']);
 export const mockPaymentOutcomeSchema = z.enum(['SUCCESS', 'FAILED', 'CANCELLED', 'PENDING']);

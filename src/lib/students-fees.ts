@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v3';
 
 export const studentStatusSchema = z.enum(['ACTIVE', 'INACTIVE', 'WITHDRAWN', 'GRADUATED']);
 export const assessmentPeriodSchema = z.enum(['ANNUAL', 'SEMESTER', 'TRIMESTER', 'MONTHLY']);

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v3';
 
 export const assessmentStatusSchema = z.enum(['DRAFT', 'POSTED', 'CANCELLED']);
 export const adjustmentTypeSchema = z.enum(['DEBIT', 'CREDIT']);
