@@ -332,6 +332,7 @@ databaseContract('external audit round 1 regressions', () => {
       expect(debitPaymentResults.every((result) => result.status === 'fulfilled')).toBe(true);
       const debitPaymentEntries = await db
         .select({
+          entryType: schema.ledgerEntries.entryType,
           debitCentavos: schema.ledgerEntries.debitCentavos,
           creditCentavos: schema.ledgerEntries.creditCentavos,
           balanceCentavos: schema.ledgerEntries.balanceCentavos,
@@ -340,7 +341,7 @@ databaseContract('external audit round 1 regressions', () => {
         .where(eq(schema.ledgerEntries.studentId, debitPaymentFixture.studentId));
       expect(ledgerBalance(debitPaymentEntries)).toBe(70_000_0);
       const mutationSnapshots = debitPaymentEntries
-        .slice(1)
+        .filter((entry) => entry.entryType !== 'ASSESSMENT')
         .map((entry) => entry.balanceCentavos)
         .sort((a, b) => a - b);
       expect([
