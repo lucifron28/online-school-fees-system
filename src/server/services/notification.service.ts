@@ -7,6 +7,7 @@ import type { NotificationType } from '@/lib/notifications';
 import { formatCentavos } from '@/lib/utils/currency';
 import { getServerEnv } from '@/lib/env';
 import { NotFoundError } from '@/server/errors';
+import { logSanitizedError } from '@/server/logging';
 
 // There is no scheduler in this scope. This is the maximum persisted delivery
 // attempts shared by the initial dispatch and explicit manual retries.
@@ -376,7 +377,7 @@ async function dispatchToRecipients(
       else summary.retrying += 1;
     } catch (error) {
       summary.failed += 1;
-      console.error('Notification persistence failed', error);
+      logSanitizedError('notification.persistence', error);
     }
   }
   return summary;
@@ -468,7 +469,7 @@ export class NotificationService {
         provider
       );
     } catch (error) {
-      console.error('Assessment notification dispatch failed', error);
+      logSanitizedError('notification.assessment_dispatch', error);
       return emptySummary();
     }
   }
@@ -512,7 +513,7 @@ export class NotificationService {
       );
       return combineSummaries(paymentSummary, receiptSummary);
     } catch (error) {
-      console.error('Payment notification dispatch failed', error);
+      logSanitizedError('notification.payment_dispatch', error);
       return emptySummary();
     }
   }
@@ -541,7 +542,7 @@ export class NotificationService {
         provider
       );
     } catch (error) {
-      console.error('Payment reversal notification dispatch failed', error);
+      logSanitizedError('notification.payment_reversal_dispatch', error);
       return emptySummary();
     }
   }

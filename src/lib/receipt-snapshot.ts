@@ -51,6 +51,12 @@ export const receiptSnapshotSchema = z
 
 export type ReceiptSnapshot = z.infer<typeof receiptSnapshotSchema>;
 
+export function getReceiptProcessorName(paymentMethod: string, staffName?: string | null): string {
+  return paymentMethod === 'MOCK_ONLINE'
+    ? 'Mock online payment system'
+    : (staffName ?? 'Finance staff');
+}
+
 /** Returns null for pre-snapshot/invalid legacy data so history remains readable. */
 export function parseReceiptSnapshot(value: unknown): ReceiptSnapshot | null {
   const parsed = receiptSnapshotSchema.safeParse(value);

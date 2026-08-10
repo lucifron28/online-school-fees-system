@@ -13,7 +13,7 @@ export default function ErrorBoundary({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('Unhandled App Error:', error);
+    console.error('Unhandled App Error', { name: error.name, digest: error.digest });
   }, [error]);
 
   return (
@@ -28,7 +28,7 @@ export default function ErrorBoundary({
             Something went wrong
           </h2>
           <p className="overflow-x-auto rounded border border-slate-200 bg-slate-100 p-3 text-left font-mono text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-            {error.message || 'An unexpected application error occurred.'}
+            Unexpected application error. Please try again or return home.
           </p>
         </div>
 

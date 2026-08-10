@@ -1,15 +1,16 @@
 # Agent Progress Log
 
-This file is a historical handoff, not a completion certificate. Earlier phase notes claimed a complete system even though the current repository still contains intentionally simulated payment-provider behavior and external deployment prerequisites. Those claims are recorded and corrected in [docs/goal-findings.md](goal-findings.md). The current branch is performing External Audit Repair Round 3 against the committed PostgreSQL, financial-history, lifecycle, statement, receipt, checkout, and browser contracts.
+This file is a historical handoff, not a completion certificate. Earlier phase notes claimed a complete system even though the current repository still contains intentionally simulated payment-provider behavior and external deployment prerequisites. Those claims are recorded and corrected in [docs/goal-findings.md](goal-findings.md). The current branch is performing final pre-deployment hardening against the committed PDF, logging, OTC selection, receipt, and evidence contracts.
 
 ## Current execution state
 
-- Branch: `fix/24-external-audit-round-3`
-- Phase: External Audit Repair Round 3; implementation and hosted CI evidence are complete, with fictional deployment evidence still external
-- Starting main: `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`
+- Branch: `fix/25-predeployment-hardening`
+- Phase: Final pre-deployment hardening; local implementation checks are complete, with hosted verification and fictional deployment evidence still external
+- Starting main: `9ab5caa93245f2d9da541ae22b37e4a70bdf5ab2`
 - GitHub connector: required for PR creation, self-review comment, merge, and remote CI because the local `gh` token is invalid
-- Verification: local unit tests (57), typecheck, lint, focused formatting, integration harness, and production build passed; hosted Foundation run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) passed clean PostgreSQL migrations/seed/verifiers, formatting, lint, typecheck, 46 integration tests, build, and Playwright
-- Current scope: assessment-level credit capacity, net-capacity payment allocation, immutable receipt snapshots, lifecycle-inclusive debt reporting, non-active settlement, Manila-ranged statements, terminal checkout state, Round 3 PostgreSQL regressions, and browser-only financial-history checks
+- Verification: local unit tests (66), typecheck, lint, targeted formatting, integration harness, and production build passed; local PostgreSQL and Playwright checks require external configuration
+- Final Round 3 evidence: hosted Foundation run [#123](https://github.com/lucifron28/online-school-fees-system/actions/runs/31328129030) passed migration/seed/reset/verifier, formatting, lint, typecheck, 57 unit tests, 46 integration tests, build, and 7 Playwright tests; historical run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) remains retained for traceability
+- Current scope: complete multi-page statement/receipt PDFs, sanitized server error logging, bounded searchable OTC student selection, payment-origin processor snapshots, and final Round 3 evidence corrections
 
 ## Historical branches
 
@@ -34,4 +35,12 @@ For every phase, record the exact command, exit status, and relevant output in `
 - Branch: `fix/24-external-audit-round-3`; starting main: `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`.
 - Added migration `0004_lumpy_bishop.sql` for nullable typed receipt issuance snapshots, with safe legacy fallback.
 - Added 28 PostgreSQL integration cases and six unit cases covering credit limits, net allocation, reconciliation, snapshots/reversals, lifecycle debt, non-active settlement, Manila statements, terminal checkout callbacks, and concurrency.
-- Hosted evidence: Foundation run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) passed; PR [#15](https://github.com/lucifron28/online-school-fees-system/pull/15) received self-review comment `4892057781` with no blocker, high, or demo-critical medium findings. No deployment or production-readiness claim is made.
+- Hosted evidence: final-head Foundation run [#123](https://github.com/lucifron28/online-school-fees-system/actions/runs/31328129030) passed migration/seed/reset/verifier, formatting, lint, typecheck, 57 unit tests, 46 integration tests, build, and 7 Playwright tests. Historical Foundation run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) remains retained; PR [#15](https://github.com/lucifron28/online-school-fees-system/pull/15) received self-review comment `4892057781` with no blocker, high, or demo-critical medium findings. No deployment or production-readiness claim is made.
+
+## Final pre-deployment hardening
+
+- Statements now paginate every chronologically ordered ledger entry with repeated headers, opening/closing balances, page numbers, repeated disclaimers, and width-bounded descriptions. Receipt allocation tables also continue across pages without footer overlap.
+- Unexpected server errors now use sanitized context/error-class/correlation-ID logging; authentication infrastructure failures still return generic HTTP 500 responses. Protected layouts are explicitly dynamic, and build-only auth configuration avoids default-secret warning spam without supplying a runtime production secret.
+- OTC finance selection now uses a debounced server search with a bounded 20-row page, supports student number/name searches beyond the first page and non-active students, and requires a positive authoritative balance before posting.
+- CASH/BANK_DEPOSIT snapshots retain the authenticated staff name; MOCK_ONLINE snapshots identify the automated mock system. Snapshot history remains immutable after later user renames.
+- Local hardening checks passed: 66 unit tests, 3 integration harness tests with 45 database cases skipped without `TEST_DATABASE_URL`, strict typecheck, ESLint, and production build. Full repository Prettier check remains a pre-existing 143-file baseline failure; changed files were formatted. Hosted current-branch CI and external deployment evidence remain pending.

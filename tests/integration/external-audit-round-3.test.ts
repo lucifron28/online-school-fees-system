@@ -12,6 +12,7 @@ import {
 } from '@/server/services/payment-gateway.service';
 import { getPayment, getReceiptPdfData, PaymentService } from '@/server/services/payment.service';
 import { ReportService } from '@/server/services/report.service';
+import { listStudents } from '@/server/services/students-fees.service';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const databaseContract = testDatabaseUrl ? describe : describe.skip;
@@ -1334,6 +1335,124 @@ databaseContract('external audit round 3 regressions', () => {
       ).toBe(100_00);
     } finally {
       await cleanupStudent(db, studentId);
+    }
+  });
+
+  it('searches a bounded student page beyond the first hundred records', async () => {
+    const context = await academicContext(db);
+    const suffix = randomUUID();
+    const searchPrefix = `R3-BULK-${suffix}`;
+    const rows = await db
+      .insert(schema.students)
+      .values(
+        Array.from({ length: 105 }, (_, index) => ({
+          studentNumber: `${searchPrefix}-${index}`,
+          firstName: 'Bulk',
+          lastName: `Student ${index}`,
+          email: `r3-bulk-${suffix}-${index}@schoolfees.example.com`,
+          gradeLevelId: context.gradeLevelId,
+          schoolYearId: context.schoolYearId,
+          status: index === 104 ? ('WITHDRAWN' as const) : ('ACTIVE' as const),
+        }))
+      )
+      .returning({ id: schema.students.id });
+    const studentIds = rows.map((row) => row.id);
+
+    try {
+      const firstPage = await listStudents(
+        { page: 1, pageSize: 20, search: searchPrefix, sort: 'studentNumber', direction: 'asc' },
+        db
+      );
+      expect(firstPage.pagination.total).toBe(105);
+      expect(firstPage.data).toHaveLength(20);
+
+      const beyondFirstPage = await listStudents(
+        { page: 1, pageSize: 20, search: `${searchPrefix}-104`, sort: 'studentNumber' },
+        db
+      );
+      expect(beyondFirstPage.data).toHaveLength(1);
+      expect(beyondFirstPage.data[0]).toMatchObject({
+        studentNumber: `${searchPrefix}-104`,
+        status: 'WITHDRAWN',
+      });
+    } finally {
+      await db.delete(schema.students).where(inArray(schema.students.id, studentIds));
+    }
+  });
+
+  it('snapshots staff names for manual payments and the system name for mock online payments', async () => {
+    const context = await academicContext(db);
+    const adminUser = assertDefined(
+      (
+        await db
+          .select({ name: schema.users.name })
+          .from(schema.users)
+          .where(eq(schema.users.id, context.adminUserId))
+          .limit(1)
+      )[0],
+      'Round 3 admin fixture could not be loaded.'
+    );
+    const studentIds = await Promise.all(
+      Array.from({ length: 3 }, () => createStudent(db, context, randomUUID()))
+    );
+    const fixtures = await Promise.all(
+      studentIds.map((studentId) =>
+        createAssessment(db, context, studentId, randomUUID(), 100_00, 'ANNUAL', new Date())
+      )
+    );
+
+    try {
+      const cash = await PaymentService.recordPayment(
+        {
+          studentId: studentIds[0]!,
+          amountCentavos: 10_00,
+          paymentMethod: 'CASH',
+          idempotencyKey: `r3-processor-cash-${randomUUID()}`,
+          processedByUserId: context.adminUserId,
+          skipNotifications: true,
+        },
+        db
+      );
+      const bank = await PaymentService.recordPayment(
+        {
+          studentId: studentIds[1]!,
+          amountCentavos: 10_00,
+          paymentMethod: 'BANK_DEPOSIT',
+          idempotencyKey: `r3-processor-bank-${randomUUID()}`,
+          processedByUserId: context.adminUserId,
+          skipNotifications: true,
+        },
+        db
+      );
+      const mockOnline = await PaymentService.recordPayment(
+        {
+          studentId: studentIds[2]!,
+          amountCentavos: 10_00,
+          paymentMethod: 'MOCK_ONLINE',
+          idempotencyKey: `r3-processor-mock-${randomUUID()}`,
+          skipNotifications: true,
+        },
+        db
+      );
+
+      expect((await getReceiptPdfData(cash.receipt!.id, db)).processedByName).toBe(adminUser.name);
+      expect((await getReceiptPdfData(bank.receipt!.id, db)).processedByName).toBe(adminUser.name);
+      expect((await getReceiptPdfData(mockOnline.receipt!.id, db)).processedByName).toBe(
+        'Mock online payment system'
+      );
+
+      await db
+        .update(schema.users)
+        .set({ name: `${adminUser.name} Renamed` })
+        .where(eq(schema.users.id, context.adminUserId));
+      expect((await getReceiptPdfData(cash.receipt!.id, db)).processedByName).toBe(adminUser.name);
+    } finally {
+      await db
+        .update(schema.users)
+        .set({ name: adminUser.name })
+        .where(eq(schema.users.id, context.adminUserId));
+      for (const studentId of studentIds) await cleanupStudent(db, studentId);
+      expect(fixtures).toHaveLength(3);
     }
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
@@ -62,12 +62,32 @@ type ManualPaymentValues = {
 export function ManualPaymentForm() {
   const queryClient = useQueryClient();
   const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState<StudentRow | null>(null);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [debouncedStudentSearch, setDebouncedStudentSearch] = useState('');
+  const [studentSearchOpen, setStudentSearchOpen] = useState(false);
   const [formError, setFormError] = useState('');
   const [successPayment, setSuccessPayment] = useState<PaymentResponse | null>(null);
 
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedStudentSearch(studentSearch.trim());
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [studentSearch]);
+
   const studentsQuery = useQuery({
-    queryKey: ['admin-payment-students'],
-    queryFn: () => requestJson<StudentListResponse>('/api/admin/students?page=1&pageSize=100'),
+    queryKey: ['admin-payment-students', debouncedStudentSearch],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        page: '1',
+        pageSize: '20',
+        sort: 'lastName',
+        direction: 'asc',
+      });
+      if (debouncedStudentSearch) params.set('search', debouncedStudentSearch);
+      return requestJson<StudentListResponse>(`/api/admin/students?${params.toString()}`);
+    },
   });
   const assessmentQuery = useQuery({
     queryKey: ['admin-payment-student-balance', selectedStudentId],
@@ -113,6 +133,9 @@ export function ManualPaymentForm() {
         setSuccessPayment(payment);
         form.reset();
         setSelectedStudentId('');
+        setSelectedStudent(null);
+        setStudentSearch('');
+        setStudentSearchOpen(false);
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['admin-payment-students'] }),
           queryClient.invalidateQueries({ queryKey: ['admin-payments'] }),
@@ -123,16 +146,18 @@ export function ManualPaymentForm() {
     },
   });
 
-  const selectedStudent = (studentsQuery.data?.data ?? []).find(
-    (student) => student.id === selectedStudentId
-  );
   const balanceCentavos = assessmentQuery.data?.ledger.balanceCentavos ?? 0;
+  const paymentDisabled =
+    !selectedStudentId ||
+    assessmentQuery.isLoading ||
+    assessmentQuery.isError ||
+    balanceCentavos <= 0;
 
   return (
     <div className="max-w-5xl space-y-6">
       <div>
         <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
-          Finance · OTC payment
+          Finance - OTC payment
         </Badge>
         <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
           Over-the-counter payment processing
@@ -147,7 +172,7 @@ export function ManualPaymentForm() {
           <CardTitle className="text-base">Payment details</CardTitle>
         </CardHeader>
         <CardContent>
-          {studentsQuery.isLoading && <p className="text-sm text-slate-500">Loading students…</p>}
+          {studentsQuery.isLoading && <p className="text-sm text-slate-500">Loading students...</p>}
           {studentsQuery.isError && (
             <div>
               <p className="text-sm text-red-600">{getClientErrorMessage(studentsQuery.error)}</p>
@@ -171,26 +196,107 @@ export function ManualPaymentForm() {
             >
               <form.Field name="studentId">
                 {(field) => (
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Student
-                    <select
-                      className="mt-1 flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-600 dark:border-slate-800 dark:bg-slate-950"
-                      value={field.state.value}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        field.handleChange(value);
-                        setSelectedStudentId(value);
-                      }}
-                    >
-                      <option value="">Select a student</option>
-                      {studentsQuery.data.data.map((student) => (
-                        <option key={student.id} value={student.id}>
-                          {student.studentNumber} — {student.firstName} {student.lastName} —{' '}
-                          {student.status}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Search students
+                      <Input
+                        aria-label="Search students"
+                        className="mt-1"
+                        value={studentSearch}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setStudentSearch(value);
+                          setStudentSearchOpen(true);
+                          if (selectedStudent) {
+                            setSelectedStudent(null);
+                            setSelectedStudentId('');
+                            field.handleChange('');
+                          }
+                        }}
+                        onFocus={() => setStudentSearchOpen(true)}
+                        placeholder="Search by student number or name"
+                        autoComplete="off"
+                      />
+                    </label>
+                    {studentSearchOpen && !selectedStudent && studentsQuery.data && (
+                      <div
+                        role="listbox"
+                        aria-label="Student search results"
+                        className="max-h-64 overflow-y-auto rounded-md border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                      >
+                        {studentsQuery.data.data.length > 0 ? (
+                          studentsQuery.data.data.map((student) => (
+                            <button
+                              key={student.id}
+                              type="button"
+                              role="option"
+                              aria-selected={field.state.value === student.id}
+                              className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-xs hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                              onClick={() => {
+                                field.handleChange(student.id);
+                                setSelectedStudentId(student.id);
+                                setSelectedStudent(student);
+                                setStudentSearch(
+                                  `${student.studentNumber} - ${student.firstName} ${student.lastName}`
+                                );
+                                setStudentSearchOpen(false);
+                                setFormError('');
+                              }}
+                            >
+                              <span>
+                                <span className="block font-semibold text-slate-800 dark:text-slate-100">
+                                  {student.studentNumber} - {student.firstName} {student.lastName}
+                                </span>
+                                <span className="text-slate-500">
+                                  {student.gradeLevelName ?? 'No grade'} -{' '}
+                                  {student.sectionName ?? 'No section'}
+                                </span>
+                              </span>
+                              <Badge variant="outline" className="ml-3 shrink-0 text-[10px]">
+                                {student.status}
+                              </Badge>
+                            </button>
+                          ))
+                        ) : (
+                          <p className="px-3 py-3 text-xs text-slate-500">
+                            No matching students found.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {studentsQuery.isFetching && !studentsQuery.isLoading && (
+                      <p className="text-[11px] text-slate-500">Searching students...</p>
+                    )}
+                    {selectedStudent && (
+                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs dark:border-blue-900/40 dark:bg-blue-950/30">
+                        <div>
+                          <p className="font-semibold text-slate-800 dark:text-slate-100">
+                            {selectedStudent.studentNumber} - {selectedStudent.firstName}{' '}
+                            {selectedStudent.lastName}
+                          </p>
+                          <p className="text-slate-500">
+                            {selectedStudent.status} -{' '}
+                            {selectedStudent.schoolYearName ?? 'No school year'}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-8 text-xs"
+                          onClick={() => {
+                            field.handleChange('');
+                            setSelectedStudentId('');
+                            setSelectedStudent(null);
+                            setStudentSearch('');
+                            setStudentSearchOpen(true);
+                          }}
+                        >
+                          Change student
+                        </Button>
+                      </div>
+                    )}
+                    <input type="hidden" value={field.state.value} readOnly />
+                  </div>
                 )}
               </form.Field>
 
@@ -247,16 +353,30 @@ export function ManualPaymentForm() {
                     Authoritative current balance
                   </p>
                   <p className="text-2xl font-extrabold text-blue-700 dark:text-blue-300">
-                    {assessmentQuery.isLoading ? 'Loading…' : formatCentavos(balanceCentavos)}
+                    {assessmentQuery.isLoading ? 'Loading...' : formatCentavos(balanceCentavos)}
                   </p>
                   {selectedStudent && (
                     <p className="mt-1 text-xs text-slate-500">
-                      {selectedStudent.firstName} {selectedStudent.lastName} ·{' '}
+                      {selectedStudent.firstName} {selectedStudent.lastName} -{' '}
                       {selectedStudent.schoolYearName ?? 'No school year'}
                     </p>
                   )}
+                  {selectedStudent && !assessmentQuery.isLoading && balanceCentavos <= 0 && (
+                    <p className="mt-1 text-xs font-semibold text-amber-700">
+                      No outstanding balance; payment posting is disabled.
+                    </p>
+                  )}
+                  {!selectedStudent && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      Select a student to load the authoritative balance.
+                    </p>
+                  )}
                 </div>
-                <Button type="submit" className="bg-blue-600 text-xs text-white hover:bg-blue-700">
+                <Button
+                  type="submit"
+                  disabled={paymentDisabled}
+                  className="bg-blue-600 text-xs text-white hover:bg-blue-700"
+                >
                   Post payment and issue receipt
                 </Button>
               </div>
