@@ -71,12 +71,12 @@ export default function ParentPayPage() {
           </Button>
         </Link>
         <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
-          Mock online payment
+          Test payment flow
         </Badge>
       </div>
 
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Start a mock online payment</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Review an online payment</h2>
         <p className="text-xs text-slate-500">
           The checkout is persisted server-side; only the simulated gateway callback can complete
           it.
@@ -134,7 +134,7 @@ export default function ParentPayPage() {
                     [
                       ['GCash', Smartphone, 'text-blue-600'],
                       ['Maya', Wallet, 'text-emerald-600'],
-                      ['CreditCard', CreditCard, 'text-purple-600'],
+                      ['CreditCard', CreditCard, 'text-sky-600'],
                     ] as const
                   ).map(([channel, Icon, iconClass]) => (
                     <button

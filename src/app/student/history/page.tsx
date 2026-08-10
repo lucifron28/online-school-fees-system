@@ -28,7 +28,7 @@ export default function StudentPaymentHistoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700">
+        <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">
           Student payment history
         </Badge>
         <h2 className="mt-1 text-2xl font-bold tracking-tight">Payment history</h2>
@@ -69,7 +69,7 @@ export default function StudentPaymentHistoryPage() {
                   {payments.map((payment) => (
                     <TableRow key={payment.id}>
                       <TableCell className="font-mono text-xs font-bold">
-                        {payment.receiptNumber ?? '—'}
+                        {payment.receiptNumber ?? 'No receipt'}
                       </TableCell>
                       <TableCell className="text-xs text-slate-500">
                         {new Date(payment.createdAt).toLocaleString('en-PH')}
@@ -85,7 +85,7 @@ export default function StudentPaymentHistoryPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 text-xs text-purple-700"
+                              className="h-8 text-xs text-sky-700"
                             >
                               <Eye className="mr-1 h-3.5 w-3.5" /> View receipt
                             </Button>

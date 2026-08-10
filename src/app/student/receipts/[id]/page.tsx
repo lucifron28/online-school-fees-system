@@ -30,7 +30,7 @@ export default function StudentReceiptPage({ params }: { params: Promise<{ id: s
               <ArrowLeft className="mr-1 h-4 w-4" /> History
             </Button>
           </Link>
-          <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700">
+          <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">
             Payment acknowledgment receipt
           </Badge>
         </div>
@@ -39,7 +39,7 @@ export default function StudentReceiptPage({ params }: { params: Promise<{ id: s
           target="_blank"
           rel="noreferrer"
         >
-          <Button className="h-9 bg-purple-600 text-xs text-white hover:bg-purple-700">
+          <Button className="h-9 bg-sky-600 text-xs text-white hover:bg-sky-700">
             <Download className="mr-1.5 h-4 w-4" /> Download PDF
           </Button>
         </a>
@@ -68,7 +68,7 @@ export default function StudentReceiptPage({ params }: { params: Promise<{ id: s
           <CardContent className="space-y-6 p-8">
             <div className="border-b pb-6 text-center">
               <div className="mb-2 flex justify-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-600 text-white">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-600 text-white">
                   <Building2 className="h-6 w-6" />
                 </div>
               </div>
@@ -102,7 +102,7 @@ export default function StudentReceiptPage({ params }: { params: Promise<{ id: s
               </div>
               <div>
                 <span className="text-slate-400">Reference</span>
-                <p className="font-mono font-semibold">{payment.referenceNumber ?? '—'}</p>
+                <p className="font-mono font-semibold">{payment.referenceNumber ?? 'Not available'}</p>
               </div>
               <div>
                 <span className="text-slate-400">Transaction status</span>
@@ -113,7 +113,7 @@ export default function StudentReceiptPage({ params }: { params: Promise<{ id: s
             <div className="rounded-lg border p-4">
               <div className="flex items-center justify-between text-sm font-bold">
                 <span>Amount received</span>
-                <span className="text-lg text-purple-700">
+                <span className="text-lg text-sky-700">
                   {formatCentavos(payment.amountCentavos)}
                 </span>
               </div>

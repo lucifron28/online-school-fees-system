@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import './globals.css';
 import { QueryProvider } from '@/lib/query/provider';
 
@@ -14,32 +15,35 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body className="flex min-h-full flex-col bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-50">
+    <html lang="en" className="min-h-full">
+      <body className="flex min-h-[100dvh] flex-col">
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <QueryProvider>
-          <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
-            <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-              <div className="flex items-center space-x-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 font-bold text-white shadow-sm dark:bg-slate-100 dark:text-slate-900">
+          <header className="border-b border-border/80 bg-background/90 backdrop-blur-md">
+            <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+              <Link href="/" className="flex items-center gap-3 rounded-lg" aria-label="School fees home">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-foreground text-xs font-bold text-background shadow-sm">
                   MP
                 </div>
                 <div>
-                  <h1 className="text-sm font-semibold leading-none tracking-tight text-slate-900 dark:text-slate-100"></h1>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Online School Fees System
-                  </p>
+                  <span className="block text-sm font-semibold leading-none tracking-tight text-foreground">
+                    Online School Fees
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">School finance portal</span>
                 </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                  v0.1.0 • Foundation
-                </span>
-              </div>
+              </Link>
+              <span className="hidden rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground sm:inline-flex">
+                Secure school finance workspace
+              </span>
             </div>
           </header>
-          <main className="flex-1">{children}</main>
-          <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-            <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div id="main-content" className="flex-1">
+            {children}
+          </div>
+          <footer className="border-t border-border bg-card py-5 text-center text-xs text-muted-foreground">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               Online School Fees Monitoring and Payment Information System
             </div>
           </footer>

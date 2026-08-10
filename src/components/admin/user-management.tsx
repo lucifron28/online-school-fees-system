@@ -68,7 +68,7 @@ function roleClass(role: UserRole) {
   if (role === 'ADMIN') return 'border-blue-200 bg-blue-50 text-blue-700';
   if (role === 'FINANCE_STAFF') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   if (role === 'PARENT') return 'border-amber-200 bg-amber-50 text-amber-700';
-  return 'border-purple-200 bg-purple-50 text-purple-700';
+  return 'border-sky-200 bg-sky-50 text-sky-700';
 }
 
 function formatCreatedAt(value: string) {

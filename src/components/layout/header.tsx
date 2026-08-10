@@ -1,7 +1,8 @@
-import React from 'react';
+'use client';
+
 import Link from 'next/link';
-import { Bell, Search, User } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { usePathname } from 'next/navigation';
+import { Bell, User } from 'lucide-react';
 import { LogoutButton } from '@/components/auth/logout-button';
 
 interface HeaderProps {
@@ -13,6 +14,39 @@ interface HeaderProps {
   notificationsPath?: string;
 }
 
+const pageCopy = [
+  { path: '/admin/dashboard', title: 'Dashboard', subtitle: 'A clear view of school collections and balances.' },
+  { path: '/admin/students', title: 'Students', subtitle: 'Manage student records and account links.' },
+  { path: '/admin/guardians', title: 'Guardians', subtitle: 'Keep family account relationships current.' },
+  { path: '/admin/fees', title: 'Fees management', subtitle: 'Maintain assessment structures for the school year.' },
+  { path: '/admin/payments', title: 'Payments', subtitle: 'Record and review over-the-counter payments.' },
+  { path: '/admin/transactions', title: 'Transactions', subtitle: 'Review the school payment ledger.' },
+  { path: '/admin/reports', title: 'Reports', subtitle: 'Export and reconcile financial activity.' },
+  { path: '/admin/notifications', title: 'Notifications', subtitle: 'Review important account updates.' },
+  { path: '/admin/users', title: 'Users', subtitle: 'Manage portal access and roles.' },
+  { path: '/admin/settings', title: 'Settings', subtitle: 'Configure school finance preferences.' },
+  { path: '/parent/dashboard', title: 'Dashboard', subtitle: 'Keep your children’s fee records in view.' },
+  { path: '/parent/history', title: 'Payment history', subtitle: 'Review receipts and completed payments.' },
+  { path: '/parent/pay', title: 'Make a payment', subtitle: 'Choose a payment method for an outstanding balance.' },
+  { path: '/parent/notifications', title: 'Notifications', subtitle: 'Review updates about your account.' },
+  { path: '/student/dashboard', title: 'Dashboard', subtitle: 'Keep your assessment and payment records close.' },
+  { path: '/student/account', title: 'My account', subtitle: 'Review your current assessment and balance.' },
+  { path: '/student/history', title: 'Payment history', subtitle: 'Review your completed payments and receipts.' },
+  { path: '/student/notifications', title: 'Notifications', subtitle: 'Review updates about your account.' },
+];
+
+function getPageCopy(pathname: string, fallbackTitle: string, fallbackSubtitle?: string) {
+  const match = pageCopy
+    .slice()
+    .sort((a, b) => b.path.length - a.path.length)
+    .find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`));
+
+  return {
+    title: match?.title ?? fallbackTitle,
+    subtitle: match?.subtitle ?? fallbackSubtitle,
+  };
+}
+
 export function Header({
   title = 'Dashboard',
   subtitle,
@@ -21,52 +55,38 @@ export function Header({
   logoutPath = '/login/admin',
   notificationsPath = '/admin/notifications',
 }: HeaderProps) {
+  const pathname = usePathname();
+  const copy = getPageCopy(pathname, title, subtitle);
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/90 px-6 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-          {title}
-        </h1>
-        {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+    <header className="sticky top-0 z-30 hidden h-[4.5rem] w-full items-center justify-between border-b border-border bg-background/90 px-6 backdrop-blur-md lg:flex">
+      <div className="min-w-0">
+        <h1 className="truncate text-lg font-semibold tracking-tight text-foreground">{copy.title}</h1>
+        {copy.subtitle && <p className="truncate text-xs text-muted-foreground">{copy.subtitle}</p>}
       </div>
 
-      <div className="flex items-center space-x-4">
-        {/* Quick Search */}
-        <div className="relative hidden w-64 md:block">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-          <Input
-            type="search"
-            placeholder="Search students, OR..."
-            className="h-9 bg-slate-50 pl-9 text-xs dark:bg-slate-800"
-          />
-        </div>
-
-        {/* Notifications */}
+      <div className="flex items-center gap-2">
         <Link
           href={notificationsPath}
           aria-label="Open notifications"
-          className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-blue-600 ring-2 ring-white dark:ring-slate-900" />
+          <Bell className="h-5 w-5" aria-hidden="true" />
         </Link>
 
-        {/* User Pill */}
-        <div className="flex items-center space-x-3 border-l border-slate-200 pl-4 dark:border-slate-800">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-blue-200 bg-blue-100 text-xs font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
-            <User className="h-4 w-4" />
+        <div className="flex items-center gap-3 border-l border-border pl-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+            <User className="h-4 w-4" aria-hidden="true" />
           </div>
           <div className="hidden text-left sm:block">
-            <p className="text-xs font-semibold leading-tight text-slate-900 dark:text-slate-100">
-              {userName}
-            </p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400">{userRole}</p>
+            <p className="max-w-40 truncate text-xs font-semibold leading-tight text-foreground">{userName}</p>
+            <p className="text-[10px] text-muted-foreground">{userRole}</p>
           </div>
         </div>
 
         <LogoutButton
           logoutPath={logoutPath}
-          className="hidden p-2 text-slate-500 hover:bg-slate-100 hover:text-red-600 dark:text-slate-400 dark:hover:bg-slate-800 sm:flex"
+          className="ml-1 flex h-11 w-11 items-center justify-center rounded-lg p-0 text-muted-foreground hover:bg-accent hover:text-red-600"
         />
       </div>
     </header>

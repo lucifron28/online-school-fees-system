@@ -38,7 +38,7 @@ export default function ParentDashboardPage() {
         </div>
         <Link href="/parent/pay">
           <Button className="h-9 bg-emerald-600 text-xs text-white shadow-sm hover:bg-emerald-700">
-            <CreditCard className="mr-1.5 h-4 w-4" /> Make mock online payment
+            <CreditCard className="mr-1.5 h-4 w-4" /> Make an online payment
           </Button>
         </Link>
       </div>

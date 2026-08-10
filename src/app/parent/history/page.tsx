@@ -70,7 +70,7 @@ export default function ParentPaymentHistoryPage() {
                   {payments.map((payment) => (
                     <TableRow key={payment.id}>
                       <TableCell className="font-mono text-xs font-bold">
-                        {payment.receiptId ? payment.receiptNumber : '—'}
+                        {payment.receiptId ? payment.receiptNumber : 'No receipt'}
                       </TableCell>
                       <TableCell className="text-xs">{payment.studentName}</TableCell>
                       <TableCell className="text-xs text-slate-500">

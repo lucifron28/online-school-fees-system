@@ -20,7 +20,7 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700">
+        <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">
           Student dashboard
         </Badge>
         <h2 className="mt-1 text-2xl font-bold tracking-tight">
@@ -57,11 +57,11 @@ export default function StudentDashboardPage() {
                 <p className="mt-1 text-xs text-slate-500">Current finance ledger balance</p>
               </CardContent>
             </Card>
-            <Card className="border-purple-200 bg-purple-50/40 shadow-sm">
+            <Card className="border-sky-200 bg-sky-50/40 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-purple-800">Net payments</span>
-                  <DollarSign className="h-5 w-5 text-purple-700" />
+                  <span className="text-xs font-semibold text-sky-800">Net payments</span>
+                  <DollarSign className="h-5 w-5 text-sky-700" />
                 </div>
                 <div className="mt-3 text-3xl font-extrabold">
                   {formatCentavos(account.student.totalPaidCentavos)}

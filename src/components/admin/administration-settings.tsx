@@ -368,7 +368,7 @@ function SchoolYearManagement({
         >
           <Input
             aria-label="School year name"
-            placeholder="e.g. SY 2026–2027"
+            placeholder="e.g. SY 2026 to 2027"
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
             required
@@ -428,7 +428,7 @@ function SchoolYearManagement({
                   <tr key={schoolYear.id} className="border-b last:border-0">
                     <td className="px-3 py-3 font-medium">{schoolYear.name}</td>
                     <td className="px-3 py-3 text-xs text-slate-500">
-                      {dateOnly(schoolYear.startDate)} – {dateOnly(schoolYear.endDate)}
+                      {dateOnly(schoolYear.startDate)} to {dateOnly(schoolYear.endDate)}
                     </td>
                     <td className="px-3 py-3">
                       <Badge variant="outline" className={statusClass(schoolYear.status)}>

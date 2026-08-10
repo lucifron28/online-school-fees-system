@@ -340,10 +340,10 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
                     <TableCell className="text-xs font-semibold">{entry.entryType}</TableCell>
                     <TableCell className="text-xs">{entry.description}</TableCell>
                     <TableCell className="text-xs text-rose-700">
-                      {entry.debitCentavos ? formatCentavos(entry.debitCentavos) : '—'}
+                      {entry.debitCentavos ? formatCentavos(entry.debitCentavos) : 'No debit'}
                     </TableCell>
                     <TableCell className="text-xs text-emerald-700">
-                      {entry.creditCentavos ? formatCentavos(entry.creditCentavos) : '—'}
+                      {entry.creditCentavos ? formatCentavos(entry.creditCentavos) : 'No credit'}
                     </TableCell>
                     <TableCell className="text-xs font-bold">
                       {formatCentavos(entry.balanceCentavos)}
@@ -375,7 +375,7 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
               <option value="">Select a structure</option>
               {(structuresQuery.data ?? []).map((structure) => (
                 <option key={structure.id} value={structure.id}>
-                  {structure.name} ({structure.assessmentPeriod}) —{' '}
+                  {structure.name} ({structure.assessmentPeriod}) :{' '}
                   {formatCentavos(
                     structure.items.reduce((total, item) => total + item.amountCentavos, 0)
                   )}
@@ -409,7 +409,7 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
         <DialogHeader>
           <DialogTitle>Adjust assessment</DialogTitle>
           <DialogDescription>
-            {adjustmentAssessment?.feeStructureName ?? 'Assessment'} — credit adjustments cannot
+            {adjustmentAssessment?.feeStructureName ?? 'Assessment'} : credit adjustments cannot
             exceed the current ledger balance.
           </DialogDescription>
         </DialogHeader>
@@ -423,8 +423,8 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
                 onChange={(event) => setAdjustmentType(event.target.value as 'DEBIT' | 'CREDIT')}
                 disabled={postAdjustment.isPending}
               >
-                <option value="DEBIT">Debit — increase balance</option>
-                <option value="CREDIT">Credit — reduce balance</option>
+                <option value="DEBIT">Debit : increase balance</option>
+                <option value="CREDIT">Credit : reduce balance</option>
               </select>
             </label>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">

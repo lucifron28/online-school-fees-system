@@ -38,7 +38,7 @@ export default function AdminDashboardPage() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
-            Finance · database-backed dashboard
+            Finance overview
           </Badge>
           <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             School collections overview
@@ -165,7 +165,7 @@ export default function AdminDashboardPage() {
                         className="flex h-full flex-1 flex-col items-center justify-end gap-2"
                       >
                         <span className="text-[10px] text-slate-500">
-                          {item.amountCentavos > 0 ? formatCentavos(item.amountCentavos) : '—'}
+                          {item.amountCentavos > 0 ? formatCentavos(item.amountCentavos) : 'No collections'}
                         </span>
                         <div
                           className="w-full max-w-10 rounded-t-md bg-blue-600/80 transition-all"
