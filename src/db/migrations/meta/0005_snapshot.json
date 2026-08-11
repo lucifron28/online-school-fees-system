@@ -117,12 +117,8 @@
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -226,12 +222,8 @@
           "name": "adjustments_assessment_id_student_assessments_id_fk",
           "tableFrom": "adjustments",
           "tableTo": "student_assessments",
-          "columnsFrom": [
-            "assessment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assessment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -239,12 +231,8 @@
           "name": "adjustments_student_id_students_id_fk",
           "tableFrom": "adjustments",
           "tableTo": "students",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -252,12 +240,8 @@
           "name": "adjustments_approved_by_user_id_users_id_fk",
           "tableFrom": "adjustments",
           "tableTo": "users",
-          "columnsFrom": [
-            "approved_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approved_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -393,12 +377,8 @@
           "name": "announcements_created_by_user_id_users_id_fk",
           "tableFrom": "announcements",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -406,12 +386,8 @@
           "name": "announcements_updated_by_user_id_users_id_fk",
           "tableFrom": "announcements",
           "tableTo": "users",
-          "columnsFrom": [
-            "updated_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -492,12 +468,8 @@
           "name": "assessment_items_assessment_id_student_assessments_id_fk",
           "tableFrom": "assessment_items",
           "tableTo": "student_assessments",
-          "columnsFrom": [
-            "assessment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assessment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -505,12 +477,8 @@
           "name": "assessment_items_fee_category_id_fee_categories_id_fk",
           "tableFrom": "assessment_items",
           "tableTo": "fee_categories",
-          "columnsFrom": [
-            "fee_category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["fee_category_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -630,12 +598,8 @@
           "name": "audit_logs_user_id_users_id_fk",
           "tableFrom": "audit_logs",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -714,9 +678,7 @@
         "fee_categories_code_unique": {
           "name": "fee_categories_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         }
       },
       "policies": {},
@@ -809,12 +771,8 @@
           "name": "fee_structure_items_fee_structure_id_fee_structures_id_fk",
           "tableFrom": "fee_structure_items",
           "tableTo": "fee_structures",
-          "columnsFrom": [
-            "fee_structure_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["fee_structure_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -822,12 +780,8 @@
           "name": "fee_structure_items_fee_category_id_fee_categories_id_fk",
           "tableFrom": "fee_structure_items",
           "tableTo": "fee_categories",
-          "columnsFrom": [
-            "fee_category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["fee_category_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -976,12 +930,8 @@
           "name": "fee_structures_school_year_id_school_years_id_fk",
           "tableFrom": "fee_structures",
           "tableTo": "school_years",
-          "columnsFrom": [
-            "school_year_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["school_year_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -989,12 +939,8 @@
           "name": "fee_structures_grade_level_id_grade_levels_id_fk",
           "tableFrom": "fee_structures",
           "tableTo": "grade_levels",
-          "columnsFrom": [
-            "grade_level_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["grade_level_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1194,12 +1140,8 @@
           "name": "guardian_students_guardian_id_guardians_id_fk",
           "tableFrom": "guardian_students",
           "tableTo": "guardians",
-          "columnsFrom": [
-            "guardian_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["guardian_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1207,12 +1149,8 @@
           "name": "guardian_students_student_id_students_id_fk",
           "tableFrom": "guardian_students",
           "tableTo": "students",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1329,12 +1267,8 @@
           "name": "guardians_user_id_users_id_fk",
           "tableFrom": "guardians",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1452,12 +1386,8 @@
           "name": "ledger_entries_student_id_students_id_fk",
           "tableFrom": "ledger_entries",
           "tableTo": "students",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1465,12 +1395,8 @@
           "name": "ledger_entries_assessment_id_student_assessments_id_fk",
           "tableFrom": "ledger_entries",
           "tableTo": "student_assessments",
-          "columnsFrom": [
-            "assessment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assessment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1603,12 +1529,8 @@
           "name": "mock_payment_callback_events_checkout_id_mock_payment_checkouts_id_fk",
           "tableFrom": "mock_payment_callback_events",
           "tableTo": "mock_payment_checkouts",
-          "columnsFrom": [
-            "checkout_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["checkout_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1618,16 +1540,12 @@
         "mock_payment_callback_events_event_id_unique": {
           "name": "mock_payment_callback_events_event_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "event_id"
-          ]
+          "columns": ["event_id"]
         },
         "mock_payment_callback_events_idempotency_key_unique": {
           "name": "mock_payment_callback_events_idempotency_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "idempotency_key"
-          ]
+          "columns": ["idempotency_key"]
         }
       },
       "policies": {},
@@ -1772,12 +1690,8 @@
           "name": "mock_payment_checkouts_student_id_students_id_fk",
           "tableFrom": "mock_payment_checkouts",
           "tableTo": "students",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1785,12 +1699,8 @@
           "name": "mock_payment_checkouts_assessment_id_student_assessments_id_fk",
           "tableFrom": "mock_payment_checkouts",
           "tableTo": "student_assessments",
-          "columnsFrom": [
-            "assessment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assessment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1798,12 +1708,8 @@
           "name": "mock_payment_checkouts_payment_id_payments_id_fk",
           "tableFrom": "mock_payment_checkouts",
           "tableTo": "payments",
-          "columnsFrom": [
-            "payment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["payment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1813,23 +1719,17 @@
         "mock_payment_checkouts_checkout_reference_unique": {
           "name": "mock_payment_checkouts_checkout_reference_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "checkout_reference"
-          ]
+          "columns": ["checkout_reference"]
         },
         "mock_payment_checkouts_idempotency_key_unique": {
           "name": "mock_payment_checkouts_idempotency_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "idempotency_key"
-          ]
+          "columns": ["idempotency_key"]
         },
         "mock_payment_checkouts_payment_id_unique": {
           "name": "mock_payment_checkouts_payment_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "payment_id"
-          ]
+          "columns": ["payment_id"]
         }
       },
       "policies": {},
@@ -1978,12 +1878,8 @@
           "name": "notification_deliveries_notification_id_notifications_id_fk",
           "tableFrom": "notification_deliveries",
           "tableTo": "notifications",
-          "columnsFrom": [
-            "notification_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["notification_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2084,12 +1980,8 @@
           "name": "notification_delivery_attempts_delivery_id_notification_deliveries_id_fk",
           "tableFrom": "notification_delivery_attempts",
           "tableTo": "notification_deliveries",
-          "columnsFrom": [
-            "delivery_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["delivery_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2216,12 +2108,8 @@
           "name": "notifications_user_id_users_id_fk",
           "tableFrom": "notifications",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2231,9 +2119,7 @@
         "notifications_dedupe_key_unique": {
           "name": "notifications_dedupe_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "dedupe_key"
-          ]
+          "columns": ["dedupe_key"]
         }
       },
       "policies": {},
@@ -2362,12 +2248,8 @@
           "name": "payment_allocations_payment_id_payments_id_fk",
           "tableFrom": "payment_allocations",
           "tableTo": "payments",
-          "columnsFrom": [
-            "payment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["payment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2375,12 +2257,8 @@
           "name": "payment_allocations_assessment_item_id_assessment_items_id_fk",
           "tableFrom": "payment_allocations",
           "tableTo": "assessment_items",
-          "columnsFrom": [
-            "assessment_item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assessment_item_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2388,12 +2266,8 @@
           "name": "payment_allocations_adjustment_id_adjustments_id_fk",
           "tableFrom": "payment_allocations",
           "tableTo": "adjustments",
-          "columnsFrom": [
-            "adjustment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["adjustment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2478,12 +2352,8 @@
           "name": "payment_reversals_payment_id_payments_id_fk",
           "tableFrom": "payment_reversals",
           "tableTo": "payments",
-          "columnsFrom": [
-            "payment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["payment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2491,12 +2361,8 @@
           "name": "payment_reversals_receipt_id_receipts_id_fk",
           "tableFrom": "payment_reversals",
           "tableTo": "receipts",
-          "columnsFrom": [
-            "receipt_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["receipt_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2504,12 +2370,8 @@
           "name": "payment_reversals_reversed_by_user_id_users_id_fk",
           "tableFrom": "payment_reversals",
           "tableTo": "users",
-          "columnsFrom": [
-            "reversed_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reversed_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2647,12 +2509,8 @@
           "name": "payments_student_id_students_id_fk",
           "tableFrom": "payments",
           "tableTo": "students",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2660,12 +2518,8 @@
           "name": "payments_assessment_id_student_assessments_id_fk",
           "tableFrom": "payments",
           "tableTo": "student_assessments",
-          "columnsFrom": [
-            "assessment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assessment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2673,12 +2527,8 @@
           "name": "payments_processed_by_user_id_users_id_fk",
           "tableFrom": "payments",
           "tableTo": "users",
-          "columnsFrom": [
-            "processed_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["processed_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2688,16 +2538,12 @@
         "payments_reference_number_unique": {
           "name": "payments_reference_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "reference_number"
-          ]
+          "columns": ["reference_number"]
         },
         "payments_idempotency_key_unique": {
           "name": "payments_idempotency_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "idempotency_key"
-          ]
+          "columns": ["idempotency_key"]
         }
       },
       "policies": {},
@@ -2854,12 +2700,8 @@
           "name": "receipts_payment_id_payments_id_fk",
           "tableFrom": "receipts",
           "tableTo": "payments",
-          "columnsFrom": [
-            "payment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["payment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2869,16 +2711,12 @@
         "receipts_receipt_number_unique": {
           "name": "receipts_receipt_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "receipt_number"
-          ]
+          "columns": ["receipt_number"]
         },
         "receipts_verification_identifier_unique": {
           "name": "receipts_verification_identifier_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "verification_identifier"
-          ]
+          "columns": ["verification_identifier"]
         }
       },
       "policies": {},
@@ -3022,12 +2860,8 @@
           "name": "school_settings_active_school_year_id_school_years_id_fk",
           "tableFrom": "school_settings",
           "tableTo": "school_years",
-          "columnsFrom": [
-            "active_school_year_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["active_school_year_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3253,12 +3087,8 @@
           "name": "sections_grade_level_id_grade_levels_id_fk",
           "tableFrom": "sections",
           "tableTo": "grade_levels",
-          "columnsFrom": [
-            "grade_level_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["grade_level_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3266,12 +3096,8 @@
           "name": "sections_school_year_id_school_years_id_fk",
           "tableFrom": "sections",
           "tableTo": "school_years",
-          "columnsFrom": [
-            "school_year_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["school_year_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3343,12 +3169,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3358,9 +3180,7 @@
         "sessions_token_unique": {
           "name": "sessions_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -3515,12 +3335,8 @@
           "name": "student_assessments_student_id_students_id_fk",
           "tableFrom": "student_assessments",
           "tableTo": "students",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -3528,12 +3344,8 @@
           "name": "student_assessments_school_year_id_school_years_id_fk",
           "tableFrom": "student_assessments",
           "tableTo": "school_years",
-          "columnsFrom": [
-            "school_year_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["school_year_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -3541,12 +3353,8 @@
           "name": "student_assessments_fee_structure_id_fee_structures_id_fk",
           "tableFrom": "student_assessments",
           "tableTo": "fee_structures",
-          "columnsFrom": [
-            "fee_structure_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["fee_structure_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -3721,12 +3529,8 @@
           "name": "students_user_id_users_id_fk",
           "tableFrom": "students",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3734,12 +3538,8 @@
           "name": "students_grade_level_id_grade_levels_id_fk",
           "tableFrom": "students",
           "tableTo": "grade_levels",
-          "columnsFrom": [
-            "grade_level_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["grade_level_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -3747,12 +3547,8 @@
           "name": "students_section_id_sections_id_fk",
           "tableFrom": "students",
           "tableTo": "sections",
-          "columnsFrom": [
-            "section_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["section_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -3760,12 +3556,8 @@
           "name": "students_school_year_id_school_years_id_fk",
           "tableFrom": "students",
           "tableTo": "school_years",
-          "columnsFrom": [
-            "school_year_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["school_year_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -3775,9 +3567,7 @@
         "students_student_number_unique": {
           "name": "students_student_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "student_number"
-          ]
+          "columns": ["student_number"]
         }
       },
       "policies": {},
@@ -3856,9 +3646,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -3921,133 +3709,72 @@
     "public.adjustment_type": {
       "name": "adjustment_type",
       "schema": "public",
-      "values": [
-        "DEBIT",
-        "CREDIT"
-      ]
+      "values": ["DEBIT", "CREDIT"]
     },
     "public.announcement_audience": {
       "name": "announcement_audience",
       "schema": "public",
-      "values": [
-        "PARENT",
-        "STUDENT",
-        "PARENT_AND_STUDENT"
-      ]
+      "values": ["PARENT", "STUDENT", "PARENT_AND_STUDENT"]
     },
     "public.announcement_status": {
       "name": "announcement_status",
       "schema": "public",
-      "values": [
-        "DRAFT",
-        "SCHEDULED",
-        "PUBLISHED",
-        "ARCHIVED"
-      ]
+      "values": ["DRAFT", "SCHEDULED", "PUBLISHED", "ARCHIVED"]
     },
     "public.assessment_period": {
       "name": "assessment_period",
       "schema": "public",
-      "values": [
-        "ANNUAL",
-        "SEMESTER",
-        "TRIMESTER",
-        "MONTHLY"
-      ]
+      "values": ["ANNUAL", "SEMESTER", "TRIMESTER", "MONTHLY"]
     },
     "public.assessment_status": {
       "name": "assessment_status",
       "schema": "public",
-      "values": [
-        "DRAFT",
-        "POSTED",
-        "CANCELLED"
-      ]
+      "values": ["DRAFT", "POSTED", "CANCELLED"]
     },
     "public.fee_category_status": {
       "name": "fee_category_status",
       "schema": "public",
-      "values": [
-        "ACTIVE",
-        "ARCHIVED"
-      ]
+      "values": ["ACTIVE", "ARCHIVED"]
     },
     "public.fee_structure_status": {
       "name": "fee_structure_status",
       "schema": "public",
-      "values": [
-        "DRAFT",
-        "ACTIVE",
-        "ARCHIVED"
-      ]
+      "values": ["DRAFT", "ACTIVE", "ARCHIVED"]
     },
     "public.ledger_entry_type": {
       "name": "ledger_entry_type",
       "schema": "public",
-      "values": [
-        "ASSESSMENT",
-        "PAYMENT",
-        "REVERSAL",
-        "DEBIT_ADJUSTMENT",
-        "CREDIT_ADJUSTMENT"
-      ]
+      "values": ["ASSESSMENT", "PAYMENT", "REVERSAL", "DEBIT_ADJUSTMENT", "CREDIT_ADJUSTMENT"]
     },
     "public.mock_callback_event_type": {
       "name": "mock_callback_event_type",
       "schema": "public",
-      "values": [
-        "PAYMENT_SUCCEEDED",
-        "PAYMENT_FAILED",
-        "PAYMENT_CANCELLED",
-        "PAYMENT_PENDING"
-      ]
+      "values": ["PAYMENT_SUCCEEDED", "PAYMENT_FAILED", "PAYMENT_CANCELLED", "PAYMENT_PENDING"]
     },
     "public.mock_callback_processing_status": {
       "name": "mock_callback_processing_status",
       "schema": "public",
-      "values": [
-        "RECEIVED",
-        "PROCESSED",
-        "FAILED"
-      ]
+      "values": ["RECEIVED", "PROCESSED", "FAILED"]
     },
     "public.mock_checkout_status": {
       "name": "mock_checkout_status",
       "schema": "public",
-      "values": [
-        "CREATED",
-        "SUCCEEDED",
-        "FAILED",
-        "CANCELLED",
-        "EXPIRED"
-      ]
+      "values": ["CREATED", "SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED"]
     },
     "public.notification_attempt_status": {
       "name": "notification_attempt_status",
       "schema": "public",
-      "values": [
-        "RETRYING",
-        "SENT",
-        "FAILED"
-      ]
+      "values": ["RETRYING", "SENT", "FAILED"]
     },
     "public.notification_channel": {
       "name": "notification_channel",
       "schema": "public",
-      "values": [
-        "EMAIL",
-        "CONSOLE"
-      ]
+      "values": ["EMAIL", "CONSOLE"]
     },
     "public.notification_delivery_status": {
       "name": "notification_delivery_status",
       "schema": "public",
-      "values": [
-        "PENDING",
-        "SENT",
-        "FAILED",
-        "RETRYING"
-      ]
+      "values": ["PENDING", "SENT", "FAILED", "RETRYING"]
     },
     "public.notification_type": {
       "name": "notification_type",
@@ -4065,59 +3792,32 @@
     "public.payment_method": {
       "name": "payment_method",
       "schema": "public",
-      "values": [
-        "CASH",
-        "BANK_DEPOSIT",
-        "MOCK_ONLINE"
-      ]
+      "values": ["CASH", "BANK_DEPOSIT", "MOCK_ONLINE"]
     },
     "public.payment_status": {
       "name": "payment_status",
       "schema": "public",
-      "values": [
-        "PENDING",
-        "POSTED",
-        "FAILED",
-        "CANCELLED",
-        "REVERSED"
-      ]
+      "values": ["PENDING", "POSTED", "FAILED", "CANCELLED", "REVERSED"]
     },
     "public.receipt_status": {
       "name": "receipt_status",
       "schema": "public",
-      "values": [
-        "ACTIVE",
-        "VOIDED"
-      ]
+      "values": ["ACTIVE", "VOIDED"]
     },
     "public.school_year_status": {
       "name": "school_year_status",
       "schema": "public",
-      "values": [
-        "DRAFT",
-        "ACTIVE",
-        "ARCHIVED"
-      ]
+      "values": ["DRAFT", "ACTIVE", "ARCHIVED"]
     },
     "public.student_status": {
       "name": "student_status",
       "schema": "public",
-      "values": [
-        "ACTIVE",
-        "INACTIVE",
-        "WITHDRAWN",
-        "GRADUATED"
-      ]
+      "values": ["ACTIVE", "INACTIVE", "WITHDRAWN", "GRADUATED"]
     },
     "public.user_role": {
       "name": "user_role",
       "schema": "public",
-      "values": [
-        "ADMIN",
-        "FINANCE_STAFF",
-        "PARENT",
-        "STUDENT"
-      ]
+      "values": ["ADMIN", "FINANCE_STAFF", "PARENT", "STUDENT"]
     }
   },
   "schemas": {},
