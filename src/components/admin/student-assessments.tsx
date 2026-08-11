@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adjustmentPostInputSchema, assessmentPostInputSchema } from '@/lib/assessments';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
+import { deadlineStateLabel, paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
 import { formatCentavos, parseMoneyInput } from '@/lib/utils/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -290,7 +291,7 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
                         variant="outline"
                         className={`text-[10px] ${deadlineClass(assessment.deadlineState)}`}
                       >
-                        {assessment.deadlineState.replaceAll('_', ' ')}
+                        {deadlineStateLabel(assessment.deadlineState)}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -302,13 +303,9 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
                       </Badge>
                       <Badge
                         variant="outline"
-                        className={`mt-1 text-[10px] ${
-                          assessment.paymentStatus === 'PAID'
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                            : 'border-blue-200 bg-blue-50 text-blue-700'
-                        }`}
+                        className={`mt-1 text-[10px] ${paymentStatusClass(assessment.paymentStatus)}`}
                       >
-                        {assessment.paymentStatus.replaceAll('_', ' ')}
+                        {paymentStatusLabel(assessment.paymentStatus)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

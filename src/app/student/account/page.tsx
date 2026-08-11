@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
+import { deadlineStateLabel, paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
 import type { PortalAccount } from '@/lib/portal-types';
 import { formatCentavos } from '@/lib/utils/currency';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +72,14 @@ export default function StudentAccountPage() {
                 <p className="mt-1 text-2xl font-extrabold text-sky-700">
                   {formatCentavos(account.ledger.balanceCentavos)}
                 </p>
+                <Badge
+                  variant="outline"
+                  className={`mt-2 ${paymentStatusClass(account.ledger.balanceCentavos === 0 ? 'PAID' : 'WITH_REMAINING_BALANCE')}`}
+                >
+                  {paymentStatusLabel(
+                    account.ledger.balanceCentavos === 0 ? 'PAID' : 'WITH_REMAINING_BALANCE'
+                  )}
+                </Badge>
               </div>
             </CardContent>
           </Card>
@@ -113,8 +122,11 @@ export default function StudentAccountPage() {
                             {assessment.dueDate ?? 'Not set'}
                           </TableCell>
                           <TableCell className="text-xs">
-                            <Badge variant="outline">
-                              {assessment.paymentStatus.replaceAll('_', ' ')}
+                            <Badge
+                              variant="outline"
+                              className={paymentStatusClass(assessment.paymentStatus)}
+                            >
+                              {paymentStatusLabel(assessment.paymentStatus)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs">
@@ -130,7 +142,7 @@ export default function StudentAccountPage() {
                                       : 'border-blue-200 bg-blue-50 text-blue-700'
                               }
                             >
-                              {assessment.deadlineState.replaceAll('_', ' ')}
+                              {deadlineStateLabel(assessment.deadlineState)}
                             </Badge>
                           </TableCell>
                         </TableRow>

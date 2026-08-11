@@ -25,6 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
+import { paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
 import {
   getManilaDateString,
   type CollectionReport,
@@ -394,6 +395,12 @@ export default function AdminReportsPage() {
                       </TableCell>
                       <TableCell className="text-xs font-bold">
                         {formatCentavos(row.outstandingBalanceCentavos)}
+                        <Badge
+                          variant="outline"
+                          className={`mt-1 block w-fit text-[10px] ${paymentStatusClass('WITH_REMAINING_BALANCE')}`}
+                        >
+                          {paymentStatusLabel('WITH_REMAINING_BALANCE')}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <a href={`/api/reports/statements/${row.studentId}/pdf`}>

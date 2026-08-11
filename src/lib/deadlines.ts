@@ -61,5 +61,15 @@ export function evaluateDeadline({
 }
 
 export function deadlineStateLabel(state: DeadlineState): string {
-  return state.replaceAll('_', ' ');
+  return state === 'PAID' ? 'FULLY PAID' : state.replaceAll('_', ' ');
+}
+
+export function paymentStatusLabel(status: PaymentBalanceStatus): string {
+  return status === 'PAID' ? 'FULLY PAID' : 'WITH REMAINING BALANCE';
+}
+
+export function paymentStatusClass(status: PaymentBalanceStatus): string {
+  return status === 'PAID'
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    : 'border-blue-200 bg-blue-50 text-blue-700';
 }

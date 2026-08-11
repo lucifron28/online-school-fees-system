@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { CreditCard, DollarSign, ChevronRight, RefreshCw } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
+import { paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
 import { formatCentavos } from '@/lib/utils/currency';
 import type { PortalChild } from '@/lib/portal-types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PortalAnnouncementPreview } from '@/components/announcements/announcement-list';
 
 export default function ParentDashboardPage() {
   const childrenQuery = useQuery({
@@ -67,6 +69,7 @@ export default function ParentDashboardPage() {
 
       {children.length > 0 && (
         <>
+          <PortalAnnouncementPreview audience="PARENT" />
           <div className="grid gap-6 sm:grid-cols-2">
             <Card className="border-emerald-200 bg-emerald-50/40 shadow-sm">
               <CardContent className="p-6">
@@ -120,6 +123,16 @@ export default function ParentDashboardPage() {
                         <p className="text-base font-extrabold text-rose-600">
                           {formatCentavos(child.outstandingBalanceCentavos)}
                         </p>
+                        <Badge
+                          variant="outline"
+                          className={`mt-1 text-[10px] ${paymentStatusClass(child.outstandingBalanceCentavos === 0 ? 'PAID' : 'WITH_REMAINING_BALANCE')}`}
+                        >
+                          {paymentStatusLabel(
+                            child.outstandingBalanceCentavos === 0
+                              ? 'PAID'
+                              : 'WITH_REMAINING_BALANCE'
+                          )}
+                        </Badge>
                       </div>
                       <Link href={`/parent/children/${child.studentId}`}>
                         <Button variant="outline" size="sm" className="h-9 text-xs">
