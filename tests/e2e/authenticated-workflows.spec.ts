@@ -426,7 +426,9 @@ test.describe('authenticated financial workflow', () => {
         parent.getByText('WITH REMAINING BALANCE', { exact: true }).first()
       ).toBeVisible();
       await parent.goto(`/parent/pay?studentId=${child!.studentId}`);
-      await expect(parent.getByText('Submit GCash or Maya payment proof')).toBeVisible();
+      await expect(
+        parent.getByRole('heading', { name: 'Submit GCash or Maya payment proof', exact: true })
+      ).toBeVisible();
       await parent.getByRole('button', { name: 'GCASH', exact: true }).click();
       await expect(parent.getByText(/OSFS Demo GCash Account/)).toBeVisible();
       await parent.getByLabel('Amount transferred (PHP)').fill((amount / 100).toFixed(2));
