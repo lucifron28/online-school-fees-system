@@ -90,6 +90,9 @@ export default function StudentAccountPage() {
                       <TableHead>School year</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Assessment balance</TableHead>
+                      <TableHead>Due date</TableHead>
+                      <TableHead>Payment status</TableHead>
+                      <TableHead>Deadline</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -105,6 +108,30 @@ export default function StudentAccountPage() {
                           </TableCell>
                           <TableCell className="text-xs">
                             {formatCentavos(assessment.balanceCentavos)}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-xs">
+                            {assessment.dueDate ?? 'Not set'}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            <Badge variant="outline">
+                              {assessment.paymentStatus.replaceAll('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            <Badge
+                              variant="outline"
+                              className={
+                                assessment.deadlineState === 'OVERDUE'
+                                  ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                  : assessment.deadlineState === 'DUE_SOON'
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                    : assessment.deadlineState === 'PAID'
+                                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                      : 'border-blue-200 bg-blue-50 text-blue-700'
+                              }
+                            >
+                              {assessment.deadlineState.replaceAll('_', ' ')}
+                            </Badge>
                           </TableCell>
                         </TableRow>
                       ))

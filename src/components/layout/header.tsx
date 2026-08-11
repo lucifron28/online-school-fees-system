@@ -55,6 +55,11 @@ const pageCopy = [
     title: 'Notifications',
     subtitle: 'Review important account updates.',
   },
+  {
+    path: '/admin/announcements',
+    title: 'Announcements',
+    subtitle: 'Publish payment-related updates to portal users.',
+  },
   { path: '/admin/users', title: 'Users', subtitle: 'Manage portal access and roles.' },
   { path: '/admin/settings', title: 'Settings', subtitle: 'Configure school finance preferences.' },
   {
@@ -78,6 +83,11 @@ const pageCopy = [
     subtitle: 'Review updates about your account.',
   },
   {
+    path: '/parent/announcements',
+    title: 'Announcements',
+    subtitle: 'Review current payment updates for your family.',
+  },
+  {
     path: '/student/dashboard',
     title: 'Dashboard',
     subtitle: 'Keep your assessment and payment records close.',
@@ -96,6 +106,11 @@ const pageCopy = [
     path: '/student/notifications',
     title: 'Notifications',
     subtitle: 'Review updates about your account.',
+  },
+  {
+    path: '/student/announcements',
+    title: 'Announcements',
+    subtitle: 'Review current payment updates from the school.',
   },
 ];
 

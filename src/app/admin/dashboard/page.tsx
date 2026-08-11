@@ -1,15 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowUpRight,
   BarChart3,
   DollarSign,
   Plus,
   Receipt,
   RefreshCw,
+  Send,
   TrendingUp,
   Users,
 } from 'lucide-react';
@@ -26,10 +28,16 @@ function statusClass(status: string) {
     : 'border-emerald-200 bg-emerald-50 text-emerald-700';
 }
 
+type ReminderRunResponse = { created: number; deduplicated: number };
+
 export default function AdminDashboardPage() {
   const summaryQuery = useQuery({
     queryKey: ['admin-report-summary'],
     queryFn: () => requestJson<DashboardMetrics>('/api/reports/summary'),
+  });
+  const reminderMutation = useMutation({
+    mutationFn: () =>
+      requestJson<ReminderRunResponse>('/api/admin/reminders/run', { method: 'POST' }),
   });
   const data = summaryQuery.data;
 
@@ -53,6 +61,20 @@ export default function AdminDashboardPage() {
               <BarChart3 className="mr-1.5 h-4 w-4" /> Reports
             </Button>
           </Link>
+          <Link href="/admin/announcements">
+            <Button variant="outline" className="h-9 text-xs">
+              Announcements
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            className="h-9 text-xs"
+            onClick={() => reminderMutation.mutate()}
+            disabled={reminderMutation.isPending}
+          >
+            <Send className="mr-1.5 h-4 w-4" />
+            {reminderMutation.isPending ? 'Checking…' : 'Run reminder check'}
+          </Button>
           <Link href="/admin/payments/manual">
             <Button className="h-9 bg-blue-600 text-xs text-white shadow-sm hover:bg-blue-700">
               <Plus className="mr-1.5 h-4 w-4" /> Post OTC payment
@@ -81,7 +103,7 @@ export default function AdminDashboardPage() {
 
       {data && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
             {[
               {
                 title: 'Active Students',
@@ -110,6 +132,20 @@ export default function AdminDashboardPage() {
                 subtext: `${data.postedTransactionsCount.toLocaleString()} posted transactions`,
                 icon: AlertCircle,
                 color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/50',
+              },
+              {
+                title: 'Due Soon',
+                value: data.dueSoonCount.toLocaleString(),
+                subtext: 'Positive balances in reminder window',
+                icon: AlertTriangle,
+                color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/50',
+              },
+              {
+                title: 'Overdue',
+                value: data.overdueCount.toLocaleString(),
+                subtext: 'Positive balances past due date',
+                icon: AlertCircle,
+                color: 'text-red-600 bg-red-50 dark:bg-red-950/50',
               },
             ].map((metric) => {
               const Icon = metric.icon;
@@ -140,6 +176,18 @@ export default function AdminDashboardPage() {
               );
             })}
           </div>
+
+          {reminderMutation.data && (
+            <p className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700">
+              Reminder check completed: {reminderMutation.data.created} new notification(s),{' '}
+              {reminderMutation.data.deduplicated} already handled.
+            </p>
+          )}
+          {reminderMutation.isError && (
+            <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+              {getClientErrorMessage(reminderMutation.error)}
+            </p>
+          )}
 
           <div className="grid gap-6 lg:grid-cols-3">
             <Card className="border-slate-200 shadow-sm dark:border-slate-800 lg:col-span-2">
@@ -254,6 +302,57 @@ export default function AdminDashboardPage() {
                         </Badge>
                       </div>
                     </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm dark:border-slate-800">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-base font-semibold">Payment deadlines</CardTitle>
+                <p className="text-xs text-slate-500">Accounts needing attention now.</p>
+              </div>
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+            </CardHeader>
+            <CardContent className="p-0">
+              {data.deadlineAssessments.length === 0 && (
+                <p className="p-6 text-sm text-slate-500">No due-soon or overdue accounts.</p>
+              )}
+              {data.deadlineAssessments.length > 0 && (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {data.deadlineAssessments.map((item) => (
+                    <div
+                      key={item.assessmentId}
+                      className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <p className="text-xs font-semibold">{item.studentName}</p>
+                        <p className="font-mono text-[10px] text-slate-500">
+                          {item.studentNumber} · {item.feeStructureName}
+                        </p>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <p className="text-xs font-bold">{formatCentavos(item.balanceCentavos)}</p>
+                        <p className="text-[11px] text-slate-500">
+                          Due {item.dueDate} ·{' '}
+                          {item.deadlineState === 'OVERDUE'
+                            ? `${item.daysOverdue} day(s) overdue`
+                            : `${item.daysRemaining} day(s) remaining`}
+                        </p>
+                        <Badge
+                          variant="outline"
+                          className={
+                            item.deadlineState === 'OVERDUE'
+                              ? 'border-red-200 bg-red-50 text-red-700'
+                              : 'border-amber-200 bg-amber-50 text-amber-700'
+                          }
+                        >
+                          {item.deadlineState.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

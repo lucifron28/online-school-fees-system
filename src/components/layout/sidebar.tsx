@@ -14,6 +14,7 @@ import {
   GraduationCap,
   History,
   LayoutDashboard,
+  Megaphone,
   Menu,
   Receipt,
   Settings,
@@ -124,6 +125,7 @@ export function Sidebar({
     { name: 'Transactions', href: '/admin/transactions', icon: Receipt },
     { name: 'Reports', href: '/admin/reports', icon: FileText },
     { name: 'Notifications', href: '/admin/notifications', icon: BellRing },
+    { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
     { name: 'Users', href: '/admin/users', icon: UserCheck },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
@@ -134,6 +136,7 @@ export function Sidebar({
     { name: 'Payment History', href: '/parent/history', icon: History },
     { name: 'Make Payment', href: '/parent/pay', icon: CreditCard },
     { name: 'Notifications', href: '/parent/notifications', icon: BellRing },
+    { name: 'Announcements', href: '/parent/announcements', icon: Megaphone },
   ];
 
   const studentNav: NavItem[] = [
@@ -141,6 +144,7 @@ export function Sidebar({
     { name: 'My Account', href: '/student/account', icon: GraduationCap },
     { name: 'Payment History', href: '/student/history', icon: History },
     { name: 'Notifications', href: '/student/notifications', icon: BellRing },
+    { name: 'Announcements', href: '/student/announcements', icon: Megaphone },
   ];
 
   const navItems =

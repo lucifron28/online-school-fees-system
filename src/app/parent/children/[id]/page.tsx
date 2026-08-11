@@ -99,7 +99,9 @@ export default function ParentChildDetailsPage({ params }: { params: Promise<{ i
                       <TableHead>Assessment item</TableHead>
                       <TableHead>Assessment</TableHead>
                       <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Due date</TableHead>
+                      <TableHead>Payment status</TableHead>
+                      <TableHead>Deadline</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -113,8 +115,32 @@ export default function ParentChildDetailsPage({ params }: { params: Promise<{ i
                           <TableCell className="text-xs font-bold">
                             {formatCentavos(item.amountCentavos)}
                           </TableCell>
+                          <TableCell className="whitespace-nowrap text-xs">
+                            {assessment.dueDate ?? 'Not set'}
+                          </TableCell>
                           <TableCell className="text-xs">
-                            {formatCentavos(assessment.balanceCentavos)} remaining on assessment
+                            <Badge variant="outline">
+                              {assessment.paymentStatus.replaceAll('_', ' ')}
+                            </Badge>
+                            <span className="mt-1 block text-[11px] text-slate-500">
+                              {formatCentavos(assessment.balanceCentavos)} remaining
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            <Badge
+                              variant="outline"
+                              className={
+                                assessment.deadlineState === 'OVERDUE'
+                                  ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                  : assessment.deadlineState === 'DUE_SOON'
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                    : assessment.deadlineState === 'PAID'
+                                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                      : 'border-blue-200 bg-blue-50 text-blue-700'
+                              }
+                            >
+                              {assessment.deadlineState.replaceAll('_', ' ')}
+                            </Badge>
                           </TableCell>
                         </TableRow>
                       ))
