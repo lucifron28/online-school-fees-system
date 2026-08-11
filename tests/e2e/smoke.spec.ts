@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Foundation Application & Scaffold Navigation Smoke Tests', () => {
-  test('opens homepage hub and verifies 20-screen reference directory', async ({ page }) => {
+  test('opens homepage hub and verifies the current workspace map', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('console', (msg) => {
       if (msg.type() === 'error') consoleErrors.push(msg.text());
@@ -10,11 +10,14 @@ test.describe('Foundation Application & Scaffold Navigation Smoke Tests', () => 
     await page.goto('/');
     await expect(
       page.getByRole('heading', {
-        name: 'Online School Fees Monitoring & Payment System',
+        name: 'Keep every fee, payment, and receipt in one clear record.',
       })
     ).toBeVisible();
 
-    await expect(page.getByText(/20 \/ 20 Reference Screens Scaffolded/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Explore the main views.' })).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Open administrator portal', exact: true })
+    ).toHaveAttribute('href', '/login/admin');
     expect(consoleErrors).toEqual([]);
   });
 

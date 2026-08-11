@@ -250,7 +250,9 @@ test.describe('authenticated financial workflow', () => {
       const finance = await financeContext.newPage();
       await login(finance, 'admin', 'finance@demo.school');
       await finance.goto('/admin/payments/manual');
-      await expect(finance.getByText('FINANCE STAFF', { exact: true })).toBeVisible();
+      await expect(
+        finance.getByRole('link', { name: 'Finance Staff Portal', exact: true })
+      ).toBeVisible();
       await expect(finance.getByRole('link', { name: 'Users', exact: true })).toHaveCount(0);
       await expect(finance.getByRole('link', { name: 'Settings', exact: true })).toHaveCount(0);
       const studentSearch = finance.getByLabel('Search students');
