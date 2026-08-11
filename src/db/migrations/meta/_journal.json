@@ -36,6 +36,13 @@
       "when": 1786296019269,
       "tag": "0004_lumpy_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786462847770,
+      "tag": "0005_silly_demogoblin",
+      "breakpoints": true
     }
   ]
 }

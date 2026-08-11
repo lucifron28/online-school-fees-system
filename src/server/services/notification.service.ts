@@ -3,8 +3,14 @@ import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { Resend } from 'resend';
 import { getDb, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
+import {
+  getOrCreateSchoolSettings,
+  isStudentPortalEnabled,
+} from '@/server/services/administration.service';
+import { evaluateDeadline } from '@/lib/deadlines';
+import { getManilaDateString } from '@/lib/reports';
 import type { NotificationType } from '@/lib/notifications';
-import { formatCentavos } from '@/lib/utils/currency';
+import { addCentavos, formatCentavos, subtractCentavos } from '@/lib/utils/currency';
 import { getServerEnv } from '@/lib/env';
 import { NotFoundError } from '@/server/errors';
 import { logSanitizedError } from '@/server/logging';
@@ -105,6 +111,14 @@ function emptySummary(): NotificationDispatchSummary {
   return { attempted: 0, created: 0, deduplicated: 0, sent: 0, retrying: 0, failed: 0 };
 }
 
+function calculateLedgerBalance(entries: Array<{ debitCentavos: number; creditCentavos: number }>) {
+  return entries.reduce(
+    (balance, entry) =>
+      subtractCentavos(addCentavos(balance, entry.debitCentavos), entry.creditCentavos),
+    0
+  );
+}
+
 function combineSummaries(...summaries: NotificationDispatchSummary[]) {
   return summaries.reduce<NotificationDispatchSummary>(
     (total, summary) => ({
@@ -192,6 +206,48 @@ async function selectStudentRecipients(studentId: string, db: DatabaseInstance) 
     recipients.set(recipient.userId, recipient);
   }
   return [...recipients.values()];
+}
+
+async function selectReminderRecipients(studentId: string, db: DatabaseInstance) {
+  const studentPortalEnabled =
+    getServerEnv().ENABLE_STUDENT_PORTAL && (await isStudentPortalEnabled(db));
+  if (studentPortalEnabled) return selectStudentRecipients(studentId, db);
+
+  return db
+    .select({
+      userId: schema.users.id,
+      name: schema.users.name,
+      email: schema.users.email,
+    })
+    .from(schema.guardianStudents)
+    .innerJoin(schema.guardians, eq(schema.guardians.id, schema.guardianStudents.guardianId))
+    .innerJoin(schema.users, eq(schema.users.id, schema.guardians.userId))
+    .where(eq(schema.guardianStudents.studentId, studentId));
+}
+
+async function selectAnnouncementRecipients(
+  audience: (typeof schema.announcementAudienceEnum.enumValues)[number],
+  db: DatabaseInstance
+) {
+  const roles: Array<(typeof schema.userRoleEnum.enumValues)[number]> =
+    audience === 'PARENT'
+      ? ['PARENT']
+      : audience === 'STUDENT'
+        ? ['STUDENT']
+        : ['PARENT', 'STUDENT'];
+  const studentPortalEnabled =
+    getServerEnv().ENABLE_STUDENT_PORTAL && (await isStudentPortalEnabled(db));
+  const eligibleRoles = studentPortalEnabled ? roles : roles.filter((role) => role !== 'STUDENT');
+  if (eligibleRoles.length === 0) return [];
+
+  return db
+    .select({
+      userId: schema.users.id,
+      name: schema.users.name,
+      email: schema.users.email,
+    })
+    .from(schema.users)
+    .where(and(eq(schema.users.active, true), inArray(schema.users.role, eligibleRoles)));
 }
 
 async function attemptDelivery(
@@ -388,6 +444,8 @@ async function selectAssessmentContext(assessmentId: string, db: DatabaseInstanc
     .select({
       id: schema.studentAssessments.id,
       studentId: schema.studentAssessments.studentId,
+      status: schema.studentAssessments.status,
+      dueDate: schema.studentAssessments.dueDate,
       studentName: schema.students.firstName,
       studentLastName: schema.students.lastName,
       totalAmountCentavos: schema.studentAssessments.totalAmountCentavos,
@@ -470,6 +528,93 @@ export class NotificationService {
       );
     } catch (error) {
       logSanitizedError('notification.assessment_dispatch', error);
+      return emptySummary();
+    }
+  }
+
+  static async notifyPaymentDueReminder(
+    assessmentId: string,
+    input: { now?: Date } = {},
+    db: DatabaseInstance = getDb(),
+    provider: EmailProvider = getEmailProvider()
+  ) {
+    try {
+      const assessment = await selectAssessmentContext(assessmentId, db);
+      if (!assessment || assessment.status !== 'POSTED' || !assessment.dueDate) {
+        return emptySummary();
+      }
+
+      const [ledgerEntries, settings] = await Promise.all([
+        db
+          .select({
+            debitCentavos: schema.ledgerEntries.debitCentavos,
+            creditCentavos: schema.ledgerEntries.creditCentavos,
+          })
+          .from(schema.ledgerEntries)
+          .where(eq(schema.ledgerEntries.assessmentId, assessmentId)),
+        getOrCreateSchoolSettings(db),
+      ]);
+      const balanceCentavos = calculateLedgerBalance(ledgerEntries);
+      const deadline = evaluateDeadline({
+        balanceCentavos,
+        dueDate: assessment.dueDate,
+        reminderLeadDays: settings.reminderLeadDays,
+        today: getManilaDateString(input.now),
+      });
+      if (deadline.deadlineState !== 'DUE_SOON') return emptySummary();
+
+      const recipients = await selectReminderRecipients(assessment.studentId, db);
+      const studentName = `${assessment.studentName} ${assessment.studentLastName}`;
+      const daysRemaining = deadline.daysFromDueDate ?? 0;
+      return dispatchToRecipients(
+        recipients,
+        {
+          type: 'PAYMENT_DUE_REMINDER',
+          dedupeKey: `payment-due:${assessment.id}:${assessment.dueDate}`,
+          entityType: 'ASSESSMENT',
+          entityId: assessment.id,
+          title: `Payment due soon for ${studentName}`,
+          body: `${assessment.assessmentPeriod} assessment ${assessment.feeStructureName} has ${formatCentavos(balanceCentavos)} remaining. Due date: ${assessment.dueDate} (${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining).`,
+        },
+        db,
+        provider
+      );
+    } catch (error) {
+      logSanitizedError('notification.payment_due_reminder_dispatch', error);
+      return emptySummary();
+    }
+  }
+
+  static async notifyAnnouncementPublished(
+    announcementId: string,
+    db: DatabaseInstance = getDb(),
+    provider: EmailProvider = getEmailProvider()
+  ) {
+    try {
+      const rows = await db
+        .select()
+        .from(schema.announcements)
+        .where(eq(schema.announcements.id, announcementId))
+        .limit(1);
+      const announcement = rows[0];
+      if (!announcement || announcement.status !== 'PUBLISHED') return emptySummary();
+
+      const recipients = await selectAnnouncementRecipients(announcement.audience, db);
+      return dispatchToRecipients(
+        recipients,
+        {
+          type: 'ANNOUNCEMENT',
+          dedupeKey: `announcement-published:${announcement.id}`,
+          entityType: 'ANNOUNCEMENT',
+          entityId: announcement.id,
+          title: announcement.title,
+          body: announcement.body,
+        },
+        db,
+        provider
+      );
+    } catch (error) {
+      logSanitizedError('notification.announcement_dispatch', error);
       return emptySummary();
     }
   }

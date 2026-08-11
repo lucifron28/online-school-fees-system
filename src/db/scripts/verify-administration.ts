@@ -43,6 +43,8 @@ function settingsInput(
     receiptPrefix: settings.receiptPrefix,
     currencyCode: 'PHP',
     timezone: 'Asia/Manila',
+    defaultPaymentTermDays: settings.defaultPaymentTermDays,
+    reminderLeadDays: settings.reminderLeadDays,
     studentPortalEnabled: settings.studentPortalEnabled,
     activeSchoolYearId: settings.activeSchoolYearId,
   };

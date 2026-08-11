@@ -175,6 +175,21 @@ export interface DashboardMetrics {
     amountCentavos: number;
   }>;
   paymentMethodBreakdown: CollectionBreakdown[];
+  dueSoonCount: number;
+  overdueCount: number;
+  deadlineAssessments: Array<{
+    assessmentId: string;
+    studentId: string;
+    studentNumber: string;
+    studentName: string;
+    feeStructureName: string;
+    dueDate: string;
+    balanceCentavos: number;
+    paymentStatus: 'PAID' | 'WITH_REMAINING_BALANCE';
+    deadlineState: 'ON_TRACK' | 'DUE_SOON' | 'OVERDUE' | 'PAID';
+    daysRemaining: number;
+    daysOverdue: number;
+  }>;
 }
 
 const MANILA_OFFSET_MINUTES = 8 * 60;

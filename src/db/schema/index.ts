@@ -1,6 +1,7 @@
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -80,6 +81,8 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'RECEIPT_AVAILABLE',
   'PAYMENT_REVERSED',
   'DUE_REMINDER',
+  'PAYMENT_DUE_REMINDER',
+  'ANNOUNCEMENT',
 ]);
 export const notificationChannelEnum = pgEnum('notification_channel', ['EMAIL', 'CONSOLE']);
 export const notificationDeliveryStatusEnum = pgEnum('notification_delivery_status', [
@@ -92,6 +95,18 @@ export const notificationAttemptStatusEnum = pgEnum('notification_attempt_status
   'RETRYING',
   'SENT',
   'FAILED',
+]);
+
+export const announcementAudienceEnum = pgEnum('announcement_audience', [
+  'PARENT',
+  'STUDENT',
+  'PARENT_AND_STUDENT',
+]);
+export const announcementStatusEnum = pgEnum('announcement_status', [
+  'DRAFT',
+  'SCHEDULED',
+  'PUBLISHED',
+  'ARCHIVED',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -197,6 +212,8 @@ export const schoolSettings = pgTable(
     receiptPrefix: text('receipt_prefix').default('OSFS').notNull(),
     currencyCode: text('currency_code').default('PHP').notNull(),
     timezone: text('timezone').default('Asia/Manila').notNull(),
+    defaultPaymentTermDays: integer('default_payment_term_days').default(7).notNull(),
+    reminderLeadDays: integer('reminder_lead_days').default(2).notNull(),
     studentPortalEnabled: boolean('student_portal_enabled').default(true).notNull(),
     activeSchoolYearId: uuid('active_school_year_id').references(() => schoolYears.id, {
       onDelete: 'set null',
@@ -205,6 +222,14 @@ export const schoolSettings = pgTable(
   },
   (table) => ({
     singletonUnique: uniqueIndex('school_settings_singleton_key_unique').on(table.singletonKey),
+    paymentTermDaysValid: check(
+      'school_settings_payment_term_days_valid',
+      sql`${table.defaultPaymentTermDays} BETWEEN 1 AND 365`
+    ),
+    reminderLeadDaysValid: check(
+      'school_settings_reminder_lead_days_valid',
+      sql`${table.reminderLeadDays} BETWEEN 0 AND 30`
+    ),
   })
 );
 
@@ -416,6 +441,7 @@ export const studentAssessments = pgTable(
     assessmentPeriod: assessmentPeriodEnum('assessment_period').default('ANNUAL').notNull(),
     totalAmountCentavos: integer('total_amount_centavos').notNull(),
     status: assessmentStatusEnum('status').default('POSTED').notNull(),
+    dueDate: date('due_date', { mode: 'string' }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -433,6 +459,11 @@ export const studentAssessments = pgTable(
       'student_assessments_amount_positive',
       sql`${table.totalAmountCentavos} > 0`
     ),
+    postedDueDateRequired: check(
+      'student_assessments_posted_due_date_required',
+      sql`${table.status} <> 'POSTED' OR ${table.dueDate} IS NOT NULL`
+    ),
+    dueDateIndex: index('student_assessments_due_date_idx').on(table.status, table.dueDate),
   })
 );
 
@@ -720,6 +751,39 @@ export const mockPaymentCallbackEvents = pgTable(
     statusReceivedIndex: index('mock_payment_callback_events_status_received_idx').on(
       table.processingStatus,
       table.receivedAt
+    ),
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Payment Announcements
+// ---------------------------------------------------------------------------
+
+export const announcements = pgTable(
+  'announcements',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    audience: announcementAudienceEnum('audience').notNull(),
+    status: announcementStatusEnum('status').default('DRAFT').notNull(),
+    publishAt: timestamp('publish_at', { withTimezone: true }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    updatedByUserId: text('updated_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    statusPublishIndex: index('announcements_status_publish_idx').on(table.status, table.publishAt),
+    expiresIndex: index('announcements_expires_idx').on(table.expiresAt),
+    datesValid: check(
+      'announcements_dates_valid',
+      sql`${table.expiresAt} IS NULL OR ${table.expiresAt} > ${table.publishAt}`
     ),
   })
 );
