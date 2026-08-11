@@ -141,7 +141,10 @@ export default function ParentPaymentSubmissionsPage() {
                             </a>
                           )}
                           {item.receiptId && (
-                            <Link href={`/parent/receipts/${item.receiptId}`}>
+                            <Link
+                              href={`/parent/receipts/${item.receiptId}`}
+                              aria-label={`View system-generated receipt for ${item.studentName}`}
+                            >
                               <Button variant="ghost" size="sm" className="h-8 px-2 text-xs">
                                 <Eye className="h-3.5 w-3.5" />
                               </Button>

@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: Final pre-deployment hardening
-- Branch: `fix/25-predeployment-hardening`
+- Phase: Final client-scope clarification
+- Branch: `fix/28-client-scope-finalization`
 - Phase 10 starting main commit: `960f107`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Round 2 is verified through hosted Foundation run #111 and merged `main` `3c7523f87cb7dfb5e5f5190a9c922d948f993e5f`; final Round 3 head is verified through PR #15 and hosted Foundation run #123, while historical run #122 remains retained. External Vercel/Neon preview evidence remains a separate fictional deployment prerequisite.
+- Current state: Rounds 1–3 and Phase 2 are merged and hosted-verified; final client-scope work is on `fix/28-client-scope-finalization` from synced `main` `246a69df64939f1b08c30436410c1efef76beab6`. External Vercel/Neon preview evidence remains a separate fictional deployment prerequisite.
 
 ## Completed phases
 
@@ -377,3 +377,12 @@ CodeGraph was used before editing to trace payment, gateway, ledger, administrat
 - Added regressions for 0/1/24/25/60+/61 statement entries, long receipt allocation tables, bounded PDF text, secret-free error logs, >100-student search, CASH/BANK_DEPOSIT/MOCK_ONLINE processor semantics, and snapshot rename immutability.
 - Local checks: 66 unit tests passed; integration harness passed 3 reset-safety tests and skipped 45 database cases without `TEST_DATABASE_URL`; typecheck, ESLint, and production build passed. Changed files were formatted; full repository Prettier remains a pre-existing 143-file baseline failure. Hosted current-branch CI and external deployment evidence remain pending.
 - Final Round 3 hosted evidence is Foundation run [#123](https://github.com/lucifron28/online-school-fees-system/actions/runs/31328129030), with historical run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) retained; #123 passed migration/seed/reset/verifiers, formatting, lint, typecheck, 57 unit tests, 46 integration tests, build, and 7 Playwright tests. No production-readiness or deployment claim is made.
+
+## Final client-scope clarification
+
+- Added `docs/client-clarified-requirements.md` with the accepted payment-monitoring workflow, required labels, explicit exclusions, and known demo boundaries.
+- Added ledger-derived FULLY PAID/WITH REMAINING BALANCE badges to admin student directory/detail, parent child/dashboard, student dashboard/account, and relevant reports. Unpaid deadline labels remain ON TRACK, DUE SOON, or OVERDUE; zero balances render FULLY PAID and never overdue.
+- Added current payment-announcement previews to parent and student dashboards while retaining dedicated announcement pages and publication/expiry filtering.
+- Renamed active receipt UI, PDF headings, notifications, seed notification text, and current documentation to System-Generated Payment Receipt with the not-an-official-tax-receipt disclaimer. Historical audit records remain historical.
+- Added Playwright coverage for admin announcement setup, parent GCash proof submission and pending state, finance approval and receipt visibility, plus Maya submission, rejection reason, and unchanged balance.
+- The normal parent flow remains manual external transfer proof. No GCash/Maya API, automatic transfer verification, official tax receipt, production-readiness, security-certification, accounting, tax-compliance, or deployment claim is made. Academic grades/gradebook data, attendance, conduct, academic-performance analytics, impact tagging, restriction tracking, predictive analytics, and general SIS features remain out of scope.

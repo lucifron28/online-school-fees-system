@@ -51,6 +51,14 @@ Client Components must not import server-only services. Financial rules must rem
 - Assessment generation, ledger balance calculation, OTC payment posting, portal ownership, mock online-payment completion, report aggregation, and notification history are PostgreSQL-backed. External deployment remains a later environment-dependent gate.
 - The mock payment gateway is allowed by scope. Its checkout records, callback events, and idempotency state are persisted, while no real payment-provider integration is claimed.
 
+## Final client-scope boundary
+
+- `assessment.service.ts` and the portal/report services derive FULLY PAID, WITH REMAINING BALANCE, and deadline states from persisted ledger entries; no mutable paid flag is accepted from the browser.
+- `announcement.service.ts` filters portal content by audience, publication time, and expiry. Parent and enabled student dashboards preview current payment announcements, while dedicated announcement pages remain available.
+- `payment-submission.service.ts` stores validated GCash/Maya proof bytes in PostgreSQL. Approval locks and rechecks the student ledger before using the shared payment transaction; rejection requires a reason and does not mutate financial state.
+- The normal portal payment flow is manual external-transfer proof. There is no GCash/Maya API or automatic verification. The `MOCK_ONLINE` checkout/callback path is retained only as a historical test harness.
+- Academic grades/gradebook data, attendance, conduct, academic-performance analytics, impact tagging, restriction tracking, predictive analytics, and general SIS behavior are outside this payment-monitoring scope. Administrative grade levels used to organize fee structures remain metadata. See `docs/client-clarified-requirements.md`.
+
 ## State ownership
 
 - Authentication and sessions: Better Auth
@@ -157,4 +165,4 @@ The Phase 9 invariants are:
 - Resend is selected only when its API key and sender address are configured; otherwise the console provider records a deterministic local/CI-safe delivery outcome;
 - delivery attempts record channel, status, attempt count, provider message ID, timestamps, and failure text, with an atomic database claim, persisted attempt history, and an authenticated admin/finance manual retry route; `SENT` is terminal and no scheduler claim is assumed in this scope;
 - duplicate payment idempotency requests and duplicate mock callback events do not create or deliver duplicate notification records;
-- no due reminder is emitted until due-date requirements are confirmed.
+- due-date reminders and payment announcements are generated only from persisted assessment/announcement records; no scheduler or external messaging provider is claimed as part of the demo deployment.

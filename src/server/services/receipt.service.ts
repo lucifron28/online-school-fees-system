@@ -45,7 +45,7 @@ export async function allocateReceiptNumber(db: DatabaseInstance, createdAt: Dat
   const institution = settings[0];
   if (!institution) {
     throw new AppError(
-      'School settings must be configured before issuing a payment acknowledgment receipt.'
+      'School settings must be configured before issuing a system-generated payment receipt.'
     );
   }
 

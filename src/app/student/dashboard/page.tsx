@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronRight, CreditCard, DollarSign, RefreshCw } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
+import { paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
 import { formatCentavos } from '@/lib/utils/currency';
 import type { PortalAccount } from '@/lib/portal-types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PortalAnnouncementPreview } from '@/components/announcements/announcement-list';
 
 export default function StudentDashboardPage() {
   const accountQuery = useQuery({
@@ -44,6 +46,7 @@ export default function StudentDashboardPage() {
       )}
       {account && (
         <>
+          <PortalAnnouncementPreview audience="STUDENT" />
           <div className="grid gap-6 sm:grid-cols-2">
             <Card className="border-rose-200 bg-rose-50/40 shadow-sm">
               <CardContent className="p-6">
@@ -55,6 +58,14 @@ export default function StudentDashboardPage() {
                   {formatCentavos(account.ledger.balanceCentavos)}
                 </div>
                 <p className="mt-1 text-xs text-slate-500">Current finance ledger balance</p>
+                <Badge
+                  variant="outline"
+                  className={`mt-2 ${paymentStatusClass(account.ledger.balanceCentavos === 0 ? 'PAID' : 'WITH_REMAINING_BALANCE')}`}
+                >
+                  {paymentStatusLabel(
+                    account.ledger.balanceCentavos === 0 ? 'PAID' : 'WITH_REMAINING_BALANCE'
+                  )}
+                </Badge>
               </CardContent>
             </Card>
             <Card className="border-sky-200 bg-sky-50/40 shadow-sm">

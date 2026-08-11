@@ -23,7 +23,7 @@ Financial records are never hard-deleted. A reversal preserves the original paym
 
 ## 5. Receipt wording
 
-Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo disclaimer. The application must not use the phrase **Official Receipt**.
+Receipts use the label **System-Generated Payment Receipt** and state: “This system-generated receipt records a payment verified in the school fees monitoring system. It is not an official tax receipt.” They are fictional system-generated records, not official tax or accounting documents.
 
 ## 6. Reset safety
 
@@ -88,14 +88,14 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - Overpayments are rejected. Reversals preserve the original payment, create a compensating debit, void the linked receipt, and record the reversal reason and actor; double reversal is rejected.
 - Receipt PDFs are generated from stored payment, allocation, receipt, student, institution, and status data. A reversed receipt is visibly marked voided.
 
-## 14. Parent/student portals and mock online payments
+## 14. Parent/student portals and manual payment proof
 
 - A parent may view only students linked through the persisted guardian-to-student relationship for the authenticated `PARENT` user.
 - A student may view only the student row linked to the authenticated `STUDENT` user. Caller-supplied student IDs, child lists, balances, and receipt ownership are not authorization evidence.
-- Mock checkout state, callback events, payment channel, expiry, and idempotency keys are persisted in PostgreSQL. The stored checkout is authoritative for student, assessment binding, amount, and channel; the browser return URL cannot mark a payment successful. An unpaid `CREATED` checkout is changed to `EXPIRED` under a row lock before callback processing once its expiry time passes.
-- `SUCCESS` callbacks are server-verified and use the same `PaymentService` transaction as other payments with method `MOCK_ONLINE`. `PENDING`, `FAILED`, and `CANCELLED` outcomes do not change the ledger.
-- Replayed callback events and repeated checkout idempotency keys return the existing persisted result and do not create duplicate payments, allocations, receipts, or audit events.
-- The online flow is intentionally a mock demonstration. It does not connect to GCash, Maya, card networks, banks, or a real payment provider.
+- Parents submit external GCash or Maya transfer details and a validated proof image; the submission is persisted in PostgreSQL and does not change the ledger while pending.
+- Finance approval rechecks ownership, amount, and current balance inside a transaction before using the shared payment service. Rejection requires a reason and leaves the ledger unchanged.
+- The legacy mock checkout state, callback events, payment-channel binding, expiry, and idempotency keys remain persisted only for historical test-harness coverage. They do not represent a real provider integration or the normal parent flow.
+- There is no GCash API, Maya API, automatic transfer verification, card network, bank integration, or payment-provider integration.
 
 ## 15. Reports and reconciliation
 
@@ -112,7 +112,7 @@ Receipts use the label **Payment Acknowledgment Receipt** and a fictional-demo d
 - Notification dedupe keys include the event entity and recipient user, and the notification-delivery unique key prevents multiple channel rows for one notification.
 - Resend is used only when both `RESEND_API_KEY` and `EMAIL_FROM` are configured. Local and CI environments use the console provider and do not require real email delivery.
 - Delivery failures are recorded with attempt counts and retry timestamps. A provider failure is isolated from the already-committed financial transaction; manual retries use the persisted delivery row.
-- Due reminders are not generated because no confirmed due-date requirement or due-date field is in scope.
+- Due dates and ON TRACK/DUE SOON/OVERDUE status are displayed for unpaid assessments. Zero-balance assessments are FULLY PAID and never overdue. Published, audience-matched payment announcements are visible in portal announcement pages and dashboard previews; expired, draft, and future announcements are excluded.
 
 ## 17. External Audit Round 3 financial-history rules
 
@@ -131,5 +131,11 @@ Phase 1 migrations, Phase 2 authentication/RBAC, Phase 3 core administration, Ph
 
 - Statement and receipt PDFs are complete fictional-demo documents: they paginate their persisted rows and preserve issuance semantics, but remain neither official tax receipts nor accounting records.
 - Unexpected server logs contain only operational context, error class, and correlation ID. Runtime production authentication still requires a configured `BETTER_AUTH_SECRET`; the build-only placeholder exists only to keep static generation quiet.
-- OTC student search is server-backed and bounded; the selected balance is re-read authoritatively before posting, and zero-balance students cannot be posted through the UI. The underlying mock online flow remains simulated.
+- OTC student search is server-backed and bounded; the selected balance is re-read authoritatively before posting, and zero-balance students cannot be posted through the UI. Manual GCash/Maya proof review is separate from the legacy simulated mock-online flow.
 - CASH/BANK_DEPOSIT processor names are authenticated staff snapshots; MOCK_ONLINE is labeled as the automated mock system. Receipt snapshots are historical facts and are not rewritten after user renames.
+
+## 20. Final client-scope boundary
+
+- The system is payment monitoring for a single fictional school. Academic grades/gradebook data, attendance/absences, conduct, class participation, academic-performance analytics, impact tagging, restriction tracking, predictive analytics, and general SIS behavior are explicitly out of scope. Administrative grade levels used to organize fee structures remain metadata.
+- A positive ledger balance is WITH REMAINING BALANCE; a zero ledger balance is FULLY PAID. No mutable paid flag is stored.
+- The complete accepted workflow and limitations are recorded in `docs/client-clarified-requirements.md`.

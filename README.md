@@ -4,7 +4,7 @@
 
 ## Current status
 
-The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, persisted core administration, persisted student/guardian/fee administration, persisted assessment/ledger posting, serialized CASH/BANK_DEPOSIT/MOCK_ONLINE ledger mutations, database-backed receipt sequences, reversal-aware parent/student accounts, database-backed reports and reconciliation, and persisted notification history with atomic retry claims. Round 2 adds payable debit adjustments, multi-assessment ledger attribution, semantic idempotency conflicts, checkout expiry, transactional administrator and guardian invariants, fee-structure serialization, auth infrastructure-error handling, role-aware finance navigation, and owner-portal receipt detail; its hosted evidence is verified by PR #14 and Foundation run [#111](https://github.com/lucifron28/online-school-fees-system/actions/runs/31304545247). Round 3 adds assessment-level credit limits, credit-aware allocation, immutable receipt issuance snapshots, lifecycle-inclusive debt reporting, non-active settlement rules, Manila-ranged statements, terminal checkout states, and historical-receipt UI coverage; its final-head hosted evidence is [#123](https://github.com/lucifron28/online-school-fees-system/actions/runs/31328129030), with historical run #122 retained. Final pre-deployment hardening adds complete multi-page statement/receipt PDFs, sanitized server error logs, bounded searchable OTC selection, and payment-origin processor snapshots. The seed is deterministic fictional data with 20 students, 10 guardians, persisted links, financial fixtures, mock checkout outcomes, notification history, and a withdrawn student with existing debt. External deployment remains pending configured fictional Vercel/Neon credentials.
+The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, persisted core administration, persisted student/guardian/fee administration, persisted assessment/ledger posting, serialized CASH/BANK_DEPOSIT/GCASH/MAYA/MOCK_ONLINE ledger mutations, database-backed receipt sequences, reversal-aware parent/student accounts, database-backed reports and reconciliation, persisted notification history with atomic retry claims, and manual GCash/Maya proof review. The final client-scope pass adds ledger-derived FULLY PAID/WITH REMAINING BALANCE states, current payment-announcement previews, System-Generated Payment Receipt wording, and browser coverage for proof approval and rejection. The seed is deterministic fictional data with 20 students, 10 guardians, persisted links, financial fixtures, mock checkout outcomes, notification history, and a withdrawn student with existing debt. External deployment remains pending configured fictional Vercel/Neon credentials.
 
 The following scope statements remain important:
 
@@ -15,8 +15,8 @@ Final-head Round 3 evidence is hosted Foundation run [#123](https://github.com/l
 - Student records, guardian records, parent/student account links, fee categories, and draft/active/archived fee structures are persisted through PostgreSQL and guarded for admin/finance access. Posted-assessment fee structures can only be archived.
 - CASH and BANK_DEPOSIT payment posting, oldest-obligation allocation across assessment items and debit adjustments, per-assessment ledger grouping, semantic idempotency, receipts, reversals, ledger entries, and audit events are persisted through PostgreSQL and verified by `pnpm payments-receipts:verify`.
 - The committed Drizzle migration set creates a clean database; hosted CI is the authoritative clean-PostgreSQL verification for the repair-round concurrency and browser suites.
-- Parent and student portal queries are filtered from authenticated database relationships and expose persisted payment targets on receipt detail. Mock checkout and callback state is persisted with channel binding and enforced expiry; only a server-verified successful callback can create a `MOCK_ONLINE` payment through the shared payment service.
-- The online payment flow is a mock demonstration only; it is not a GCash, Maya, card, banking, or payment-provider integration.
+- Parent and student portal queries are filtered from authenticated database relationships and expose persisted payment targets on receipt detail. Manual GCash/Maya proof submissions store validated proof bytes in PostgreSQL and change the ledger only after finance approval. The legacy mock checkout/callback path remains persisted for historical test-harness coverage.
+- GCash and Maya transfers happen outside this system. There is no GCash API, Maya API, automatic transfer verification, card, bank, or payment-provider integration.
 - No production-readiness, accounting, security-certification, or tax-receipt claim is made.
 
 The completion checklist and verified evidence are tracked in [docs/goal-progress.md](docs/goal-progress.md) and [docs/goal-findings.md](docs/goal-findings.md).
@@ -29,10 +29,12 @@ The completion checklist and verified evidence are tracked in [docs/goal-progres
 - Asia/Manila timezone
 - Next.js full-stack monolith deployed to Vercel for a fictional demo
 - PostgreSQL hosted on Neon for the deployed demo
-- Simulated online payments only
+- Manual GCash/Maya proof verification; legacy mock checkout retained only for historical tests
 - Configurable student portal
 
-The receipt label is **Payment Acknowledgment Receipt**. The application must not call it an official receipt.
+Receipts are titled **System-Generated Payment Receipt** and state that they record a payment verified in this system and are not an official tax receipt. They are fictional system-generated records, not official tax or accounting documents.
+
+The final accepted scope and explicit exclusions are recorded in [docs/client-clarified-requirements.md](docs/client-clarified-requirements.md).
 
 ## Existing application areas
 
@@ -43,8 +45,8 @@ The receipt label is **Payment Acknowledgment Receipt**. The application must no
 - Better Auth route handler: `/api/auth/*`
 - Health check: `/api/health`
 - Mock payment callback: `/api/payments/mock-callback`
-- Parent portal APIs: `/api/portal/parent/children`, `/api/portal/parent/children/[id]`, `/api/portal/parent/payments`, and `/api/portal/parent/checkouts`
-- Student portal APIs: `/api/portal/student/account` and `/api/portal/student/payments`
+- Parent portal APIs: `/api/portal/parent/children`, `/api/portal/parent/children/[id]`, `/api/portal/parent/payments`, `/api/portal/parent/checkouts`, and manual proof submission/options/history routes
+- Student portal APIs: `/api/portal/student/account`, `/api/portal/student/payments`, and the shared current-announcements route
 - Persisted receipt PDF route: `/api/receipts/[id]/pdf`
 - Owned portal receipt PDF route: `/api/portal/receipts/[id]/pdf`
 - Reports API: `/api/reports/summary`, `/api/reports/collections`, `/api/reports/outstanding`, `/api/reports/reversals`, and `/api/reports/statement/[studentId]`
@@ -54,7 +56,7 @@ The receipt label is **Payment Acknowledgment Receipt**. The application must no
 - Student/guardian APIs: `/api/admin/students`, `/api/admin/guardians`, and guardian-link subroutes
 - Fee APIs: `/api/admin/fee-options`, `/api/admin/fee-categories`, and `/api/admin/fee-structures`
 - Assessment and ledger APIs: `/api/admin/students/[id]/assessments`, `/api/admin/assessments/[id]`, and `/api/admin/assessments/[id]/adjustments`
-- Payment and receipt APIs: `/api/admin/payments`, `/api/admin/payments/[id]`, `/api/admin/payments/[id]/reverse`, and `/api/receipts/[id]/pdf`
+- Payment, proof, and receipt APIs: `/api/admin/payments`, `/api/admin/payments/[id]`, `/api/admin/payments/[id]/reverse`, `/api/admin/payment-submissions`, and `/api/receipts/[id]/pdf`
 
 ## Local setup
 

@@ -144,7 +144,9 @@ export default function AdminTransactionDetailsPage({
       <Card className="border-slate-200 shadow-sm dark:border-slate-800">
         <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-slate-800">
           <div>
-            <span className="font-mono text-xs text-slate-500">Payment acknowledgment receipt</span>
+            <span className="font-mono text-xs text-slate-500">
+              System-generated payment receipt
+            </span>
             <CardTitle className="font-mono text-xl font-bold">
               {payment.receipt?.receiptNumber ?? 'Receipt pending'}
             </CardTitle>

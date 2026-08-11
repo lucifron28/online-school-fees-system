@@ -886,7 +886,7 @@ async function ensurePayment(
     'RECEIPT',
     receipt.id,
     'Receipt available',
-    `Payment acknowledgment receipt ${receipt.receiptNumber} is available.`
+    `System-generated payment receipt ${receipt.receiptNumber} is available.`
   );
   return { payment, receipt };
 }

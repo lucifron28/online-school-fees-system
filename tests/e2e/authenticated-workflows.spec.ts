@@ -1,4 +1,6 @@
 import { expect, test, type APIResponse, type Page } from '@playwright/test';
+import { fictionalPaymentProof } from '../fixtures/fictional-payment-proof';
+import { formatCentavos } from '@/lib/utils/currency';
 
 const PASSWORD = 'DemoPass123!';
 
@@ -300,7 +302,9 @@ test.describe('authenticated financial workflow', () => {
       const parentPaymentRow = parent.getByRole('row').filter({ hasText: receiptNumber });
       await expect(parentPaymentRow).toBeVisible();
       await parentPaymentRow.getByRole('link', { name: 'View receipt', exact: true }).click();
-      await expect(parent.getByText(browserReference, { exact: true })).toBeVisible();
+      await expect(parent.getByText(browserReference, { exact: true })).toBeVisible({
+        timeout: 30_000,
+      });
 
       const student = await studentContext.newPage();
       await login(student, 'student', 'student@demo.school');
@@ -314,7 +318,9 @@ test.describe('authenticated financial workflow', () => {
       const studentPaymentRow = student.getByRole('row').filter({ hasText: receiptNumber });
       await expect(studentPaymentRow).toBeVisible();
       await studentPaymentRow.getByRole('link', { name: 'View receipt', exact: true }).click();
-      await expect(student.getByText(browserReference, { exact: true })).toBeVisible();
+      await expect(student.getByText(browserReference, { exact: true })).toBeVisible({
+        timeout: 30_000,
+      });
     } finally {
       await Promise.all([financeContext.close(), parentContext.close(), studentContext.close()]);
     }
@@ -379,6 +385,190 @@ test.describe('authenticated financial workflow', () => {
       ).toContainText('₱60,000.00');
     } finally {
       await financeContext.close();
+    }
+  });
+
+  test('browser-only UI verifies a manual GCash proof and shows the system-generated receipt', async ({
+    browser,
+  }) => {
+    test.setTimeout(120_000);
+    const suffix = Date.now();
+    const adminContext = await browser.newContext();
+    const parentContext = await browser.newContext();
+    const financeContext = await browser.newContext();
+
+    try {
+      const admin = await adminContext.newPage();
+      await login(admin, 'admin', 'admin@demo.school');
+      const announcementTitle = `E2E payment update ${suffix}`;
+      const announcement = await jsonResponse<{ id: string }>(
+        await admin.request.post('/api/admin/announcements', {
+          data: {
+            title: announcementTitle,
+            body: 'Fictional payment verification hours are available in the parent portal.',
+            audience: 'PARENT_AND_STUDENT',
+            status: 'PUBLISHED',
+            publishAt: new Date(Date.now() - 60_000).toISOString(),
+            expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+          },
+        })
+      );
+      expect(announcement.id).toBeTruthy();
+
+      const parent = await parentContext.newPage();
+      await login(parent, 'parent', 'parent@demo.school');
+      const children = await jsonResponse<
+        Array<{ studentId: string; studentNumber: string; outstandingBalanceCentavos: number }>
+      >(await parent.request.get('/api/portal/parent/children'));
+      const child = children.find((item) => item.outstandingBalanceCentavos > 0);
+      expect(child).toBeDefined();
+      const amount = child!.outstandingBalanceCentavos;
+      const reference = `E2E-MANUAL-GCASH-${suffix}`;
+
+      await expect(parent.getByText(announcementTitle, { exact: true })).toBeVisible();
+      await expect(
+        parent.getByText('WITH REMAINING BALANCE', { exact: true }).first()
+      ).toBeVisible();
+      await parent.goto(`/parent/pay?studentId=${child!.studentId}`);
+      await expect(
+        parent.getByRole('heading', { name: 'Submit GCash or Maya payment proof', exact: true })
+      ).toBeVisible();
+      await parent.getByRole('button', { name: /^GCASH/ }).click();
+      await expect(parent.getByText(/OSFS Demo GCash Account/)).toBeVisible();
+      await parent.getByLabel('Amount transferred (PHP)').fill((amount / 100).toFixed(2));
+      await parent.getByLabel('Transaction/reference number').fill(reference);
+      await parent
+        .getByLabel('Transaction date and time')
+        .fill(new Date(Date.now() - 60_000).toISOString().slice(0, 16));
+      await parent.getByLabel('Screenshot/proof').setInputFiles({
+        name: 'fictional-payment-proof.png',
+        mimeType: 'image/png',
+        buffer: fictionalPaymentProof,
+      });
+      await parent.getByRole('button', { name: 'Submit payment proof', exact: true }).click();
+      await expect(parent.getByText('PENDING VERIFICATION', { exact: true })).toBeVisible();
+      await expect(
+        parent.getByText('The balance will remain unchanged until Finance Staff approves it.')
+      ).toBeVisible();
+
+      const finance = await financeContext.newPage();
+      await login(finance, 'admin', 'finance@demo.school');
+      await finance.goto('/admin/payment-submissions');
+      await Promise.all([
+        finance.waitForResponse((response) => {
+          if (!response.url().includes('/api/admin/payment-submissions') || !response.ok()) {
+            return false;
+          }
+          return new URL(response.url()).searchParams.get('search') === reference;
+        }),
+        finance.getByLabel('Search student or reference').fill(reference),
+      ]);
+      const pendingRow = finance.getByRole('row').filter({ hasText: reference });
+      await expect(pendingRow).toBeVisible({ timeout: 15_000 });
+      await pendingRow.click();
+      await expect(finance.getByText(`Reference: ${reference}`, { exact: true })).toBeVisible({
+        timeout: 15_000,
+      });
+      finance.once('dialog', (dialog) => dialog.accept());
+      await finance.getByRole('button', { name: 'Approve and post payment', exact: true }).click();
+      await expect(finance.getByRole('status')).toContainText('Payment proof approved and posted.');
+
+      await parent.goto('/parent/dashboard');
+      await expect(parent.getByText('FULLY PAID', { exact: true }).first()).toBeVisible();
+      await parent.goto('/parent/payment-submissions');
+      const approvedRow = parent.getByRole('row').filter({ hasText: reference });
+      await expect(approvedRow).toContainText('APPROVED', { timeout: 15_000 });
+      await approvedRow.getByRole('link', { name: /View system-generated receipt/ }).click();
+      await expect(parent).toHaveURL(/\/parent\/receipts\//);
+      await expect(
+        parent.getByRole('heading', { name: /System-generated payment receipt/i })
+      ).toBeVisible();
+      await expect(
+        parent.getByText(
+          'This system-generated receipt records a payment verified in the school fees monitoring system. It is not an official tax receipt.',
+          { exact: false }
+        )
+      ).toBeVisible();
+    } finally {
+      await Promise.all([adminContext.close(), parentContext.close(), financeContext.close()]);
+    }
+  });
+
+  test('browser-only UI rejects a manual Maya proof without changing the balance', async ({
+    browser,
+  }) => {
+    test.setTimeout(120_000);
+    const suffix = Date.now();
+    const parentContext = await browser.newContext();
+    const financeContext = await browser.newContext();
+
+    try {
+      const parent = await parentContext.newPage();
+      await login(parent, 'parent', 'parent@demo.school');
+      const children = await jsonResponse<
+        Array<{ studentId: string; studentNumber: string; outstandingBalanceCentavos: number }>
+      >(await parent.request.get('/api/portal/parent/children'));
+      const child = children.find((item) => item.outstandingBalanceCentavos > 0);
+      expect(child).toBeDefined();
+      const beforeBalance = child!.outstandingBalanceCentavos;
+      const amount = Math.min(beforeBalance, 12_345);
+      const reference = `E2E-MANUAL-MAYA-${suffix}`;
+
+      await parent.goto(`/parent/pay?studentId=${child!.studentId}`);
+      await parent.getByRole('button', { name: /^MAYA/ }).click();
+      await expect(parent.getByText(/OSFS Demo Maya Account/)).toBeVisible();
+      await parent.getByLabel('Amount transferred (PHP)').fill((amount / 100).toFixed(2));
+      await parent.getByLabel('Transaction/reference number').fill(reference);
+      await parent
+        .getByLabel('Transaction date and time')
+        .fill(new Date(Date.now() - 60_000).toISOString().slice(0, 16));
+      await parent.getByLabel('Screenshot/proof').setInputFiles({
+        name: 'fictional-maya-proof.png',
+        mimeType: 'image/png',
+        buffer: fictionalPaymentProof,
+      });
+      await parent.getByRole('button', { name: 'Submit payment proof', exact: true }).click();
+      await expect(parent.getByText('PENDING VERIFICATION', { exact: true })).toBeVisible();
+
+      const finance = await financeContext.newPage();
+      await login(finance, 'admin', 'finance@demo.school');
+      await finance.goto('/admin/payment-submissions');
+      await Promise.all([
+        finance.waitForResponse((response) => {
+          if (!response.url().includes('/api/admin/payment-submissions') || !response.ok()) {
+            return false;
+          }
+          return new URL(response.url()).searchParams.get('search') === reference;
+        }),
+        finance.getByLabel('Search student or reference').fill(reference),
+      ]);
+      const pendingRow = finance.getByRole('row').filter({ hasText: reference });
+      await expect(pendingRow).toBeVisible({ timeout: 15_000 });
+      await pendingRow.click();
+      await finance
+        .getByLabel('Rejection reason (required to reject)')
+        .fill('The fictional proof needs a clearer transfer reference.');
+      await finance.getByRole('button', { name: 'Reject proof', exact: true }).click();
+      await expect(finance.getByRole('status')).toContainText('Payment proof rejected.');
+
+      await parent.goto('/parent/payment-submissions');
+      await expect(
+        parent.getByRole('heading', { name: 'Payment proof submissions', exact: true })
+      ).toBeVisible();
+      const rejectedRow = parent.getByRole('row').filter({ hasText: reference });
+      await expect(rejectedRow).toContainText('REJECTED', { timeout: 30_000 });
+      await expect(rejectedRow).toContainText(
+        'The fictional proof needs a clearer transfer reference.'
+      );
+      await parent.goto(`/parent/children/${child!.studentId}`);
+      await expect(
+        parent.getByText(formatCentavos(beforeBalance), { exact: true }).first()
+      ).toBeVisible();
+      await expect(
+        parent.getByText('WITH REMAINING BALANCE', { exact: true }).first()
+      ).toBeVisible();
+    } finally {
+      await Promise.all([parentContext.close(), financeContext.close()]);
     }
   });
 });

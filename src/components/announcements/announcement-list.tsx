@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, BellRing, CalendarClock, Megaphone, Pencil, Send } from 'lucide-react';
@@ -390,5 +391,53 @@ export function PortalAnnouncementList({ audience }: { audience: 'PARENT' | 'STU
         </Card>
       ))}
     </div>
+  );
+}
+
+export function PortalAnnouncementPreview({ audience }: { audience: 'PARENT' | 'STUDENT' }) {
+  const query = useQuery({
+    queryKey: ['portal-announcements', audience],
+    queryFn: () => requestJson<Announcement[]>('/api/portal/announcements'),
+  });
+  const announcements = useMemo(() => (query.data ?? []).slice(0, 3), [query.data]);
+  const href = audience === 'PARENT' ? '/parent/announcements' : '/student/announcements';
+
+  return (
+    <Card className="border-slate-200 shadow-sm dark:border-slate-800">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
+        <div>
+          <CardTitle className="text-base">Payment announcements</CardTitle>
+          <p className="text-xs text-slate-500">Current published payment updates.</p>
+        </div>
+        <Link href={href} className="text-xs font-semibold text-blue-600 hover:underline">
+          View all
+        </Link>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {query.isPending && <p className="text-sm text-slate-500">Loading announcements...</p>}
+        {query.isError && (
+          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+            {getClientErrorMessage(query.error)}
+          </p>
+        )}
+        {query.data && announcements.length === 0 && (
+          <p className="text-sm text-slate-500">No current payment announcements.</p>
+        )}
+        {announcements.map((announcement) => (
+          <article key={announcement.id} className="rounded-lg border border-slate-100 p-3">
+            <div className="flex items-center gap-2">
+              <BellRing className="h-3.5 w-3.5 text-emerald-600" />
+              <h3 className="text-sm font-semibold">{announcement.title}</h3>
+            </div>
+            <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">
+              {announcement.body}
+            </p>
+            <p className="mt-2 text-[11px] text-slate-400">
+              Published {displayDate(announcement.publishAt)}
+            </p>
+          </article>
+        ))}
+      </CardContent>
+    </Card>
   );
 }

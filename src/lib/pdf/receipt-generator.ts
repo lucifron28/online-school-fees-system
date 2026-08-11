@@ -27,6 +27,10 @@ export interface ReceiptPdfData {
   };
 }
 
+export const SYSTEM_GENERATED_RECEIPT_TITLE = 'System-Generated Payment Receipt';
+export const SYSTEM_GENERATED_RECEIPT_DISCLAIMER =
+  'This system-generated receipt records a payment verified in the school fees monitoring system. It is not an official tax receipt.';
+
 const PAGE_WIDTH = 600;
 const PAGE_HEIGHT = 750;
 const ROW_HEIGHT = 16;
@@ -145,8 +149,8 @@ function drawFirstPageHeader(page: PDFPage, data: ReceiptPdfData, bold: PdfFont,
   });
   page.drawText(
     data.status === 'VOIDED'
-      ? 'PAYMENT ACKNOWLEDGMENT RECEIPT - VOIDED'
-      : 'PAYMENT ACKNOWLEDGMENT RECEIPT',
+      ? `${SYSTEM_GENERATED_RECEIPT_TITLE} - VOIDED`
+      : SYSTEM_GENERATED_RECEIPT_TITLE,
     {
       x: 50,
       y: y + 3,
@@ -306,25 +310,44 @@ function drawSummary(
     x: 40,
     y: y - 5,
     width: width - 80,
-    height: 25,
+    height: 38,
     color: rgb(0.99, 0.95, 0.95),
     borderColor: rgb(0.95, 0.8, 0.8),
     borderWidth: 1,
   });
+  page.drawText('DEMO DISCLAIMER', {
+    x: 50,
+    y: y + 12,
+    size: 8,
+    font: bold,
+    color: rgb(0.7, 0.1, 0.1),
+  });
   page.drawText(
-    'DEMO DISCLAIMER: Payment Acknowledgment Receipt - Fictional Capstone Demo System',
+    fitPdfText(
+      'This system-generated receipt records a payment verified in the school fees monitoring system.',
+      regular,
+      7,
+      width - 100
+    ),
     {
       x: 50,
-      y: y + 3,
-      size: 8,
-      font: bold,
-      color: rgb(0.7, 0.1, 0.1),
+      y: y - 1,
+      size: 7,
+      font: regular,
+      color: rgb(0.45, 0.1, 0.1),
     }
   );
+  page.drawText('It is not an official tax receipt.', {
+    x: 50,
+    y: y - 12,
+    size: 7,
+    font: regular,
+    color: rgb(0.45, 0.1, 0.1),
+  });
 }
 
 /**
- * Generates a Payment Acknowledgment Receipt PDF using pdf-lib.
+ * Generates a System-Generated Payment Receipt PDF using pdf-lib.
  * Returns Uint8Array binary bytes suitable for download or HTTP response.
  */
 export async function generateReceiptPdf(data: ReceiptPdfData): Promise<Uint8Array> {

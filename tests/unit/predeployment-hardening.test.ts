@@ -1,7 +1,11 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { getReceiptProcessorName } from '@/lib/receipt-snapshot';
-import { generateReceiptPdf } from '@/lib/pdf/receipt-generator';
+import {
+  generateReceiptPdf,
+  SYSTEM_GENERATED_RECEIPT_DISCLAIMER,
+  SYSTEM_GENERATED_RECEIPT_TITLE,
+} from '@/lib/pdf/receipt-generator';
 import { fitPdfText } from '@/lib/pdf/text';
 import { generateStatementPdf } from '@/lib/pdf/statement-generator';
 import type { StudentStatement } from '@/lib/reports';
@@ -67,6 +71,11 @@ function receiptWithAllocations(count: number) {
 }
 
 describe('final pre-deployment hardening', () => {
+  it('uses system-generated receipt wording with a tax-receipt disclaimer', () => {
+    expect(SYSTEM_GENERATED_RECEIPT_TITLE).toBe('System-Generated Payment Receipt');
+    expect(SYSTEM_GENERATED_RECEIPT_DISCLAIMER).toContain('It is not an official tax receipt.');
+  });
+
   it.each([
     [0, 1],
     [1, 1],

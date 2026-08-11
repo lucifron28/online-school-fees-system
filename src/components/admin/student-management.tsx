@@ -8,6 +8,8 @@ import { useForm } from '@tanstack/react-form';
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table';
 import { studentCreateInputSchema, type StudentCreateInput } from '@/lib/students-fees';
 import { requestJson, getClientErrorMessage } from '@/lib/client-api';
+import { paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
+import { formatCentavos } from '@/lib/utils/currency';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -38,6 +40,7 @@ type StudentRow = StudentCreateInput & {
   sectionName: string | null;
   sectionCode: string | null;
   schoolYearName: string | null;
+  outstandingBalanceCentavos: number;
 };
 
 type StudentListResponse = {
@@ -410,6 +413,24 @@ export function StudentManagement() {
             {row.original.status}
           </Badge>
         ),
+      },
+      {
+        id: 'balance',
+        header: 'Payment status',
+        cell: ({ row }) => {
+          const status =
+            row.original.outstandingBalanceCentavos === 0 ? 'PAID' : 'WITH_REMAINING_BALANCE';
+          return (
+            <div className="text-xs">
+              <p className="font-semibold">
+                {formatCentavos(row.original.outstandingBalanceCentavos)}
+              </p>
+              <Badge variant="outline" className={`mt-1 text-[10px] ${paymentStatusClass(status)}`}>
+                {paymentStatusLabel(status)}
+              </Badge>
+            </div>
+          );
+        },
       },
       {
         id: 'actions',

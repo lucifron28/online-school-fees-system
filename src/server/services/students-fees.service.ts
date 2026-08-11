@@ -125,6 +125,27 @@ async function assertUserRole(
   }
 }
 
+async function selectStudentOutstandingBalances(studentIds: string[], db: DatabaseInstance) {
+  if (studentIds.length === 0) return new Map<string, number>();
+  const entries = await db
+    .select({
+      studentId: schema.ledgerEntries.studentId,
+      debitCentavos: schema.ledgerEntries.debitCentavos,
+      creditCentavos: schema.ledgerEntries.creditCentavos,
+    })
+    .from(schema.ledgerEntries)
+    .where(inArray(schema.ledgerEntries.studentId, studentIds));
+  const balances = new Map<string, number>();
+  for (const studentId of studentIds) balances.set(studentId, 0);
+  for (const entry of entries) {
+    balances.set(
+      entry.studentId,
+      (balances.get(entry.studentId) ?? 0) + entry.debitCentavos - entry.creditCentavos
+    );
+  }
+  return balances;
+}
+
 async function assertStudentReferences(
   input: {
     gradeLevelId: string | null;
@@ -241,8 +262,15 @@ export async function listStudents(
       .where(where),
   ]);
 
+  const balances = await selectStudentOutstandingBalances(
+    rows.map((row) => row.id),
+    db
+  );
   return {
-    data: rows,
+    data: rows.map((row) => ({
+      ...row,
+      outstandingBalanceCentavos: balances.get(row.id) ?? 0,
+    })),
     pagination: {
       page: values.page,
       pageSize: values.pageSize,
