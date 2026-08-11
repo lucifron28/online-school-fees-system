@@ -399,7 +399,7 @@ export function ManualPaymentForm() {
           <DialogTitle>Payment posted</DialogTitle>
           <DialogDescription>
             The payment, oldest-obligation allocations, per-assessment ledger entries,
-            acknowledgment receipt, and audit event were committed together.
+            System-Generated Payment Receipt, and audit event were committed together.
           </DialogDescription>
         </DialogHeader>
         {successPayment && (

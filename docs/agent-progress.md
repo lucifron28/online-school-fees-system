@@ -1,16 +1,16 @@
 # Agent Progress Log
 
-This file is a historical handoff, not a completion certificate. Earlier phase notes claimed a complete system even though the current repository still contains intentionally simulated payment-provider behavior and external deployment prerequisites. Those claims are recorded and corrected in [docs/goal-findings.md](goal-findings.md). The current branch is finalizing the client-clarified payment-monitoring scope and its hosted acceptance evidence.
+This file is a historical handoff, not a completion certificate. Earlier phase notes claimed a complete system even though the current repository still contains intentionally simulated payment-provider behavior and external deployment prerequisites. Those claims are recorded and corrected in [docs/goal-findings.md](goal-findings.md). The client-clarified payment-monitoring scope is merged; this branch is performing a final evidence and documentation audit.
 
 ## Current execution state
 
-- Branch: `fix/28-client-scope-finalization`
-- Phase: Final client-scope clarification; local implementation checks are complete, with hosted verification and fictional deployment evidence still external
-- Starting main: `246a69df64939f1b08c30436410c1efef76beab6`
+- Branch: `fix/final-scope-audit`
+- Phase: Final secondary audit and evidence repair
+- Audited main: `f2b81b9c5ce0b2a79091acb6f825a27040e9189f`
 - GitHub connector: required for PR creation, self-review comment, merge, and remote CI because the local `gh` token is invalid
-- Verification: local unit tests (66), typecheck, lint, targeted formatting, integration harness, and production build passed; local PostgreSQL and Playwright checks require external configuration
+- Verification: merged main has hosted Foundation CI evidence for the final-scope workflow; the corrective branch adds due-date browser assertions and will be rechecked before merge. Local PostgreSQL and full Playwright checks require external configuration.
 - Final Round 3 evidence: hosted Foundation run [#123](https://github.com/lucifron28/online-school-fees-system/actions/runs/31328129030) passed migration/seed/reset/verifier, formatting, lint, typecheck, 57 unit tests, 46 integration tests, build, and 7 Playwright tests; historical run [#122](https://github.com/lucifron28/online-school-fees-system/actions/runs/31327646073) remains retained for traceability
-- Current scope: ledger-derived payment status labels, current payment-announcement visibility, manual GCash/Maya proof approval/rejection, System-Generated Payment Receipt wording, and final client-scope documentation
+- Current scope: ledger-derived payment status labels, due dates and deadline states, current payment-announcement visibility, manual GCash/Maya proof approval/rejection, System-Generated Payment Receipt wording, and final client-scope documentation
 
 ## Historical branches
 

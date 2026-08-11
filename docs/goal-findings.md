@@ -70,7 +70,11 @@ Round 3 addresses the remaining financial-history and lifecycle gaps. The implem
 
 ## Final client-scope clarification
 
-The final scope is implemented on `fix/28-client-scope-finalization`. Active UI and documentation now describe payment monitoring only: ledger-derived FULLY PAID/WITH REMAINING BALANCE states, due-date status, current payment-announcement visibility, and manual GCash/Maya proof approval or rejection. The normal parent flow does not claim a GCash/Maya API or automatic verification. Academic grades/gradebook data, attendance, conduct, class participation, academic analytics, impact tagging, restriction tracking, predictive analytics, and general SIS behavior are explicitly out of scope. See `docs/client-clarified-requirements.md` for the acceptance contract.
+The final scope was implemented on `fix/28-client-scope-finalization` and merged to `main` at `f2b81b9c5ce0b2a79091acb6f825a27040e9189f`. Active UI and documentation now describe payment monitoring only: ledger-derived FULLY PAID/WITH REMAINING BALANCE states, persisted due-date status and reminders, current payment-announcement visibility, and manual GCash/Maya proof approval or rejection. The normal parent flow does not claim a GCash/Maya API or automatic verification. Academic grades/gradebook data, attendance, conduct, class participation, academic analytics, impact tagging, restriction tracking, predictive analytics, and general SIS behavior are explicitly out of scope. See `docs/client-clarified-requirements.md` for the acceptance contract.
+
+## Final secondary audit
+
+The corrective audit branch is `fix/final-scope-audit`. It updates stale progress wording and adds browser assertions that the persisted due date is visible to both a parent and a student. No production deployment or new feature phase is being started.
 
 | ID      | Severity | Finding                                                                                                                            | Repair status                                                                                                                  |
 | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
