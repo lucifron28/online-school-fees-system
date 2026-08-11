@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v3';
 
 export const REPORT_TIME_ZONE = 'Asia/Manila';
 

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v3';
 
 export const otcPaymentMethodSchema = z.enum(['CASH', 'BANK_DEPOSIT']);
 export const paymentMethodSchema = z.enum(['CASH', 'BANK_DEPOSIT', 'MOCK_ONLINE']);

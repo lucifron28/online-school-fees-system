@@ -23,7 +23,11 @@ export default function RootLayout({
         <QueryProvider>
           <header className="border-b border-border/80 bg-background/90 backdrop-blur-md">
             <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-              <Link href="/" className="flex items-center gap-3 rounded-lg" aria-label="School fees home">
+              <Link
+                href="/"
+                className="flex items-center gap-3 rounded-lg"
+                aria-label="School fees home"
+              >
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-foreground text-xs font-bold text-background shadow-sm">
                   MP
                 </div>
@@ -31,7 +35,9 @@ export default function RootLayout({
                   <span className="block text-sm font-semibold leading-none tracking-tight text-foreground">
                     Online School Fees
                   </span>
-                  <span className="mt-1 block text-xs text-muted-foreground">School finance portal</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    School finance portal
+                  </span>
                 </div>
               </Link>
               <span className="hidden rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground sm:inline-flex">

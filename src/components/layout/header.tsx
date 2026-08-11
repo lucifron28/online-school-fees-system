@@ -15,24 +15,88 @@ interface HeaderProps {
 }
 
 const pageCopy = [
-  { path: '/admin/dashboard', title: 'Dashboard', subtitle: 'A clear view of school collections and balances.' },
-  { path: '/admin/students', title: 'Students', subtitle: 'Manage student records and account links.' },
-  { path: '/admin/guardians', title: 'Guardians', subtitle: 'Keep family account relationships current.' },
-  { path: '/admin/fees', title: 'Fees management', subtitle: 'Maintain assessment structures for the school year.' },
-  { path: '/admin/payments', title: 'Payments', subtitle: 'Record and review over-the-counter payments.' },
-  { path: '/admin/transactions', title: 'Transactions', subtitle: 'Review the school payment ledger.' },
-  { path: '/admin/reports', title: 'Reports', subtitle: 'Export and reconcile financial activity.' },
-  { path: '/admin/notifications', title: 'Notifications', subtitle: 'Review important account updates.' },
+  {
+    path: '/admin/dashboard',
+    title: 'Dashboard',
+    subtitle: 'A clear view of school collections and balances.',
+  },
+  {
+    path: '/admin/students',
+    title: 'Students',
+    subtitle: 'Manage student records and account links.',
+  },
+  {
+    path: '/admin/guardians',
+    title: 'Guardians',
+    subtitle: 'Keep family account relationships current.',
+  },
+  {
+    path: '/admin/fees',
+    title: 'Fees management',
+    subtitle: 'Maintain assessment structures for the school year.',
+  },
+  {
+    path: '/admin/payments',
+    title: 'Payments',
+    subtitle: 'Record and review over-the-counter payments.',
+  },
+  {
+    path: '/admin/transactions',
+    title: 'Transactions',
+    subtitle: 'Review the school payment ledger.',
+  },
+  {
+    path: '/admin/reports',
+    title: 'Reports',
+    subtitle: 'Export and reconcile financial activity.',
+  },
+  {
+    path: '/admin/notifications',
+    title: 'Notifications',
+    subtitle: 'Review important account updates.',
+  },
   { path: '/admin/users', title: 'Users', subtitle: 'Manage portal access and roles.' },
   { path: '/admin/settings', title: 'Settings', subtitle: 'Configure school finance preferences.' },
-  { path: '/parent/dashboard', title: 'Dashboard', subtitle: 'Keep your children’s fee records in view.' },
-  { path: '/parent/history', title: 'Payment history', subtitle: 'Review receipts and completed payments.' },
-  { path: '/parent/pay', title: 'Make a payment', subtitle: 'Choose a payment method for an outstanding balance.' },
-  { path: '/parent/notifications', title: 'Notifications', subtitle: 'Review updates about your account.' },
-  { path: '/student/dashboard', title: 'Dashboard', subtitle: 'Keep your assessment and payment records close.' },
-  { path: '/student/account', title: 'My account', subtitle: 'Review your current assessment and balance.' },
-  { path: '/student/history', title: 'Payment history', subtitle: 'Review your completed payments and receipts.' },
-  { path: '/student/notifications', title: 'Notifications', subtitle: 'Review updates about your account.' },
+  {
+    path: '/parent/dashboard',
+    title: 'Dashboard',
+    subtitle: 'Keep your children’s fee records in view.',
+  },
+  {
+    path: '/parent/history',
+    title: 'Payment history',
+    subtitle: 'Review receipts and completed payments.',
+  },
+  {
+    path: '/parent/pay',
+    title: 'Make a payment',
+    subtitle: 'Choose a payment method for an outstanding balance.',
+  },
+  {
+    path: '/parent/notifications',
+    title: 'Notifications',
+    subtitle: 'Review updates about your account.',
+  },
+  {
+    path: '/student/dashboard',
+    title: 'Dashboard',
+    subtitle: 'Keep your assessment and payment records close.',
+  },
+  {
+    path: '/student/account',
+    title: 'My account',
+    subtitle: 'Review your current assessment and balance.',
+  },
+  {
+    path: '/student/history',
+    title: 'Payment history',
+    subtitle: 'Review your completed payments and receipts.',
+  },
+  {
+    path: '/student/notifications',
+    title: 'Notifications',
+    subtitle: 'Review updates about your account.',
+  },
 ];
 
 function getPageCopy(pathname: string, fallbackTitle: string, fallbackSubtitle?: string) {
@@ -61,7 +125,9 @@ export function Header({
   return (
     <header className="sticky top-0 z-30 hidden h-[4.5rem] w-full items-center justify-between border-b border-border bg-background/90 px-6 backdrop-blur-md lg:flex">
       <div className="min-w-0">
-        <h1 className="truncate text-lg font-semibold tracking-tight text-foreground">{copy.title}</h1>
+        <h1 className="truncate text-lg font-semibold tracking-tight text-foreground">
+          {copy.title}
+        </h1>
         {copy.subtitle && <p className="truncate text-xs text-muted-foreground">{copy.subtitle}</p>}
       </div>
 
@@ -79,7 +145,9 @@ export function Header({
             <User className="h-4 w-4" aria-hidden="true" />
           </div>
           <div className="hidden text-left sm:block">
-            <p className="max-w-40 truncate text-xs font-semibold leading-tight text-foreground">{userName}</p>
+            <p className="max-w-40 truncate text-xs font-semibold leading-tight text-foreground">
+              {userName}
+            </p>
             <p className="text-[10px] text-muted-foreground">{userRole}</p>
           </div>
         </div>

@@ -102,7 +102,9 @@ export default function StudentReceiptPage({ params }: { params: Promise<{ id: s
               </div>
               <div>
                 <span className="text-slate-400">Reference</span>
-                <p className="font-mono font-semibold">{payment.referenceNumber ?? 'Not available'}</p>
+                <p className="font-mono font-semibold">
+                  {payment.referenceNumber ?? 'Not available'}
+                </p>
               </div>
               <div>
                 <span className="text-slate-400">Transaction status</span>

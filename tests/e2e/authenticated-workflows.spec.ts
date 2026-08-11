@@ -250,7 +250,9 @@ test.describe('authenticated financial workflow', () => {
       const finance = await financeContext.newPage();
       await login(finance, 'admin', 'finance@demo.school');
       await finance.goto('/admin/payments/manual');
-      await expect(finance.getByText('FINANCE STAFF', { exact: true })).toBeVisible();
+      await expect(
+        finance.getByRole('link', { name: 'Finance Staff Portal', exact: true })
+      ).toBeVisible();
       await expect(finance.getByRole('link', { name: 'Users', exact: true })).toHaveCount(0);
       await expect(finance.getByRole('link', { name: 'Settings', exact: true })).toHaveCount(0);
       const studentSearch = finance.getByLabel('Search students');
@@ -292,9 +294,9 @@ test.describe('authenticated financial workflow', () => {
       await login(parent, 'parent', 'parent@demo.school');
       await expect(parent.getByText(/DEMO-0001/)).toBeVisible({ timeout: 15_000 });
       await parent.getByRole('link', { name: 'Payment History', exact: true }).click();
-      await expect(parent.getByRole('heading', { name: 'Payment history' })).toBeVisible({
-        timeout: 15_000,
-      });
+      await expect(
+        parent.locator('main').getByRole('heading', { name: 'Payment history' })
+      ).toBeVisible({ timeout: 15_000 });
       const parentPaymentRow = parent.getByRole('row').filter({ hasText: receiptNumber });
       await expect(parentPaymentRow).toBeVisible();
       await parentPaymentRow.getByRole('link', { name: 'View receipt', exact: true }).click();
@@ -306,7 +308,9 @@ test.describe('authenticated financial workflow', () => {
       await student.getByRole('link', { name: 'My Account', exact: true }).click();
       await expect(student.getByText('Finance-posted fee assessments')).toBeVisible();
       await student.getByRole('link', { name: 'Payment History', exact: true }).click();
-      await expect(student.getByRole('heading', { name: 'Payment history' })).toBeVisible();
+      await expect(
+        student.locator('main').getByRole('heading', { name: 'Payment history' })
+      ).toBeVisible();
       const studentPaymentRow = student.getByRole('row').filter({ hasText: receiptNumber });
       await expect(studentPaymentRow).toBeVisible();
       await studentPaymentRow.getByRole('link', { name: 'View receipt', exact: true }).click();

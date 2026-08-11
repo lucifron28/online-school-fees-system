@@ -101,7 +101,9 @@ export default function ParentReceiptPage({ params }: { params: Promise<{ id: st
               </div>
               <div>
                 <span className="text-slate-400">Reference</span>
-                <p className="font-mono font-semibold">{payment.referenceNumber ?? 'Not available'}</p>
+                <p className="font-mono font-semibold">
+                  {payment.referenceNumber ?? 'Not available'}
+                </p>
               </div>
               <div>
                 <span className="text-slate-400">Transaction status</span>

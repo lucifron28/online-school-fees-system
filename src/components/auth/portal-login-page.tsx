@@ -1,11 +1,5 @@
 import Link from 'next/link';
-import {
-  CheckCircle2,
-  GraduationCap,
-  Shield,
-  ShieldCheck,
-  Users,
-} from 'lucide-react';
+import { CheckCircle2, GraduationCap, Shield, ShieldCheck, Users } from 'lucide-react';
 import { LoginForm } from '@/components/auth/login-form';
 
 type LoginPortal = 'admin' | 'parent' | 'student';
@@ -84,8 +78,14 @@ function PortalVisual({ config }: { config: PortalConfig }) {
 
   return (
     <aside className="relative hidden overflow-hidden bg-slate-950 p-8 text-white lg:flex lg:flex-col lg:justify-between xl:p-12">
-      <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/10" aria-hidden="true" />
-      <div className="absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-teal-500/10" aria-hidden="true" />
+      <div
+        className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/10"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-teal-500/10"
+        aria-hidden="true"
+      />
 
       <div className="relative max-w-xl">
         <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-200">
@@ -95,7 +95,9 @@ function PortalVisual({ config }: { config: PortalConfig }) {
         <div className="mt-10 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 shadow-lg">
           <Icon className="h-7 w-7" aria-hidden="true" />
         </div>
-        <h2 className="mt-8 max-w-lg text-3xl font-semibold tracking-tight xl:text-4xl">{config.panelTitle}</h2>
+        <h2 className="mt-8 max-w-lg text-3xl font-semibold tracking-tight xl:text-4xl">
+          {config.panelTitle}
+        </h2>
         <p className="mt-4 max-w-lg text-sm leading-7 text-slate-300">{config.panelDescription}</p>
         <ul className="mt-8 space-y-4 text-sm text-slate-200">
           {config.panelPoints.map((point) => (
@@ -122,7 +124,10 @@ export function PortalLoginPage({ portal }: { portal: LoginPortal }) {
     <div className="grid min-h-[calc(100dvh-8rem)] bg-background lg:grid-cols-2">
       <section className="flex items-center border-b border-border px-5 py-10 sm:px-8 lg:border-b-0 lg:border-r lg:px-12 xl:px-20">
         <div className="mx-auto w-full max-w-md">
-          <Link href="/" className="text-xs font-semibold text-muted-foreground hover:text-foreground">
+          <Link
+            href="/"
+            className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
             Back to portal selection
           </Link>
 
@@ -131,8 +136,12 @@ export function PortalLoginPage({ portal }: { portal: LoginPortal }) {
               <Icon className="h-6 w-6" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{config.label}</p>
-              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{config.title}</h1>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                {config.label}
+              </p>
+              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                {config.title}
+              </h1>
               <p className="mt-3 text-sm leading-6 text-muted-foreground">{config.description}</p>
             </div>
           </div>
@@ -147,7 +156,9 @@ export function PortalLoginPage({ portal }: { portal: LoginPortal }) {
           />
 
           <div className="mt-8 border-t border-border pt-6">
-            <p className="mb-3 text-xs font-semibold text-muted-foreground">Use a different portal</p>
+            <p className="mb-3 text-xs font-semibold text-muted-foreground">
+              Use a different portal
+            </p>
             <div className="grid gap-2 sm:grid-cols-3">
               {portalSwitches
                 .filter((item) => item.portal !== portal)

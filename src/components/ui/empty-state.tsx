@@ -28,7 +28,7 @@ export function EmptyState({
       )}
       {...props}
     >
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <Icon className="h-6 w-6" />
       </div>
       <div>
