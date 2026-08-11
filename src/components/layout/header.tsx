@@ -41,6 +41,11 @@ const pageCopy = [
     subtitle: 'Record and review over-the-counter payments.',
   },
   {
+    path: '/admin/payment-submissions',
+    title: 'Payment proofs',
+    subtitle: 'Review GCash and Maya proof submissions before posting payment.',
+  },
+  {
     path: '/admin/transactions',
     title: 'Transactions',
     subtitle: 'Review the school payment ledger.',
@@ -75,7 +80,12 @@ const pageCopy = [
   {
     path: '/parent/pay',
     title: 'Make a payment',
-    subtitle: 'Choose a payment method for an outstanding balance.',
+    subtitle: 'Submit GCash or Maya payment proof for school verification.',
+  },
+  {
+    path: '/parent/payment-submissions',
+    title: 'Payment proofs',
+    subtitle: 'Review submitted GCash and Maya proofs.',
   },
   {
     path: '/parent/notifications',

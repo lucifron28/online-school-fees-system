@@ -92,3 +92,37 @@ export interface MockCheckoutResult {
   redirectUrl: string;
   status: 'CREATED' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
 }
+
+export interface PaymentDestinationOptions {
+  gcash: { accountName: string; accountNumber: string } | null;
+  maya: { accountName: string; accountNumber: string } | null;
+}
+
+export interface PortalPaymentSubmission {
+  id: string;
+  studentId: string;
+  studentNumber: string;
+  studentName: string;
+  studentStatus: string;
+  submittedByUserId: string;
+  submittedByName: string;
+  submittedByEmail: string;
+  paymentChannel: 'GCASH' | 'MAYA';
+  amountCentavos: number;
+  referenceNumber: string;
+  paidAt: string;
+  status: 'PENDING_VERIFICATION' | 'APPROVED' | 'REJECTED';
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+  approvedPaymentId: string | null;
+  receiptId: string | null;
+  receiptNumber: string | null;
+  proofId: string | null;
+  proofMimeType: string | null;
+  proofSizeBytes: number | null;
+  currentBalanceCentavos: number;
+  createdAt: string;
+  updatedAt: string;
+  paymentDestination?: { accountName: string; accountNumber: string } | null;
+}

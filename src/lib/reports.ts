@@ -177,6 +177,7 @@ export interface DashboardMetrics {
   paymentMethodBreakdown: CollectionBreakdown[];
   dueSoonCount: number;
   overdueCount: number;
+  pendingProofCount: number;
   deadlineAssessments: Array<{
     assessmentId: string;
     studentId: string;

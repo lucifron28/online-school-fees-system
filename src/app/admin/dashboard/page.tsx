@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   BarChart3,
+  ClipboardCheck,
   DollarSign,
   Plus,
   Receipt,
@@ -64,6 +65,11 @@ export default function AdminDashboardPage() {
           <Link href="/admin/announcements">
             <Button variant="outline" className="h-9 text-xs">
               Announcements
+            </Button>
+          </Link>
+          <Link href="/admin/payment-submissions">
+            <Button variant="outline" className="h-9 text-xs">
+              Payment proofs
             </Button>
           </Link>
           <Button
@@ -146,6 +152,13 @@ export default function AdminDashboardPage() {
                 subtext: 'Positive balances past due date',
                 icon: AlertCircle,
                 color: 'text-red-600 bg-red-50 dark:bg-red-950/50',
+              },
+              {
+                title: 'Pending Proofs',
+                value: data.pendingProofCount.toLocaleString(),
+                subtext: 'GCash/Maya reviews waiting for staff',
+                icon: ClipboardCheck,
+                color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/50',
               },
             ].map((metric) => {
               const Icon = metric.icon;
