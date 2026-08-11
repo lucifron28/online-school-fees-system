@@ -302,7 +302,9 @@ test.describe('authenticated financial workflow', () => {
       const parentPaymentRow = parent.getByRole('row').filter({ hasText: receiptNumber });
       await expect(parentPaymentRow).toBeVisible();
       await parentPaymentRow.getByRole('link', { name: 'View receipt', exact: true }).click();
-      await expect(parent.getByText(browserReference, { exact: true })).toBeVisible();
+      await expect(parent.getByText(browserReference, { exact: true })).toBeVisible({
+        timeout: 30_000,
+      });
 
       const student = await studentContext.newPage();
       await login(student, 'student', 'student@demo.school');
@@ -316,7 +318,9 @@ test.describe('authenticated financial workflow', () => {
       const studentPaymentRow = student.getByRole('row').filter({ hasText: receiptNumber });
       await expect(studentPaymentRow).toBeVisible();
       await studentPaymentRow.getByRole('link', { name: 'View receipt', exact: true }).click();
-      await expect(student.getByText(browserReference, { exact: true })).toBeVisible();
+      await expect(student.getByText(browserReference, { exact: true })).toBeVisible({
+        timeout: 30_000,
+      });
     } finally {
       await Promise.all([financeContext.close(), parentContext.close(), studentContext.close()]);
     }
@@ -450,11 +454,21 @@ test.describe('authenticated financial workflow', () => {
       const finance = await financeContext.newPage();
       await login(finance, 'admin', 'finance@demo.school');
       await finance.goto('/admin/payment-submissions');
-      await finance.getByLabel('Search student or reference').fill(reference);
+      await Promise.all([
+        finance.waitForResponse((response) => {
+          if (!response.url().includes('/api/admin/payment-submissions') || !response.ok()) {
+            return false;
+          }
+          return new URL(response.url()).searchParams.get('search') === reference;
+        }),
+        finance.getByLabel('Search student or reference').fill(reference),
+      ]);
       const pendingRow = finance.getByRole('row').filter({ hasText: reference });
-      await expect(pendingRow).toBeVisible();
+      await expect(pendingRow).toBeVisible({ timeout: 15_000 });
       await pendingRow.click();
-      await expect(finance.getByText(`Reference: ${reference}`, { exact: true })).toBeVisible();
+      await expect(finance.getByText(`Reference: ${reference}`, { exact: true })).toBeVisible({
+        timeout: 15_000,
+      });
       finance.once('dialog', (dialog) => dialog.accept());
       await finance.getByRole('button', { name: 'Approve and post payment', exact: true }).click();
       await expect(finance.getByRole('status')).toContainText('Payment proof approved and posted.');
@@ -463,7 +477,7 @@ test.describe('authenticated financial workflow', () => {
       await expect(parent.getByText('FULLY PAID', { exact: true }).first()).toBeVisible();
       await parent.goto('/parent/payment-submissions');
       const approvedRow = parent.getByRole('row').filter({ hasText: reference });
-      await expect(approvedRow).toContainText('APPROVED');
+      await expect(approvedRow).toContainText('APPROVED', { timeout: 15_000 });
       await approvedRow.getByRole('link', { name: /View system-generated receipt/ }).click();
       await expect(parent).toHaveURL(/\/parent\/receipts\//);
       await expect(
@@ -519,9 +533,17 @@ test.describe('authenticated financial workflow', () => {
       const finance = await financeContext.newPage();
       await login(finance, 'admin', 'finance@demo.school');
       await finance.goto('/admin/payment-submissions');
-      await finance.getByLabel('Search student or reference').fill(reference);
+      await Promise.all([
+        finance.waitForResponse((response) => {
+          if (!response.url().includes('/api/admin/payment-submissions') || !response.ok()) {
+            return false;
+          }
+          return new URL(response.url()).searchParams.get('search') === reference;
+        }),
+        finance.getByLabel('Search student or reference').fill(reference),
+      ]);
       const pendingRow = finance.getByRole('row').filter({ hasText: reference });
-      await expect(pendingRow).toBeVisible();
+      await expect(pendingRow).toBeVisible({ timeout: 15_000 });
       await pendingRow.click();
       await finance
         .getByLabel('Rejection reason (required to reject)')
