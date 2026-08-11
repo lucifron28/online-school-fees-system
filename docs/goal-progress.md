@@ -6,7 +6,7 @@
 - Branch: `fix/final-scope-audit`
 - Audited main commit: `f2b81b9c5ce0b2a79091acb6f825a27040e9189f`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Phase 1 deadline/announcement work, Phase 2 manual GCash/Maya verification, and Phase 3 client-scope finalization are merged to `main` and hosted-verified. This branch only repairs audit evidence and stale status documentation. External Vercel/Neon preview evidence remains a separate fictional deployment prerequisite.
+- Current state: Phase 1 deadline/announcement work, Phase 2 manual GCash/Maya verification, and Phase 3 client-scope finalization are merged to `main` and hosted-verified. Corrective PR [#22](https://github.com/lucifron28/online-school-fees-system/pull/22) adds due-date browser evidence and stale-wording repairs; hosted Foundation run [#161](https://github.com/lucifron28/online-school-fees-system/actions/runs/31529015883) passed all configured gates. External Vercel/Neon preview evidence remains a separate fictional deployment prerequisite.
 
 ## Completed phases
 
@@ -386,4 +386,5 @@ CodeGraph was used before editing to trace payment, gateway, ledger, administrat
 - Renamed active receipt UI, PDF headings, notifications, seed notification text, and current documentation to System-Generated Payment Receipt with the not-an-official-tax-receipt disclaimer. Historical audit records remain historical.
 - Added Playwright coverage for admin announcement setup, parent GCash proof submission and pending state, finance approval and receipt visibility, plus Maya submission, rejection reason, and unchanged balance.
 - The hosted browser workflow also asserts that the persisted assessment due date renders in both the parent child detail and student account screens.
+- Corrective PR #22 self-review `4910170861` and hosted Foundation run #161 passed the full audit branch; the protected-route smoke test passed on retry after one first-attempt timeout.
 - The normal parent flow remains manual external transfer proof. No GCash/Maya API, automatic transfer verification, official tax receipt, production-readiness, security-certification, accounting, tax-compliance, or deployment claim is made. Academic grades/gradebook data, attendance, conduct, academic-performance analytics, impact tagging, restriction tracking, predictive analytics, and general SIS features remain out of scope.
