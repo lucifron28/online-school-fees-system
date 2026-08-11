@@ -429,7 +429,7 @@ test.describe('authenticated financial workflow', () => {
       await expect(
         parent.getByRole('heading', { name: 'Submit GCash or Maya payment proof', exact: true })
       ).toBeVisible();
-      await parent.getByRole('button', { name: 'GCASH', exact: true }).click();
+      await parent.getByRole('button', { name: /^GCASH/ }).click();
       await expect(parent.getByText(/OSFS Demo GCash Account/)).toBeVisible();
       await parent.getByLabel('Amount transferred (PHP)').fill((amount / 100).toFixed(2));
       await parent.getByLabel('Transaction/reference number').fill(reference);
@@ -501,7 +501,7 @@ test.describe('authenticated financial workflow', () => {
       const reference = `E2E-MANUAL-MAYA-${suffix}`;
 
       await parent.goto(`/parent/pay?studentId=${child!.studentId}`);
-      await parent.getByRole('button', { name: 'MAYA', exact: true }).click();
+      await parent.getByRole('button', { name: /^MAYA/ }).click();
       await expect(parent.getByText(/OSFS Demo Maya Account/)).toBeVisible();
       await parent.getByLabel('Amount transferred (PHP)').fill((amount / 100).toFixed(2));
       await parent.getByLabel('Transaction/reference number').fill(reference);
