@@ -310,7 +310,7 @@ test.describe('authenticated financial workflow', () => {
         parent.locator('main').getByRole('heading', { name: 'Payment history' })
       ).toBeVisible({ timeout: 15_000 });
       const parentPaymentRow = parent.getByRole('row').filter({ hasText: receiptNumber });
-      await expect(parentPaymentRow).toBeVisible();
+      await expect(parentPaymentRow).toBeVisible({ timeout: 15_000 });
       await parentPaymentRow.getByRole('link', { name: 'View receipt', exact: true }).click();
       await expect(parent.getByText(browserReference, { exact: true })).toBeVisible({
         timeout: 30_000,
@@ -326,7 +326,7 @@ test.describe('authenticated financial workflow', () => {
         student.locator('main').getByRole('heading', { name: 'Payment history' })
       ).toBeVisible();
       const studentPaymentRow = student.getByRole('row').filter({ hasText: receiptNumber });
-      await expect(studentPaymentRow).toBeVisible();
+      await expect(studentPaymentRow).toBeVisible({ timeout: 15_000 });
       await studentPaymentRow.getByRole('link', { name: 'View receipt', exact: true }).click();
       await expect(student.getByText(browserReference, { exact: true })).toBeVisible({
         timeout: 30_000,

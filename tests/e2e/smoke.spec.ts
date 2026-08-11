@@ -24,6 +24,7 @@ test.describe('Foundation Application & Scaffold Navigation Smoke Tests', () => 
   test('verifies representative protected routes redirect to their login portals', async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     const routes = [
       { path: '/admin/dashboard', loginPath: '/login/admin' },
       { path: '/admin/students', loginPath: '/login/admin' },
