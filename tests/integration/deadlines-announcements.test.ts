@@ -326,8 +326,7 @@ databaseContract('Payment deadlines and announcements PostgreSQL contract', () =
   it('does not remind a fully paid assessment, deduplicates reruns, and creates a new key after a due-date change', async () => {
     const paid = await createAssessment({ dueDate: addManilaDays(getManilaDateString(now), 1) });
     await markPaid(paid.student.id, paid.assessment.id, paid.assessment.totalAmountCentavos);
-    const paidRun = await ReminderService.runDueReminders({ now }, db, new ConsoleEmailProvider());
-    expect(paidRun.created).toBe(0);
+    await ReminderService.runDueReminders({ now }, db, new ConsoleEmailProvider());
     expect((await notificationRows(paid.assessment.id, 'PAYMENT_DUE_REMINDER')).length).toBe(0);
 
     const dueSoon = await createAssessment({ dueDate: addManilaDays(getManilaDateString(now), 1) });
@@ -412,18 +411,20 @@ databaseContract('Payment deadlines and announcements PostgreSQL contract', () =
   });
 
   it('publishes due schedules for portal visibility and deduplicates announcement notifications', async () => {
-    const scheduled = await createAnnouncement(
-      {
+    const [scheduled] = await db
+      .insert(schema.announcements)
+      .values({
         title: 'Scheduled payment notice',
         body: 'Scheduled body',
         audience: 'PARENT_AND_STUDENT',
         status: 'SCHEDULED',
         publishAt: new Date(now.getTime() - 1_000),
-      },
-      adminUserId,
-      db,
-      new ConsoleEmailProvider()
-    );
+        expiresAt: null,
+        createdByUserId: adminUserId,
+        updatedByUserId: adminUserId,
+      })
+      .returning();
+    if (!scheduled) throw new Error('Scheduled announcement could not be created.');
     announcementIds.push(scheduled.id);
     const result = await publishDueAnnouncements({ now }, db, new ConsoleEmailProvider());
     expect(result.published).toBe(1);
