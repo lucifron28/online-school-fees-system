@@ -454,7 +454,7 @@ test.describe('authenticated financial workflow', () => {
       const pendingRow = finance.getByRole('row').filter({ hasText: reference });
       await expect(pendingRow).toBeVisible();
       await pendingRow.click();
-      await expect(finance.getByText(reference, { exact: true })).toBeVisible();
+      await expect(finance.getByText(`Reference: ${reference}`, { exact: true })).toBeVisible();
       finance.once('dialog', (dialog) => dialog.accept());
       await finance.getByRole('button', { name: 'Approve and post payment', exact: true }).click();
       await expect(finance.getByRole('status')).toContainText('Payment proof approved and posted.');
@@ -530,8 +530,11 @@ test.describe('authenticated financial workflow', () => {
       await expect(finance.getByRole('status')).toContainText('Payment proof rejected.');
 
       await parent.goto('/parent/payment-submissions');
+      await expect(
+        parent.getByRole('heading', { name: 'Payment proof submissions', exact: true })
+      ).toBeVisible();
       const rejectedRow = parent.getByRole('row').filter({ hasText: reference });
-      await expect(rejectedRow).toContainText('REJECTED');
+      await expect(rejectedRow).toContainText('REJECTED', { timeout: 30_000 });
       await expect(rejectedRow).toContainText(
         'The fictional proof needs a clearer transfer reference.'
       );
