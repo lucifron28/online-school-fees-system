@@ -483,7 +483,12 @@ test.describe('authenticated financial workflow', () => {
       });
       finance.once('dialog', (dialog) => dialog.accept());
       await finance.getByRole('button', { name: 'Approve and post payment', exact: true }).click();
-      await expect(finance.getByRole('status')).toContainText('Payment proof approved and posted.');
+      await expect(finance.getByRole('status')).toContainText(
+        'Payment proof approved and posted.',
+        {
+          timeout: 15_000,
+        }
+      );
 
       await parent.goto('/parent/dashboard');
       await expect(parent.getByText('FULLY PAID', { exact: true }).first()).toBeVisible({

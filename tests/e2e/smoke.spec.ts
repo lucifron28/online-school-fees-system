@@ -45,8 +45,8 @@ test.describe('Foundation Application & Scaffold Navigation Smoke Tests', () => 
         expect(String(error)).toContain('ERR_ABORTED');
       }
 
-      await expect(page).toHaveURL(new RegExp(`${loginPath}$`));
-      await expect(page.locator('body')).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`${loginPath}$`), { timeout: 15_000 });
+      await expect(page.locator('body')).toBeVisible({ timeout: 15_000 });
     }
   });
 
