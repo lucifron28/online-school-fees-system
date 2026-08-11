@@ -43,6 +43,8 @@ type Settings = {
   receiptPrefix: string;
   currencyCode: 'PHP';
   timezone: 'Asia/Manila';
+  defaultPaymentTermDays: number;
+  reminderLeadDays: number;
   studentPortalEnabled: boolean;
   activeSchoolYearId: string | null;
   updatedAt: string;
@@ -262,6 +264,37 @@ function InstitutionProfile({
                 onChange={(event) => setForm({ ...form, receiptPrefix: event.target.value })}
                 required
               />
+            </Field>
+            <Field label="Default payment term (days)">
+              <Input
+                type="number"
+                min={1}
+                max={365}
+                value={form.defaultPaymentTermDays}
+                onChange={(event) =>
+                  setForm({ ...form, defaultPaymentTermDays: Number(event.target.value) })
+                }
+                required
+              />
+              <span className="mt-1 block text-xs font-normal text-slate-500">
+                New posted assessments use this many Manila calendar days unless staff overrides the
+                due date.
+              </span>
+            </Field>
+            <Field label="Reminder lead time (days)">
+              <Input
+                type="number"
+                min={0}
+                max={30}
+                value={form.reminderLeadDays}
+                onChange={(event) =>
+                  setForm({ ...form, reminderLeadDays: Number(event.target.value) })
+                }
+                required
+              />
+              <span className="mt-1 block text-xs font-normal text-slate-500">
+                Reminder checks notify linked accounts this many days before a due date.
+              </span>
             </Field>
             <Field label="Active school year">
               <select

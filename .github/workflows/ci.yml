@@ -85,6 +85,7 @@ jobs:
           pnpm portals-online:verify
           pnpm reports-reconciliation:verify
           pnpm notifications:verify
+          pnpm deadlines-announcements:verify
 
       - name: Reset integration database before test suite
         env:

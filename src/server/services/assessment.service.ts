@@ -10,6 +10,8 @@ import {
   type AdjustmentInput,
 } from '@/lib/assessments';
 import { addCentavos, subtractCentavos } from '@/lib/utils/currency';
+import { calculateAssessmentDueDate, evaluateDeadline } from '@/lib/deadlines';
+import { getOrCreateSchoolSettings } from './administration.service';
 import { AppError, NotFoundError, ValidationError } from '@/server/errors';
 import { lockStudentForLedgerMutation } from './ledger.service';
 import { NotificationService } from './notification.service';
@@ -144,6 +146,7 @@ async function selectAssessment(id: string, db: DatabaseInstance) {
       assessmentPeriod: schema.studentAssessments.assessmentPeriod,
       totalAmountCentavos: schema.studentAssessments.totalAmountCentavos,
       status: schema.studentAssessments.status,
+      dueDate: schema.studentAssessments.dueDate,
       createdAt: schema.studentAssessments.createdAt,
       updatedAt: schema.studentAssessments.updatedAt,
       studentNumber: schema.students.studentNumber,
@@ -212,10 +215,17 @@ export async function getAssessment(id: string, db: DatabaseInstance = getDb()) 
       )
       .orderBy(asc(schema.ledgerEntries.createdAt)),
   ]);
+  const balanceCentavos = calculateBalanceFromEntries(ledgerEntries);
+  const settings = await getOrCreateSchoolSettings(db);
   return {
     ...assessment,
     items,
-    balanceCentavos: calculateBalanceFromEntries(ledgerEntries),
+    balanceCentavos,
+    ...evaluateDeadline({
+      balanceCentavos,
+      dueDate: assessment.dueDate,
+      reminderLeadDays: settings.reminderLeadDays,
+    }),
     ledgerEntries,
   };
 }
@@ -239,6 +249,7 @@ export async function getStudentAssessments(
       assessmentPeriod: schema.studentAssessments.assessmentPeriod,
       totalAmountCentavos: schema.studentAssessments.totalAmountCentavos,
       status: schema.studentAssessments.status,
+      dueDate: schema.studentAssessments.dueDate,
       createdAt: schema.studentAssessments.createdAt,
       updatedAt: schema.studentAssessments.updatedAt,
       schoolYearName: schema.schoolYears.name,
@@ -284,12 +295,19 @@ export async function getStudentAssessments(
       .orderBy(asc(schema.ledgerEntries.createdAt)),
   ]);
 
+  const settings = await getOrCreateSchoolSettings(db);
   return assessments.map((assessment) => {
     const assessmentLedger = ledgerEntries.filter((entry) => entry.assessmentId === assessment.id);
+    const balanceCentavos = calculateBalanceFromEntries(assessmentLedger);
     return {
       ...assessment,
       items: items.filter((item) => item.assessmentId === assessment.id),
-      balanceCentavos: calculateBalanceFromEntries(assessmentLedger),
+      balanceCentavos,
+      ...evaluateDeadline({
+        balanceCentavos,
+        dueDate: assessment.dueDate,
+        reminderLeadDays: settings.reminderLeadDays,
+      }),
     };
   });
 }
@@ -374,6 +392,9 @@ export class AssessmentService {
         (total, item) => addCentavos(total, item.amountCentavos),
         0
       );
+      const settings = await getOrCreateSchoolSettings(transactionDb);
+      const dueDate =
+        values.dueDate ?? calculateAssessmentDueDate(new Date(), settings.defaultPaymentTermDays);
 
       const existing = await tx
         .select({ id: schema.studentAssessments.id })
@@ -399,6 +420,7 @@ export class AssessmentService {
           assessmentPeriod: structure.assessmentPeriod,
           totalAmountCentavos,
           status: 'POSTED',
+          dueDate,
         })
         .returning();
       if (!assessment) throw new AppError('The assessment could not be created.');
@@ -442,6 +464,7 @@ export class AssessmentService {
           assessmentPeriod: structure.assessmentPeriod,
           totalAmountCentavos,
           itemCount: items.length,
+          dueDate,
         },
       });
       return assessment;

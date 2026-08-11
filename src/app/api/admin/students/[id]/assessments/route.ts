@@ -36,6 +36,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       await AssessmentService.generateAssessment({
         studentId: id,
         feeStructureId: body.feeStructureId,
+        dueDate: body.dueDate,
         actorUserId: actor.id,
       }),
       { status: 201 }

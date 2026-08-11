@@ -5,6 +5,7 @@ import * as schema from '@/db/schema';
 import { logSanitizedError } from '../../server/logging';
 import { generateStatementPdf } from '@/lib/pdf/statement-generator';
 import { getManilaDateString } from '@/lib/reports';
+import { calculateAssessmentDueDate } from '@/lib/deadlines';
 import { ReportService } from '@/server/services/report.service';
 import { PaymentService } from '@/server/services/payment.service';
 
@@ -116,6 +117,7 @@ async function main() {
         assessmentPeriod: 'ANNUAL',
         totalAmountCentavos: 1000,
         status: 'POSTED',
+        dueDate: calculateAssessmentDueDate(new Date(), 7),
       })
       .returning({ id: schema.studentAssessments.id });
     assert(assessment, 'The report assessment could not be created.');

@@ -30,6 +30,8 @@ export const schoolSettingsInputSchema = z.object({
     .regex(/^[A-Za-z0-9]{2,12}$/, 'Use 2-12 letters or numbers for the receipt prefix.'),
   currencyCode: z.literal('PHP'),
   timezone: z.literal('Asia/Manila'),
+  defaultPaymentTermDays: z.number().int().min(1).max(365),
+  reminderLeadDays: z.number().int().min(0).max(30),
   studentPortalEnabled: z.boolean(),
   activeSchoolYearId: z.string().uuid().nullable(),
 });

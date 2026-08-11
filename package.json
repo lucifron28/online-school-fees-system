@@ -30,6 +30,7 @@
     "portals-online:verify": "tsx src/db/scripts/verify-portals-online-payment.ts",
     "reports-reconciliation:verify": "tsx src/db/scripts/verify-reports-reconciliation.ts",
     "notifications:verify": "tsx src/db/scripts/verify-notifications.ts",
+    "deadlines-announcements:verify": "tsx src/db/scripts/verify-deadlines-announcements.ts",
     "db:seed": "tsx src/db/scripts/seed.ts",
     "db:reset": "tsx src/db/scripts/reset-demo.ts --demo",
     "db:test:reset": "tsx src/db/scripts/reset-demo.ts --test"

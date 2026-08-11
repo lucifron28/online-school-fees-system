@@ -48,6 +48,10 @@ type StudentAssessment = {
   assessmentPeriod: string;
   totalAmountCentavos: number;
   balanceCentavos: number;
+  dueDate: string | null;
+  deadlineState: 'ON_TRACK' | 'DUE_SOON' | 'OVERDUE' | 'PAID';
+  paymentStatus: 'PAID' | 'WITH_REMAINING_BALANCE';
+  daysFromDueDate: number | null;
   status: string;
   createdAt: string;
   schoolYearName: string;
@@ -86,10 +90,18 @@ function statusClass(status: string) {
   return 'border-amber-200 bg-amber-50 text-amber-700';
 }
 
+function deadlineClass(state: StudentAssessment['deadlineState']) {
+  if (state === 'PAID') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (state === 'OVERDUE') return 'border-rose-200 bg-rose-50 text-rose-700';
+  if (state === 'DUE_SOON') return 'border-amber-200 bg-amber-50 text-amber-700';
+  return 'border-blue-200 bg-blue-50 text-blue-700';
+}
+
 export function StudentAssessments({ student }: { student: StudentProfile }) {
   const queryClient = useQueryClient();
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [selectedStructureId, setSelectedStructureId] = useState('');
+  const [postDueDate, setPostDueDate] = useState('');
   const [postError, setPostError] = useState('');
   const [adjustmentAssessment, setAdjustmentAssessment] = useState<StudentAssessment | null>(null);
   const [adjustmentType, setAdjustmentType] = useState<'DEBIT' | 'CREDIT'>('DEBIT');
@@ -115,8 +127,8 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
   });
 
   const postAssessment = useMutation({
-    mutationFn: async (feeStructureId: string) => {
-      const body = assessmentPostInputSchema.parse({ feeStructureId });
+    mutationFn: async (input: { feeStructureId: string; dueDate?: string }) => {
+      const body = assessmentPostInputSchema.parse(input);
       return requestJson<StudentAssessment>(`/api/admin/students/${student.id}/assessments`, {
         method: 'POST',
         body: JSON.stringify(body),
@@ -125,6 +137,7 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
     onSuccess: async () => {
       setPostDialogOpen(false);
       setSelectedStructureId('');
+      setPostDueDate('');
       setPostError('');
       await queryClient.invalidateQueries({ queryKey: ['admin-student-assessments', student.id] });
     },
@@ -157,12 +170,15 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
   function submitAssessment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPostError('');
-    const parsed = assessmentPostInputSchema.safeParse({ feeStructureId: selectedStructureId });
+    const parsed = assessmentPostInputSchema.safeParse({
+      feeStructureId: selectedStructureId,
+      dueDate: postDueDate || undefined,
+    });
     if (!parsed.success) {
       setPostError('Choose an active fee structure.');
       return;
     }
-    postAssessment.mutate(parsed.data.feeStructureId);
+    postAssessment.mutate(parsed.data);
   }
 
   function submitAdjustment(event: FormEvent<HTMLFormElement>) {
@@ -240,6 +256,8 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
                   <TableHead>Snapshot items</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Balance</TableHead>
+                  <TableHead>Due date</TableHead>
+                  <TableHead>Deadline</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead />
                 </TableRow>
@@ -264,12 +282,33 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
                     <TableCell className="text-xs font-bold text-blue-700">
                       {formatCentavos(assessment.balanceCentavos)}
                     </TableCell>
+                    <TableCell className="whitespace-nowrap text-xs">
+                      {assessment.dueDate ?? 'Not set'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${deadlineClass(assessment.deadlineState)}`}
+                      >
+                        {assessment.deadlineState.replaceAll('_', ' ')}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
                         className={`text-[10px] ${statusClass(assessment.status)}`}
                       >
                         {assessment.status}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className={`mt-1 text-[10px] ${
+                          assessment.paymentStatus === 'PAID'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : 'border-blue-200 bg-blue-50 text-blue-700'
+                        }`}
+                      >
+                        {assessment.paymentStatus.replaceAll('_', ' ')}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -382,6 +421,19 @@ export function StudentAssessments({ student }: { student: StudentProfile }) {
                 </option>
               ))}
             </select>
+          </label>
+          <label className="mt-4 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            Due date override <span className="font-normal text-slate-500">(optional)</span>
+            <Input
+              className="mt-1"
+              type="date"
+              value={postDueDate}
+              onChange={(event) => setPostDueDate(event.target.value)}
+              disabled={postAssessment.isPending}
+            />
+            <span className="mt-1 block font-normal text-slate-500">
+              Leave blank to use the institution&apos;s configured payment term.
+            </span>
           </label>
           {structuresQuery.isError && (
             <p className="mt-2 text-xs text-red-600">

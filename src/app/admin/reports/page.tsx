@@ -3,7 +3,15 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Download, FileText, RefreshCw, Search, TrendingUp } from 'lucide-react';
+import {
+  AlertCircle,
+  Clock,
+  Download,
+  FileText,
+  RefreshCw,
+  Search,
+  TrendingUp,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,6 +59,29 @@ function QueryError({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
+type DeadlineReport = {
+  dueSoonCount: number;
+  overdueCount: number;
+  dueSoon: Array<{
+    assessmentId: string;
+    studentNumber: string;
+    studentName: string;
+    feeStructureName: string;
+    dueDate: string;
+    balanceCentavos: number;
+    daysRemaining: number;
+  }>;
+  overdue: Array<{
+    assessmentId: string;
+    studentNumber: string;
+    studentName: string;
+    feeStructureName: string;
+    dueDate: string;
+    balanceCentavos: number;
+    daysOverdue: number;
+  }>;
+};
+
 export default function AdminReportsPage() {
   const initial = useMemo(defaultRange, []);
   const [from, setFrom] = useState(initial.from);
@@ -75,9 +106,14 @@ export default function AdminReportsPage() {
         `/api/reports/reversals?from=${applied.from}&to=${applied.to}`
       ),
   });
+  const deadlinesQuery = useQuery({
+    queryKey: ['admin-report-deadlines'],
+    queryFn: () => requestJson<DeadlineReport>('/api/reports/deadlines'),
+  });
   const collections = collectionsQuery.data;
   const outstanding = outstandingQuery.data?.items ?? [];
   const reversals = reversalsQuery.data?.items ?? [];
+  const deadlineReport = deadlinesQuery.data;
 
   function applyRange(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -254,6 +290,57 @@ export default function AdminReportsPage() {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="border-slate-200 shadow-sm dark:border-slate-800">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Payment deadline report</CardTitle>
+              <p className="text-xs text-slate-500">Positive balances grouped by deadline state.</p>
+            </div>
+            <Clock className="h-4 w-4 text-amber-600" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {deadlinesQuery.isLoading && (
+              <p className="text-sm text-slate-500">Loading deadlines…</p>
+            )}
+            {deadlinesQuery.isError && (
+              <QueryError
+                message={getClientErrorMessage(deadlinesQuery.error)}
+                onRetry={() => void deadlinesQuery.refetch()}
+              />
+            )}
+            {deadlineReport && (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-md bg-amber-50 p-3 text-amber-800">
+                    <p className="text-[11px] font-semibold">Due soon</p>
+                    <p className="mt-1 text-xl font-bold">{deadlineReport.dueSoonCount}</p>
+                  </div>
+                  <div className="rounded-md bg-rose-50 p-3 text-rose-800">
+                    <p className="text-[11px] font-semibold">Overdue</p>
+                    <p className="mt-1 text-xl font-bold">{deadlineReport.overdueCount}</p>
+                  </div>
+                </div>
+                {[...deadlineReport.overdue, ...deadlineReport.dueSoon].slice(0, 8).map((item) => (
+                  <div
+                    key={item.assessmentId}
+                    className="flex items-center justify-between gap-3 border-b pb-2 last:border-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold">{item.studentName}</p>
+                      <p className="truncate text-[10px] text-slate-500">
+                        {item.studentNumber} · {item.feeStructureName}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-xs font-bold">{formatCentavos(item.balanceCentavos)}</p>
+                      <p className="text-[10px] text-slate-500">Due {item.dueDate}</p>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </CardContent>
+        </Card>
         <Card className="border-slate-200 shadow-sm dark:border-slate-800">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>

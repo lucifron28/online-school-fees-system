@@ -7,6 +7,7 @@ const serverEnvSchema = z.object({
   BETTER_AUTH_URL: z.string().url().optional().or(z.literal('')),
   RESEND_API_KEY: z.string().min(1).optional().or(z.literal('')),
   EMAIL_FROM: z.string().email().optional().or(z.literal('')),
+  CRON_SECRET: z.string().min(1).optional().or(z.literal('')),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   ENABLE_STUDENT_PORTAL: z
     .string()
@@ -32,6 +33,7 @@ export function getServerEnv() {
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     EMAIL_FROM: process.env.EMAIL_FROM,
+    CRON_SECRET: process.env.CRON_SECRET,
     NODE_ENV: process.env.NODE_ENV,
     ENABLE_STUDENT_PORTAL: process.env.ENABLE_STUDENT_PORTAL,
   });

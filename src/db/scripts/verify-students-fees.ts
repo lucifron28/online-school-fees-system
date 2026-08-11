@@ -5,6 +5,7 @@ import { and, eq } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
 import { logSanitizedError } from '../../server/logging';
+import { calculateAssessmentDueDate } from '../../lib/deadlines';
 import {
   createFeeCategory,
   createFeeStructure,
@@ -271,6 +272,7 @@ async function main() {
         assessmentPeriod: 'SEMESTER',
         totalAmountCentavos: 60000,
         status: 'POSTED',
+        dueDate: calculateAssessmentDueDate(new Date(), 7),
       })
       .returning();
     createdAssessmentIds.push(assessment.id);

@@ -1,4 +1,5 @@
 import { z } from 'zod/v3';
+import { reportDateSchema } from '@/lib/reports';
 
 export const assessmentStatusSchema = z.enum(['DRAFT', 'POSTED', 'CANCELLED']);
 export const adjustmentTypeSchema = z.enum(['DEBIT', 'CREDIT']);
@@ -15,6 +16,7 @@ export const assessmentGenerateInputSchema = z.object({
   // authoritative, but a supplied value is checked against it below.
   schoolYearId: z.string().uuid().optional(),
   feeStructureId: z.string().uuid(),
+  dueDate: reportDateSchema.optional(),
   // Kept only for backwards-compatible validation of callers that previously
   // supplied items. The service never trusts or persists these values.
   items: z.array(feeItemSnapshotSchema).optional(),
@@ -22,6 +24,7 @@ export const assessmentGenerateInputSchema = z.object({
 
 export const assessmentPostInputSchema = z.object({
   feeStructureId: z.string().uuid(),
+  dueDate: reportDateSchema.optional(),
 });
 
 export const assessmentListInputSchema = z.object({

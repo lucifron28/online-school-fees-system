@@ -46,6 +46,10 @@ export interface PortalAssessment {
   assessmentPeriod: string;
   totalAmountCentavos: number;
   balanceCentavos: number;
+  dueDate: string | null;
+  deadlineState: 'ON_TRACK' | 'DUE_SOON' | 'OVERDUE' | 'PAID';
+  paymentStatus: 'PAID' | 'WITH_REMAINING_BALANCE';
+  daysFromDueDate: number | null;
   status: string;
   items: PortalAssessmentItem[];
 }

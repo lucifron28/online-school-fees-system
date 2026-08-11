@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getDb, type DatabaseInstance } from '@/db';
+import { calculateAssessmentDueDate } from '@/lib/deadlines';
 import * as schema from '@/db/schema';
 import { AssessmentService } from '@/server/services/assessment.service';
 import { updateUser } from '@/server/services/administration.service';
@@ -137,6 +138,7 @@ async function createAssessment(
       assessmentPeriod: period,
       totalAmountCentavos: amountCentavos,
       status: 'POSTED',
+      dueDate: calculateAssessmentDueDate(createdAt, 7),
       createdAt,
     })
     .returning({ id: schema.studentAssessments.id });

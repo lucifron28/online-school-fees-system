@@ -6,6 +6,7 @@ import { getReceiptProcessorName, receiptSnapshotSchema } from '../../lib/receip
 import { getDb, type DatabaseInstance } from '../index';
 import * as schema from '../schema';
 import { logSanitizedError } from '../../server/logging';
+import { calculateAssessmentDueDate } from '../../lib/deadlines';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -630,6 +631,7 @@ async function ensureAssessment(
       assessmentPeriod: 'ANNUAL',
       totalAmountCentavos,
       status: 'POSTED',
+      dueDate: calculateAssessmentDueDate(DEMO_NOW, 7),
       createdAt: DEMO_NOW,
       updatedAt: DEMO_NOW,
     })

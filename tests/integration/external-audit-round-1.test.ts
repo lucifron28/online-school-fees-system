@@ -12,6 +12,7 @@ import {
 } from '@/server/services/notification.service';
 import { PaymentService } from '@/server/services/payment.service';
 import { PortalService } from '@/server/services/portal.service';
+import { calculateAssessmentDueDate } from '@/lib/deadlines';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const databaseContract = testDatabaseUrl ? describe : describe.skip;
@@ -92,6 +93,7 @@ async function createFinancialFixture(
       assessmentPeriod: 'ANNUAL',
       totalAmountCentavos: amountCentavos,
       status: 'POSTED',
+      dueDate: calculateAssessmentDueDate(new Date(), 7),
     })
     .returning();
   const [item] = await db

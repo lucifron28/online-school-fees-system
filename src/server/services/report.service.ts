@@ -34,6 +34,7 @@ import {
   REPORT_TIME_ZONE,
 } from '@/lib/reports';
 import { calculateBalanceFromEntries } from './assessment.service';
+import { getDeadlineSummary } from './deadline.service';
 import { NotFoundError } from '@/server/errors';
 
 export { type CollectionReportItem, type DashboardMetrics } from '@/lib/reports';
@@ -541,6 +542,7 @@ export class ReportService {
       activeStudents,
       postedCount,
       recent,
+      deadlineSummary,
     ] = await Promise.all([
       ReportService.getCollectionReport({ from: today, to: today }, db),
       ReportService.getCollectionReport({ from: monthStart, to: today }, db),
@@ -555,6 +557,7 @@ export class ReportService {
         .from(schema.payments)
         .where(eq(schema.payments.status, 'POSTED')),
       selectCollectionRows(db),
+      getDeadlineSummary({ now, limit: 12 }, db),
     ]);
 
     const trendByMonth = new Map<string, number>();
@@ -588,6 +591,9 @@ export class ReportService {
       recentTransactions: recent.slice(0, 8).map(toCollectionItem),
       collectionTrend,
       paymentMethodBreakdown: monthReport.byPaymentMethod,
+      dueSoonCount: deadlineSummary.dueSoonCount,
+      overdueCount: deadlineSummary.overdueCount,
+      deadlineAssessments: [...deadlineSummary.dueSoon, ...deadlineSummary.overdue],
     };
   }
 

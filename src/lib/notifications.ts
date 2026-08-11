@@ -6,6 +6,8 @@ export const notificationTypeSchema = z.enum([
   'RECEIPT_AVAILABLE',
   'PAYMENT_REVERSED',
   'DUE_REMINDER',
+  'PAYMENT_DUE_REMINDER',
+  'ANNOUNCEMENT',
 ]);
 
 export const notificationListInputSchema = z.object({
