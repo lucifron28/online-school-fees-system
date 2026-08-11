@@ -116,6 +116,12 @@ async function ensureSettings(db: DatabaseInstance, activeSchoolYearId: string) 
     receiptPrefix: 'OSFS',
     currencyCode: 'PHP',
     timezone: 'Asia/Manila',
+    gcashEnabled: true,
+    gcashAccountName: 'OSFS Demo GCash Account',
+    gcashAccountNumber: '0999 000 0000',
+    mayaEnabled: true,
+    mayaAccountName: 'OSFS Demo Maya Account',
+    mayaAccountNumber: '0998 000 0000',
     studentPortalEnabled: true,
     activeSchoolYearId,
   };

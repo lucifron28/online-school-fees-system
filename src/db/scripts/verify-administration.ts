@@ -45,6 +45,12 @@ function settingsInput(
     timezone: 'Asia/Manila',
     defaultPaymentTermDays: settings.defaultPaymentTermDays,
     reminderLeadDays: settings.reminderLeadDays,
+    gcashEnabled: settings.gcashEnabled,
+    gcashAccountName: settings.gcashAccountName,
+    gcashAccountNumber: settings.gcashAccountNumber,
+    mayaEnabled: settings.mayaEnabled,
+    mayaAccountName: settings.mayaAccountName,
+    mayaAccountNumber: settings.mayaAccountNumber,
     studentPortalEnabled: settings.studentPortalEnabled,
     activeSchoolYearId: settings.activeSchoolYearId,
   };

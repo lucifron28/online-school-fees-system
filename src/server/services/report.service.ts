@@ -543,6 +543,7 @@ export class ReportService {
       postedCount,
       recent,
       deadlineSummary,
+      pendingProofs,
     ] = await Promise.all([
       ReportService.getCollectionReport({ from: today, to: today }, db),
       ReportService.getCollectionReport({ from: monthStart, to: today }, db),
@@ -558,6 +559,10 @@ export class ReportService {
         .where(eq(schema.payments.status, 'POSTED')),
       selectCollectionRows(db),
       getDeadlineSummary({ now, limit: 12 }, db),
+      db
+        .select({ total: count() })
+        .from(schema.paymentSubmissions)
+        .where(eq(schema.paymentSubmissions.status, 'PENDING_VERIFICATION')),
     ]);
 
     const trendByMonth = new Map<string, number>();
@@ -593,6 +598,7 @@ export class ReportService {
       paymentMethodBreakdown: monthReport.byPaymentMethod,
       dueSoonCount: deadlineSummary.dueSoonCount,
       overdueCount: deadlineSummary.overdueCount,
+      pendingProofCount: Number(pendingProofs[0]?.total ?? 0),
       deadlineAssessments: [...deadlineSummary.dueSoon, ...deadlineSummary.overdue],
     };
   }

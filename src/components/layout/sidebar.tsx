@@ -8,6 +8,7 @@ import { LogoutButton } from '@/components/auth/logout-button';
 import {
   BellRing,
   Building2,
+  ClipboardCheck,
   ChevronRight,
   CreditCard,
   FileText,
@@ -122,6 +123,7 @@ export function Sidebar({
     { name: 'Guardians', href: '/admin/guardians', icon: UserCheck },
     { name: 'Fees Management', href: '/admin/fees', icon: CreditCard },
     { name: 'Payments (OTC)', href: '/admin/payments/manual', icon: Wallet },
+    { name: 'Payment Proofs', href: '/admin/payment-submissions', icon: ClipboardCheck },
     { name: 'Transactions', href: '/admin/transactions', icon: Receipt },
     { name: 'Reports', href: '/admin/reports', icon: FileText },
     { name: 'Notifications', href: '/admin/notifications', icon: BellRing },
@@ -134,6 +136,7 @@ export function Sidebar({
     { name: 'Dashboard', href: '/parent/dashboard', icon: LayoutDashboard },
     { name: 'My Children', href: '/parent/dashboard', icon: Users },
     { name: 'Payment History', href: '/parent/history', icon: History },
+    { name: 'Payment Proofs', href: '/parent/payment-submissions', icon: ClipboardCheck },
     { name: 'Make Payment', href: '/parent/pay', icon: CreditCard },
     { name: 'Notifications', href: '/parent/notifications', icon: BellRing },
     { name: 'Announcements', href: '/parent/announcements', icon: Megaphone },

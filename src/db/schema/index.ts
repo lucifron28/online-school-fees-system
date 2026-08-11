@@ -1,6 +1,7 @@
 import {
   boolean,
   check,
+  customType,
   date,
   index,
   integer,
@@ -14,6 +15,10 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import type { ReceiptSnapshot } from '../../lib/receipt-snapshot';
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => 'bytea',
+});
 
 // User Role Enum
 export const userRoleEnum = pgEnum('user_role', ['ADMIN', 'FINANCE_STAFF', 'PARENT', 'STUDENT']);
@@ -48,7 +53,19 @@ export const ledgerEntryTypeEnum = pgEnum('ledger_entry_type', [
   'CREDIT_ADJUSTMENT',
 ]);
 
-export const paymentMethodEnum = pgEnum('payment_method', ['CASH', 'BANK_DEPOSIT', 'MOCK_ONLINE']);
+export const paymentMethodEnum = pgEnum('payment_method', [
+  'CASH',
+  'BANK_DEPOSIT',
+  'GCASH',
+  'MAYA',
+  'MOCK_ONLINE',
+]);
+export const paymentSubmissionChannelEnum = pgEnum('payment_submission_channel', ['GCASH', 'MAYA']);
+export const paymentSubmissionStatusEnum = pgEnum('payment_submission_status', [
+  'PENDING_VERIFICATION',
+  'APPROVED',
+  'REJECTED',
+]);
 export const paymentStatusEnum = pgEnum('payment_status', [
   'PENDING',
   'POSTED',
@@ -82,6 +99,8 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'PAYMENT_REVERSED',
   'DUE_REMINDER',
   'PAYMENT_DUE_REMINDER',
+  'PAYMENT_PROOF_SUBMITTED',
+  'PAYMENT_PROOF_REJECTED',
   'ANNOUNCEMENT',
 ]);
 export const notificationChannelEnum = pgEnum('notification_channel', ['EMAIL', 'CONSOLE']);
@@ -214,6 +233,12 @@ export const schoolSettings = pgTable(
     timezone: text('timezone').default('Asia/Manila').notNull(),
     defaultPaymentTermDays: integer('default_payment_term_days').default(7).notNull(),
     reminderLeadDays: integer('reminder_lead_days').default(2).notNull(),
+    gcashEnabled: boolean('gcash_enabled').default(false).notNull(),
+    gcashAccountName: text('gcash_account_name'),
+    gcashAccountNumber: text('gcash_account_number'),
+    mayaEnabled: boolean('maya_enabled').default(false).notNull(),
+    mayaAccountName: text('maya_account_name'),
+    mayaAccountNumber: text('maya_account_number'),
     studentPortalEnabled: boolean('student_portal_enabled').default(true).notNull(),
     activeSchoolYearId: uuid('active_school_year_id').references(() => schoolYears.id, {
       onDelete: 'set null',
@@ -229,6 +254,14 @@ export const schoolSettings = pgTable(
     reminderLeadDaysValid: check(
       'school_settings_reminder_lead_days_valid',
       sql`${table.reminderLeadDays} BETWEEN 0 AND 30`
+    ),
+    gcashDestinationValid: check(
+      'school_settings_gcash_destination_valid',
+      sql`${table.gcashEnabled} = false OR (${table.gcashAccountName} IS NOT NULL AND length(trim(${table.gcashAccountName})) > 0 AND ${table.gcashAccountNumber} IS NOT NULL AND length(trim(${table.gcashAccountNumber})) > 0)`
+    ),
+    mayaDestinationValid: check(
+      'school_settings_maya_destination_valid',
+      sql`${table.mayaEnabled} = false OR (${table.mayaAccountName} IS NOT NULL AND length(trim(${table.mayaAccountName})) > 0 AND ${table.mayaAccountNumber} IS NOT NULL AND length(trim(${table.mayaAccountNumber})) > 0)`
     ),
   })
 );
@@ -571,6 +604,102 @@ export const payments = pgTable(
       table.createdAt
     ),
     assessmentIndex: index('payments_assessment_idx').on(table.assessmentId),
+  })
+);
+
+export const paymentSubmissions = pgTable(
+  'payment_submissions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id),
+    submittedByUserId: text('submitted_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    paymentChannel: paymentSubmissionChannelEnum('payment_channel').notNull(),
+    amountCentavos: integer('amount_centavos').notNull(),
+    referenceNumber: text('reference_number').notNull(),
+    normalizedReferenceNumber: text('normalized_reference_number').notNull(),
+    paidAt: timestamp('paid_at', { withTimezone: true }).notNull(),
+    status: paymentSubmissionStatusEnum('status').default('PENDING_VERIFICATION').notNull(),
+    reviewedByUserId: text('reviewed_by_user_id').references(() => users.id),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    rejectionReason: text('rejection_reason'),
+    approvedPaymentId: uuid('approved_payment_id')
+      .unique()
+      .references(() => payments.id),
+    idempotencyKey: text('idempotency_key').notNull().unique(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    amountPositive: check('payment_submissions_amount_positive', sql`${table.amountCentavos} > 0`),
+    referenceLengthValid: check(
+      'payment_submissions_reference_length_valid',
+      sql`length(trim(${table.referenceNumber})) BETWEEN 1 AND 120`
+    ),
+    rejectionReasonRequired: check(
+      'payment_submissions_rejection_reason_required',
+      sql`${table.status} <> 'REJECTED' OR (${table.rejectionReason} IS NOT NULL AND length(trim(${table.rejectionReason})) > 0)`
+    ),
+    approvedPaymentRequired: check(
+      'payment_submissions_approved_payment_required',
+      sql`${table.status} <> 'APPROVED' OR ${table.approvedPaymentId} IS NOT NULL`
+    ),
+    statusChannelCreatedIndex: index('payment_submissions_status_channel_created_idx').on(
+      table.status,
+      table.paymentChannel,
+      table.createdAt
+    ),
+    studentStatusIndex: index('payment_submissions_student_status_idx').on(
+      table.studentId,
+      table.status
+    ),
+    submitterCreatedIndex: index('payment_submissions_submitter_created_idx').on(
+      table.submittedByUserId,
+      table.createdAt
+    ),
+    activeReferenceUnique: uniqueIndex('payment_submissions_active_reference_unique')
+      .on(table.paymentChannel, table.normalizedReferenceNumber)
+      .where(sql`${table.status} IN ('PENDING_VERIFICATION', 'APPROVED')`),
+  })
+);
+
+export const paymentSubmissionProofs = pgTable(
+  'payment_submission_proofs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    submissionId: uuid('submission_id')
+      .notNull()
+      .references(() => paymentSubmissions.id),
+    mimeType: text('mime_type').notNull(),
+    originalFileName: text('original_file_name').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    sha256: text('sha256').notNull(),
+    data: bytea('data').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    submissionUnique: uniqueIndex('payment_submission_proofs_submission_unique').on(
+      table.submissionId
+    ),
+    mimeTypeValid: check(
+      'payment_submission_proofs_mime_type_valid',
+      sql`${table.mimeType} IN ('image/jpeg', 'image/png', 'image/webp')`
+    ),
+    sizeValid: check(
+      'payment_submission_proofs_size_valid',
+      sql`${table.sizeBytes} BETWEEN 1 AND 3145728 AND octet_length(${table.data}) BETWEEN 1 AND 3145728`
+    ),
+    fileNameLengthValid: check(
+      'payment_submission_proofs_filename_length_valid',
+      sql`length(trim(${table.originalFileName})) BETWEEN 1 AND 160`
+    ),
+    sha256FormatValid: check(
+      'payment_submission_proofs_sha256_format_valid',
+      sql`${table.sha256} ~ '^[0-9a-f]{64}$'`
+    ),
   })
 );
 

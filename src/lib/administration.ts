@@ -18,23 +18,46 @@ const dateOnly = z
 
 export const administrationRoleSchema = z.enum(USER_ROLES);
 
-export const schoolSettingsInputSchema = z.object({
-  schoolName: z.string().trim().min(1).max(160),
-  shortName: z.string().trim().min(1).max(32),
-  address: z.string().trim().min(1).max(240),
-  email: z.string().trim().email().max(160),
-  phone: z.string().trim().min(3).max(40),
-  receiptPrefix: z
-    .string()
-    .trim()
-    .regex(/^[A-Za-z0-9]{2,12}$/, 'Use 2-12 letters or numbers for the receipt prefix.'),
-  currencyCode: z.literal('PHP'),
-  timezone: z.literal('Asia/Manila'),
-  defaultPaymentTermDays: z.number().int().min(1).max(365),
-  reminderLeadDays: z.number().int().min(0).max(30),
-  studentPortalEnabled: z.boolean(),
-  activeSchoolYearId: z.string().uuid().nullable(),
-});
+export const schoolSettingsInputSchema = z
+  .object({
+    schoolName: z.string().trim().min(1).max(160),
+    shortName: z.string().trim().min(1).max(32),
+    address: z.string().trim().min(1).max(240),
+    email: z.string().trim().email().max(160),
+    phone: z.string().trim().min(3).max(40),
+    receiptPrefix: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9]{2,12}$/, 'Use 2-12 letters or numbers for the receipt prefix.'),
+    currencyCode: z.literal('PHP'),
+    timezone: z.literal('Asia/Manila'),
+    defaultPaymentTermDays: z.number().int().min(1).max(365),
+    reminderLeadDays: z.number().int().min(0).max(30),
+    gcashEnabled: z.boolean().default(false),
+    gcashAccountName: z.string().trim().max(160).nullable().default(null),
+    gcashAccountNumber: z.string().trim().max(80).nullable().default(null),
+    mayaEnabled: z.boolean().default(false),
+    mayaAccountName: z.string().trim().max(160).nullable().default(null),
+    mayaAccountNumber: z.string().trim().max(80).nullable().default(null),
+    studentPortalEnabled: z.boolean(),
+    activeSchoolYearId: z.string().uuid().nullable(),
+  })
+  .superRefine((values, context) => {
+    if (values.gcashEnabled && (!values.gcashAccountName || !values.gcashAccountNumber)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['gcashAccountName'],
+        message: 'GCash account name and number are required when GCash is enabled.',
+      });
+    }
+    if (values.mayaEnabled && (!values.mayaAccountName || !values.mayaAccountNumber)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['mayaAccountName'],
+        message: 'Maya account name and number are required when Maya is enabled.',
+      });
+    }
+  });
 
 export const schoolYearInputSchema = z.object({
   name: z.string().trim().min(3).max(80),

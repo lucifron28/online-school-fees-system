@@ -7,6 +7,8 @@ export const notificationTypeSchema = z.enum([
   'PAYMENT_REVERSED',
   'DUE_REMINDER',
   'PAYMENT_DUE_REMINDER',
+  'PAYMENT_PROOF_SUBMITTED',
+  'PAYMENT_PROOF_REJECTED',
   'ANNOUNCEMENT',
 ]);
 
