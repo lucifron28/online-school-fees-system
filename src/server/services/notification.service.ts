@@ -502,6 +502,26 @@ async function selectReversalContext(paymentId: string, db: DatabaseInstance) {
   return rows[0] ?? null;
 }
 
+async function selectPaymentSubmissionContext(submissionId: string, db: DatabaseInstance) {
+  const rows = await db
+    .select({
+      id: schema.paymentSubmissions.id,
+      submittedByUserId: schema.paymentSubmissions.submittedByUserId,
+      paymentChannel: schema.paymentSubmissions.paymentChannel,
+      amountCentavos: schema.paymentSubmissions.amountCentavos,
+      referenceNumber: schema.paymentSubmissions.referenceNumber,
+      status: schema.paymentSubmissions.status,
+      rejectionReason: schema.paymentSubmissions.rejectionReason,
+      studentName: schema.students.firstName,
+      studentLastName: schema.students.lastName,
+    })
+    .from(schema.paymentSubmissions)
+    .innerJoin(schema.students, eq(schema.students.id, schema.paymentSubmissions.studentId))
+    .where(eq(schema.paymentSubmissions.id, submissionId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export class NotificationService {
   static async notifyAssessmentPosted(
     assessmentId: string,
@@ -688,6 +708,66 @@ export class NotificationService {
       );
     } catch (error) {
       logSanitizedError('notification.payment_reversal_dispatch', error);
+      return emptySummary();
+    }
+  }
+
+  static async notifyPaymentProofSubmitted(
+    submissionId: string,
+    db: DatabaseInstance = getDb(),
+    provider: EmailProvider = getEmailProvider()
+  ) {
+    try {
+      const submission = await selectPaymentSubmissionContext(submissionId, db);
+      if (!submission || submission.status !== 'PENDING_VERIFICATION') return emptySummary();
+      const recipient = await selectRecipient(submission.submittedByUserId, db);
+      if (!recipient) return emptySummary();
+      const studentName = `${submission.studentName} ${submission.studentLastName}`;
+      return dispatchToRecipients(
+        [recipient],
+        {
+          type: 'PAYMENT_PROOF_SUBMITTED',
+          dedupeKey: `payment-proof-submitted:${submission.id}`,
+          entityType: 'PAYMENT_SUBMISSION',
+          entityId: submission.id,
+          title: 'Payment proof submitted for review',
+          body: `Your ${submission.paymentChannel} payment proof for ${studentName} (${formatCentavos(submission.amountCentavos)}) is pending school verification.`,
+        },
+        db,
+        provider
+      );
+    } catch (error) {
+      logSanitizedError('notification.payment_proof_submission_dispatch', error);
+      return emptySummary();
+    }
+  }
+
+  static async notifyPaymentProofRejected(
+    submissionId: string,
+    db: DatabaseInstance = getDb(),
+    provider: EmailProvider = getEmailProvider()
+  ) {
+    try {
+      const submission = await selectPaymentSubmissionContext(submissionId, db);
+      if (!submission || submission.status !== 'REJECTED') return emptySummary();
+      const recipient = await selectRecipient(submission.submittedByUserId, db);
+      if (!recipient) return emptySummary();
+      const studentName = `${submission.studentName} ${submission.studentLastName}`;
+      return dispatchToRecipients(
+        [recipient],
+        {
+          type: 'PAYMENT_PROOF_REJECTED',
+          dedupeKey: `payment-proof-rejected:${submission.id}`,
+          entityType: 'PAYMENT_SUBMISSION',
+          entityId: submission.id,
+          title: 'Payment proof needs attention',
+          body: `Your ${submission.paymentChannel} payment proof for ${studentName} was rejected. Reason: ${submission.rejectionReason ?? 'The school requested a correction.'}`,
+        },
+        db,
+        provider
+      );
+    } catch (error) {
+      logSanitizedError('notification.payment_proof_rejection_dispatch', error);
       return emptySummary();
     }
   }
