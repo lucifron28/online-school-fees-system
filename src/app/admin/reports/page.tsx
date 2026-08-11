@@ -127,7 +127,9 @@ export default function AdminReportsPage() {
         {[
           [
             'Net collections',
-            collections ? formatCentavos(collections.totals.netCollectionsCentavos) : 'Not available',
+            collections
+              ? formatCentavos(collections.totals.netCollectionsCentavos)
+              : 'Not available',
           ],
           [
             'Reversed amount',
@@ -209,7 +211,9 @@ export default function AdminReportsPage() {
                 {collections.items.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="whitespace-nowrap text-xs text-slate-500">
-                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-PH') : 'Not available'}
+                      {item.createdAt
+                        ? new Date(item.createdAt).toLocaleDateString('en-PH')
+                        : 'Not available'}
                     </TableCell>
                     <TableCell>
                       <div className="text-xs font-semibold">{item.studentName}</div>

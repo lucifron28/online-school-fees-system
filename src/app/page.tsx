@@ -194,10 +194,15 @@ function PortalLink({
       className={`group flex min-h-40 flex-col justify-between rounded-2xl border p-5 transition-[border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md ${tone} ${className}`}
     >
       <div className="flex items-start justify-between gap-4">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-sm ${iconTone}`}>
+        <div
+          className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-sm ${iconTone}`}
+        >
           <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
-        <ArrowUpRight className="h-5 w-5 text-muted-foreground transition-transform duration-150 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
+        <ArrowUpRight
+          className="h-5 w-5 text-muted-foreground transition-transform duration-150 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
       </div>
       <div className="mt-8">
         <h2 className="text-base font-semibold tracking-tight text-foreground">{title}</h2>
@@ -242,18 +247,29 @@ export default function HomeHubPage() {
           </div>
 
           <div className="border-t border-slate-800 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Built for clarity</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Built for clarity
+            </p>
             <ul className="mt-5 space-y-5 text-sm text-slate-300">
               <li className="flex gap-3">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" aria-hidden="true" />
+                <CheckCircle2
+                  className="mt-0.5 h-4 w-4 shrink-0 text-blue-300"
+                  aria-hidden="true"
+                />
                 <span>Role-based access for each type of account</span>
               </li>
               <li className="flex gap-3">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" aria-hidden="true" />
+                <CheckCircle2
+                  className="mt-0.5 h-4 w-4 shrink-0 text-blue-300"
+                  aria-hidden="true"
+                />
                 <span>Balances and assessments that are easy to verify</span>
               </li>
               <li className="flex gap-3">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" aria-hidden="true" />
+                <CheckCircle2
+                  className="mt-0.5 h-4 w-4 shrink-0 text-blue-300"
+                  aria-hidden="true"
+                />
                 <span>Receipts and transaction records in one place</span>
               </li>
             </ul>
@@ -264,8 +280,13 @@ export default function HomeHubPage() {
       <section aria-labelledby="portal-heading">
         <div className="mb-4 flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Choose a portal</p>
-            <h2 id="portal-heading" className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+              Choose a portal
+            </p>
+            <h2
+              id="portal-heading"
+              className="mt-2 text-2xl font-semibold tracking-tight text-foreground"
+            >
               Start from the account you use.
             </h2>
           </div>
@@ -279,12 +300,18 @@ export default function HomeHubPage() {
 
       <section id="workspace-map" aria-labelledby="workspace-heading" className="scroll-mt-6">
         <div className="mb-5 max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Workspace map</p>
-          <h2 id="workspace-heading" className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+            Workspace map
+          </p>
+          <h2
+            id="workspace-heading"
+            className="mt-2 text-2xl font-semibold tracking-tight text-foreground"
+          >
             Explore the main views.
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Use these links to preview the available workflows before signing in with a configured account.
+            Use these links to preview the available workflows before signing in with a configured
+            account.
           </p>
         </div>
 
@@ -292,7 +319,10 @@ export default function HomeHubPage() {
           {workspaceGroups.map((group) => {
             const GroupIcon = group.icon;
             return (
-              <section key={group.title} className={`rounded-2xl border border-border bg-card p-5 shadow-sm ${group.className}`}>
+              <section
+                key={group.title}
+                className={`rounded-2xl border border-border bg-card p-5 shadow-sm ${group.className}`}
+              >
                 <div className="flex items-start gap-3 border-b border-border pb-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <GroupIcon className="h-5 w-5" aria-hidden="true" />
@@ -311,12 +341,22 @@ export default function HomeHubPage() {
                         href={link.href}
                         className="group flex min-h-14 items-center gap-3 py-3 transition-colors duration-150 first:pt-2 last:pb-2 hover:text-primary"
                       >
-                        <LinkIcon className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
+                        <LinkIcon
+                          className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary"
+                          aria-hidden="true"
+                        />
                         <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-foreground group-hover:text-primary">{link.title}</span>
-                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">{link.description}</span>
+                          <span className="block text-sm font-medium text-foreground group-hover:text-primary">
+                            {link.title}
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                            {link.description}
+                          </span>
                         </span>
-                        <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
+                        <ArrowUpRight
+                          className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary"
+                          aria-hidden="true"
+                        />
                       </Link>
                     );
                   })}

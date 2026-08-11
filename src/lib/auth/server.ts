@@ -31,9 +31,7 @@ export function createAuth({ allowSignUp = false, database }: AuthFactoryOptions
     env.BETTER_AUTH_SECRET ||
     buildSecret ||
     (env.NODE_ENV === 'production' ? undefined : 'osfs-development-secret-not-for-production-2026');
-  const plugins = env.BETTER_AUTH_API_KEY
-    ? [dash({ apiKey: env.BETTER_AUTH_API_KEY })]
-    : [];
+  const plugins = env.BETTER_AUTH_API_KEY ? [dash({ apiKey: env.BETTER_AUTH_API_KEY })] : [];
 
   return betterAuth({
     appName: 'Online School Fees System',

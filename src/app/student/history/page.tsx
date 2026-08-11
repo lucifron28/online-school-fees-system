@@ -82,11 +82,7 @@ export default function StudentPaymentHistoryPage() {
                       <TableCell className="text-right">
                         {payment.receiptId && (
                           <Link href={`/student/receipts/${payment.receiptId}`}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 text-xs text-sky-700"
-                            >
+                            <Button variant="ghost" size="sm" className="h-8 text-xs text-sky-700">
                               <Eye className="mr-1 h-3.5 w-3.5" /> View receipt
                             </Button>
                           </Link>

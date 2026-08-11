@@ -77,15 +77,15 @@ Neon provides a set of agent skills in addition to the official documentation. W
 
 The skills below live in the [`neondatabase/agent-skills`](https://github.com/neondatabase/agent-skills) repo:
 
-| Skill | Use it for |
-| --- | --- |
-| `neon-postgres` | Working with databases, including connections, schemas, queries, and autoscaling: SQL development, schema design, performance optimization, and scaling decisions. |
-| `neon-postgres-branches` | Choosing or creating the right branch type for dev, preview, test, or CI workflows. Use this skill as a slash command. |
-| `neon-object-storage` | Storing and serving files (uploads, images, blobs), including branching them with the database. |
-| `neon-functions` | Deploying long-running or streaming serverless functions — APIs, agents, SSE/WebSocket servers. |
-| `neon-ai-gateway` | Calling an LLM or routing across model providers with one credential, including discovering the branch's servable models at runtime via the OpenAI-compatible `/v1/models` endpoint. |
-| `claimable-postgres` | Provisioning instant, claimable temporary Postgres databases (for example, one per end user or demo). |
-| `neon-postgres-egress-optimizer` | Diagnosing or fixing excessive Postgres egress (network data-transfer) costs in a codebase. |
+| Skill                            | Use it for                                                                                                                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `neon-postgres`                  | Working with databases, including connections, schemas, queries, and autoscaling: SQL development, schema design, performance optimization, and scaling decisions.                   |
+| `neon-postgres-branches`         | Choosing or creating the right branch type for dev, preview, test, or CI workflows. Use this skill as a slash command.                                                               |
+| `neon-object-storage`            | Storing and serving files (uploads, images, blobs), including branching them with the database.                                                                                      |
+| `neon-functions`                 | Deploying long-running or streaming serverless functions — APIs, agents, SSE/WebSocket servers.                                                                                      |
+| `neon-ai-gateway`                | Calling an LLM or routing across model providers with one credential, including discovering the branch's servable models at runtime via the OpenAI-compatible `/v1/models` endpoint. |
+| `claimable-postgres`             | Provisioning instant, claimable temporary Postgres databases (for example, one per end user or demo).                                                                                |
+| `neon-postgres-egress-optimizer` | Diagnosing or fixing excessive Postgres egress (network data-transfer) costs in a codebase.                                                                                          |
 
 For guidance on agent platforms that provision and operate Lakebase Postgres on Neon at scale, use `neon-postgres-agent-platforms`, which lives in a separate repo: [`neondatabase/neon-for-agent-platforms`](https://github.com/neondatabase/neon-for-agent-platforms).
 
@@ -176,20 +176,20 @@ npm i @neon/config
 
 ```typescript
 // neon.ts
-import { defineConfig } from "@neon/config/v1";
+import { defineConfig } from '@neon/config/v1';
 
 export default defineConfig({
   preview: {
     aiGateway: true,
     buckets: {
       images: {
-        access: "private",
+        access: 'private',
       },
     },
     functions: {
       imagegen: {
-        name: "AI SDK image agent",
-        source: "src/index.ts",
+        name: 'AI SDK image agent',
+        source: 'src/index.ts',
       },
     },
   },
@@ -206,12 +206,8 @@ export default defineConfig({
   auth: true,
   dataApi: true,
   preview: {
-    functions: {
-      /* ... */
-    }, // see the neon-functions skill
-    buckets: {
-      /* ... */
-    }, // see the neon-object-storage skill
+    functions: {/* ... */}, // see the neon-functions skill
+    buckets: {/* ... */}, // see the neon-object-storage skill
     aiGateway: true, // see the neon-ai-gateway skill
   },
 });
@@ -236,8 +232,8 @@ npm i @neon/env
 ```
 
 ```typescript
-import { parseEnv } from "@neon/env";
-import config from "./neon";
+import { parseEnv } from '@neon/env';
+import config from './neon';
 
 const env = parseEnv(config);
 
@@ -248,15 +244,15 @@ console.log(env.auth.baseUrl);
 By default `parseEnv` requires _every_ variable your config implies. When one of your apps only uses a subset, for example when you need to read `DATABASE_URL` but never the unpooled URL, pass an array of env-var keys to require and validate only those. The keys are typesafe: autocomplete only offers variables your config enables, and the returned shape is narrowed to exactly what you selected (so unselected variables are neither enforced nor present).
 
 ```typescript
-import { parseEnv } from "@neon/env";
-import config from "./neon";
+import { parseEnv } from '@neon/env';
+import config from './neon';
 
 // Only DATABASE_URL is required and returned; DATABASE_URL_UNPOOLED is not enforced.
-const { postgres } = parseEnv(config, ["DATABASE_URL"]);
+const { postgres } = parseEnv(config, ['DATABASE_URL']);
 console.log(postgres.databaseUrl);
 
 // Selecting across services — only these keys are validated.
-const env = parseEnv(config, ["DATABASE_URL", "NEON_AUTH_BASE_URL"]);
+const env = parseEnv(config, ['DATABASE_URL', 'NEON_AUTH_BASE_URL']);
 console.log(env.postgres.databaseUrl, env.auth.baseUrl);
 ```
 
@@ -266,7 +262,7 @@ Beyond services, `neon.ts` can program what configuration _new_ branches receive
 
 ```typescript
 // neon.ts
-import { defineConfig } from "@neon/config/v1";
+import { defineConfig } from '@neon/config/v1';
 
 export default defineConfig({
   auth: true,
@@ -276,14 +272,14 @@ export default defineConfig({
       // leave existing branches untouched
       return {};
     }
-    if (branch.name.startsWith("dev")) {
+    if (branch.name.startsWith('dev')) {
       return {
-        ttl: "7d", // clean up the branch after 7 days
+        ttl: '7d', // clean up the branch after 7 days
         postgres: {
           computeSettings: {
             autoscalingLimitMinCu: 0.25, // scale to zero
             autoscalingLimitMaxCu: 1, // keep it cheap
-            suspendTimeout: "5m",
+            suspendTimeout: '5m',
           },
         },
       };
@@ -314,8 +310,8 @@ export default defineConfig({ auth: true, dataApi: true });
 // 2. Or verify a third-party IdP instead of Neon Auth:
 export default defineConfig({
   dataApi: {
-    authProvider: "external",
-    jwksUrl: "https://your-idp/.well-known/jwks.json",
+    authProvider: 'external',
+    jwksUrl: 'https://your-idp/.well-known/jwks.json',
   },
 });
 ```
@@ -386,14 +382,14 @@ In TypeScript applications, use `@neon/sdk`. Project and branch are positional, 
 
 ```typescript
 for await (const record of neon.logs.query(projectId, branchId, {
-  since: "1h",
-  source: "function",
+  since: '1h',
+  source: 'function',
 })) {
   console.log(record.timestamp, record.severity_text, record.message);
 }
 
 const { data: fields } = await neon.logs.fields(projectId, branchId);
-const { data: serviceNames } = await neon.logs.fieldValues(projectId, branchId, "service_name");
+const { data: serviceNames } = await neon.logs.fieldValues(projectId, branchId, 'service_name');
 ```
 
 `query`'s iterator always throws on error, but `fields` and `fieldValues` follow the client's `throwOnError`, which defaults to `false` and hands back `{ data, error }`. `fieldValues` resolves to the whole response, not a bare array: read `serviceNames.values`, and treat them as an arbitrary subset whenever `serviceNames.is_truncated` is true.

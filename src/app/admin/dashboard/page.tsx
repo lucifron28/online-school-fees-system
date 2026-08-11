@@ -165,7 +165,9 @@ export default function AdminDashboardPage() {
                         className="flex h-full flex-1 flex-col items-center justify-end gap-2"
                       >
                         <span className="text-[10px] text-slate-500">
-                          {item.amountCentavos > 0 ? formatCentavos(item.amountCentavos) : 'No collections'}
+                          {item.amountCentavos > 0
+                            ? formatCentavos(item.amountCentavos)
+                            : 'No collections'}
                         </span>
                         <div
                           className="w-full max-w-10 rounded-t-md bg-blue-600/80 transition-all"

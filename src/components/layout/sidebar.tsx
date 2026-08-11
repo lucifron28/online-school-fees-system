@@ -175,7 +175,8 @@ export function Sidebar({
       : role === 'student'
         ? 'border-sky-400/30 bg-sky-500/15 text-sky-200'
         : 'border-blue-400/30 bg-blue-500/15 text-blue-200';
-  const initials = role === 'admin' ? 'A' : role === 'finance' ? 'F' : role === 'parent' ? 'P' : 'S';
+  const initials =
+    role === 'admin' ? 'A' : role === 'finance' ? 'F' : role === 'parent' ? 'P' : 'S';
 
   const brand = (
     <Link href={portalPath} className="flex items-center gap-3 rounded-lg" aria-label={roleTitle}>
@@ -184,7 +185,12 @@ export function Sidebar({
       </div>
       <div>
         <span className="block text-sm font-semibold tracking-tight text-white">School Fees</span>
-        <span className={cn('mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold', roleColor)}>
+        <span
+          className={cn(
+            'mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold',
+            roleColor
+          )}
+        >
           {roleBadge}
         </span>
       </div>
