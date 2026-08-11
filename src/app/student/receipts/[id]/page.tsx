@@ -31,7 +31,7 @@ export default function StudentReceiptPage({ params }: { params: Promise<{ id: s
             </Button>
           </Link>
           <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">
-            Payment acknowledgment receipt
+            System-generated payment receipt
           </Badge>
         </div>
         <a
@@ -73,7 +73,7 @@ export default function StudentReceiptPage({ params }: { params: Promise<{ id: s
                 </div>
               </div>
               <h2 className="text-lg font-bold uppercase tracking-wider">
-                Payment acknowledgment receipt
+                System-generated payment receipt
               </h2>
               <p className="text-xs text-slate-500">Online School Fees Monitoring System</p>
               <Badge variant="outline" className="mt-2">
@@ -151,7 +151,8 @@ export default function StudentReceiptPage({ params }: { params: Promise<{ id: s
             </div>
 
             <div className="border-t pt-4 text-center text-[10px] text-slate-400">
-              This fictional demonstration receipt is generated from persisted payment data.
+              This system-generated receipt records a payment verified in the school fees monitoring
+              system. It is not an official tax receipt.
             </div>
           </CardContent>
         </Card>

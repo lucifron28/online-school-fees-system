@@ -670,8 +670,8 @@ export class NotificationService {
           dedupeKey: `receipt-available:${payment.receiptId}`,
           entityType: 'RECEIPT',
           entityId: payment.receiptId,
-          title: 'Payment acknowledgment receipt available',
-          body: `Payment acknowledgment receipt ${payment.receiptNumber ?? payment.receiptId} is available for ${studentName}.`,
+          title: 'System-generated payment receipt available',
+          body: `System-generated payment receipt ${payment.receiptNumber ?? payment.receiptId} is available for ${studentName}.`,
         },
         db,
         provider
