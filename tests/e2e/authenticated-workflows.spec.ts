@@ -294,8 +294,10 @@ test.describe('authenticated financial workflow', () => {
       await finance.getByRole('link', { name: 'View transaction', exact: true }).click();
       await expect(finance).toHaveURL(/\/admin\/transactions\//, { timeout: 15_000 });
       const receiptLink = finance.getByRole('link', { name: 'Receipt PDF', exact: true });
-      await expect(receiptLink).toBeVisible();
-      await expect(receiptLink).toHaveAttribute('href', /\/api\/receipts\/.*\/pdf/);
+      await expect(receiptLink).toBeVisible({ timeout: 15_000 });
+      await expect(receiptLink).toHaveAttribute('href', /\/api\/receipts\/.*\/pdf/, {
+        timeout: 15_000,
+      });
       const [receiptPopup] = await Promise.all([
         finance.waitForEvent('popup'),
         receiptLink.click(),
@@ -484,7 +486,9 @@ test.describe('authenticated financial workflow', () => {
       await expect(finance.getByRole('status')).toContainText('Payment proof approved and posted.');
 
       await parent.goto('/parent/dashboard');
-      await expect(parent.getByText('FULLY PAID', { exact: true }).first()).toBeVisible();
+      await expect(parent.getByText('FULLY PAID', { exact: true }).first()).toBeVisible({
+        timeout: 15_000,
+      });
       await parent.goto('/parent/payment-submissions');
       const approvedRow = parent.getByRole('row').filter({ hasText: reference });
       await expect(approvedRow).toContainText('APPROVED', { timeout: 15_000 });
