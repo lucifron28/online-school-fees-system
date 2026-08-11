@@ -1,7 +1,7 @@
 import { z } from 'zod/v3';
 
 export const otcPaymentMethodSchema = z.enum(['CASH', 'BANK_DEPOSIT']);
-export const paymentMethodSchema = z.enum(['CASH', 'BANK_DEPOSIT', 'MOCK_ONLINE']);
+export const paymentMethodSchema = z.enum(['CASH', 'BANK_DEPOSIT', 'GCASH', 'MAYA', 'MOCK_ONLINE']);
 export const paymentStatusSchema = z.enum(['PENDING', 'POSTED', 'FAILED', 'CANCELLED', 'REVERSED']);
 
 export const paymentPostInputSchema = z.object({

@@ -45,6 +45,12 @@ type Settings = {
   timezone: 'Asia/Manila';
   defaultPaymentTermDays: number;
   reminderLeadDays: number;
+  gcashEnabled: boolean;
+  gcashAccountName: string | null;
+  gcashAccountNumber: string | null;
+  mayaEnabled: boolean;
+  mayaAccountName: string | null;
+  mayaAccountNumber: string | null;
   studentPortalEnabled: boolean;
   activeSchoolYearId: string | null;
   updatedAt: string;
@@ -296,6 +302,70 @@ function InstitutionProfile({
                 Reminder checks notify linked accounts this many days before a due date.
               </span>
             </Field>
+            <div className="space-y-3 rounded-lg border border-blue-100 bg-blue-50/40 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+              <div className="flex items-center gap-3">
+                <input
+                  id="gcash-enabled"
+                  type="checkbox"
+                  checked={form.gcashEnabled}
+                  onChange={(event) => setForm({ ...form, gcashEnabled: event.target.checked })}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="gcash-enabled" className="text-sm font-semibold">
+                  Enable GCash proof submissions
+                </label>
+              </div>
+              <Input
+                aria-label="GCash account name"
+                value={form.gcashAccountName ?? ''}
+                onChange={(event) =>
+                  setForm({ ...form, gcashAccountName: event.target.value || null })
+                }
+                placeholder="Fictional school account name"
+                disabled={!form.gcashEnabled}
+              />
+              <Input
+                aria-label="GCash account number"
+                value={form.gcashAccountNumber ?? ''}
+                onChange={(event) =>
+                  setForm({ ...form, gcashAccountNumber: event.target.value || null })
+                }
+                placeholder="Fictional school account number"
+                disabled={!form.gcashEnabled}
+              />
+            </div>
+            <div className="space-y-3 rounded-lg border border-emerald-100 bg-emerald-50/40 p-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+              <div className="flex items-center gap-3">
+                <input
+                  id="maya-enabled"
+                  type="checkbox"
+                  checked={form.mayaEnabled}
+                  onChange={(event) => setForm({ ...form, mayaEnabled: event.target.checked })}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <label htmlFor="maya-enabled" className="text-sm font-semibold">
+                  Enable Maya proof submissions
+                </label>
+              </div>
+              <Input
+                aria-label="Maya account name"
+                value={form.mayaAccountName ?? ''}
+                onChange={(event) =>
+                  setForm({ ...form, mayaAccountName: event.target.value || null })
+                }
+                placeholder="Fictional school account name"
+                disabled={!form.mayaEnabled}
+              />
+              <Input
+                aria-label="Maya account number"
+                value={form.mayaAccountNumber ?? ''}
+                onChange={(event) =>
+                  setForm({ ...form, mayaAccountNumber: event.target.value || null })
+                }
+                placeholder="Fictional school account number"
+                disabled={!form.mayaEnabled}
+              />
+            </div>
             <Field label="Active school year">
               <select
                 value={form.activeSchoolYearId ?? ''}

@@ -43,6 +43,13 @@
       "when": 1786462847770,
       "tag": "0005_silly_demogoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786466061065,
+      "tag": "0006_cool_the_initiative",
+      "breakpoints": true
     }
   ]
 }
