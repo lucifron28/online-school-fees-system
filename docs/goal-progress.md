@@ -2,11 +2,11 @@
 
 ## Current phase
 
-- Phase: Final client-scope clarification
-- Branch: `fix/28-client-scope-finalization`
-- Phase 10 starting main commit: `960f107`
+- Phase: Final secondary audit and evidence repair
+- Branch: `fix/final-scope-audit`
+- Audited main commit: `f2b81b9c5ce0b2a79091acb6f825a27040e9189f`
 - Goal starting commit: `8bfcbb2618e2d7f38ee505fa167fa768c8663153`
-- Current state: Rounds 1–3 and Phase 2 are merged and hosted-verified; final client-scope work is on `fix/28-client-scope-finalization` from synced `main` `246a69df64939f1b08c30436410c1efef76beab6`. External Vercel/Neon preview evidence remains a separate fictional deployment prerequisite.
+- Current state: Phase 1 deadline/announcement work, Phase 2 manual GCash/Maya verification, and Phase 3 client-scope finalization are merged to `main` and hosted-verified. Corrective PR [#22](https://github.com/lucifron28/online-school-fees-system/pull/22) adds due-date browser evidence and stale-wording repairs; final hosted Foundation run [#169](https://github.com/lucifron28/online-school-fees-system/actions/runs/31533269858) passed all configured gates. External Vercel/Neon preview evidence remains a separate fictional deployment prerequisite.
 
 ## Completed phases
 
@@ -229,7 +229,7 @@ Phase 6 was implemented on `feat/16-payments-receipts-audit` in commits `2d474ec
 ## Phase 9 implementation
 
 - Added the provider-neutral `EmailProvider` interface with a configured Resend implementation and a console fallback when `RESEND_API_KEY` and `EMAIL_FROM` are unavailable.
-- Added persisted, recipient-scoped notification dispatch for assessment posting, successful payment, receipt availability, and payment reversal. Due reminders remain intentionally unimplemented because no confirmed due-date requirement exists.
+- Added persisted, recipient-scoped notification dispatch for assessment posting, successful payment, receipt availability, payment reversal, and due-soon payment reminders. Reminder runs use the stored due date and lead-time setting, notify only unpaid due-soon assessments, and deduplicate repeat runs; overdue assessments remain visible to the deadline monitor without a separate overdue reminder.
 - Added database-backed delivery state transitions (`PENDING`, `RETRYING`, `SENT`, and `FAILED`), attempt counts, retry timestamps, provider IDs, and failure messages. Manual retries are available to administrators and finance staff.
 - Added unique recipient/event dedupe keys so repeated payment requests and mock callback replays do not create duplicate messages. Notification dispatch runs after financial commits and catches provider failures so financial success is not rolled back.
 - Added authenticated notification APIs and role-scoped history pages. Admin/finance users can audit all notification history; parent and student users can retrieve only their own records.
@@ -385,4 +385,6 @@ CodeGraph was used before editing to trace payment, gateway, ledger, administrat
 - Added current payment-announcement previews to parent and student dashboards while retaining dedicated announcement pages and publication/expiry filtering.
 - Renamed active receipt UI, PDF headings, notifications, seed notification text, and current documentation to System-Generated Payment Receipt with the not-an-official-tax-receipt disclaimer. Historical audit records remain historical.
 - Added Playwright coverage for admin announcement setup, parent GCash proof submission and pending state, finance approval and receipt visibility, plus Maya submission, rejection reason, and unchanged balance.
+- The hosted browser workflow also asserts that the persisted assessment due date renders in both the parent child detail and student account screens.
+- Corrective PR #22 final self-review `4910560642` and hosted Foundation run #169 passed the full audit branch; all nine Playwright tests passed on the first attempt.
 - The normal parent flow remains manual external transfer proof. No GCash/Maya API, automatic transfer verification, official tax receipt, production-readiness, security-certification, accounting, tax-compliance, or deployment claim is made. Academic grades/gradebook data, attendance, conduct, academic-performance analytics, impact tagging, restriction tracking, predictive analytics, and general SIS features remain out of scope.

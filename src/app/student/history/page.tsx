@@ -33,7 +33,7 @@ export default function StudentPaymentHistoryPage() {
         </Badge>
         <h2 className="mt-1 text-2xl font-bold tracking-tight">Payment history</h2>
         <p className="text-xs text-slate-500">
-          Your finance-posted payments and acknowledgment receipts.
+          Your finance-posted payments and System-Generated Payment Receipts.
         </p>
       </div>
 

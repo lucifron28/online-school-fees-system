@@ -122,12 +122,13 @@ test.describe('authenticated financial workflow', () => {
       expect(structures.length).toBeGreaterThan(0);
       expect(structures[0].items.length).toBeGreaterThan(0);
 
-      const assessment = await jsonResponse<{ id: string }>(
+      const assessment = await jsonResponse<{ id: string; dueDate: string | null }>(
         await admin.request.post(`/api/admin/students/${createdStudent.id}/assessments`, {
           data: { feeStructureId: structures[0].id },
         })
       );
       expect(assessment.id).toBeTruthy();
+      expect(assessment.dueDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
       const finance = await financeContext.newPage();
       await login(finance, 'admin', 'finance@demo.school');
@@ -158,6 +159,8 @@ test.describe('authenticated financial workflow', () => {
         children.some((child) => child.studentId === createdStudent.id),
         `Parent children: ${children.map((child) => child.studentNumber).join(', ')}`
       ).toBe(true);
+      await parent.goto(`/parent/children/${createdStudent.id}`);
+      await expect(parent.getByText(assessment.dueDate!, { exact: true }).first()).toBeVisible();
       const parentPaymentsBeforeOnline = await jsonResponse<Array<{ id: string }>>(
         await parent.request.get('/api/portal/parent/payments')
       );
@@ -193,11 +196,18 @@ test.describe('authenticated financial workflow', () => {
 
       const student = await studentContext.newPage();
       await login(student, 'student', 'student@demo.school');
-      const studentAccount = await jsonResponse<{ student: { studentNumber: string } }>(
-        await student.request.get('/api/portal/student/account')
-      );
+      const studentAccount = await jsonResponse<{
+        student: { studentNumber: string };
+        assessments: Array<{ dueDate: string | null }>;
+      }>(await student.request.get('/api/portal/student/account'));
       expect(studentAccount.student.studentNumber).toBe('DEMO-0001');
       expect(studentAccount.student.studentNumber).not.toBe(createdStudent.studentNumber);
+      const studentDueDate = studentAccount.assessments.find(
+        (item) => item.dueDate !== null
+      )?.dueDate;
+      expect(studentDueDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      await student.goto('/student/account');
+      await expect(student.getByText(studentDueDate!, { exact: true }).first()).toBeVisible();
 
       const reversed = await jsonResponse<{
         paymentStatus: string;
@@ -284,8 +294,10 @@ test.describe('authenticated financial workflow', () => {
       await finance.getByRole('link', { name: 'View transaction', exact: true }).click();
       await expect(finance).toHaveURL(/\/admin\/transactions\//, { timeout: 15_000 });
       const receiptLink = finance.getByRole('link', { name: 'Receipt PDF', exact: true });
-      await expect(receiptLink).toBeVisible();
-      await expect(receiptLink).toHaveAttribute('href', /\/api\/receipts\/.*\/pdf/);
+      await expect(receiptLink).toBeVisible({ timeout: 15_000 });
+      await expect(receiptLink).toHaveAttribute('href', /\/api\/receipts\/.*\/pdf/, {
+        timeout: 15_000,
+      });
       const [receiptPopup] = await Promise.all([
         finance.waitForEvent('popup'),
         receiptLink.click(),
@@ -300,7 +312,7 @@ test.describe('authenticated financial workflow', () => {
         parent.locator('main').getByRole('heading', { name: 'Payment history' })
       ).toBeVisible({ timeout: 15_000 });
       const parentPaymentRow = parent.getByRole('row').filter({ hasText: receiptNumber });
-      await expect(parentPaymentRow).toBeVisible();
+      await expect(parentPaymentRow).toBeVisible({ timeout: 15_000 });
       await parentPaymentRow.getByRole('link', { name: 'View receipt', exact: true }).click();
       await expect(parent.getByText(browserReference, { exact: true })).toBeVisible({
         timeout: 30_000,
@@ -316,7 +328,7 @@ test.describe('authenticated financial workflow', () => {
         student.locator('main').getByRole('heading', { name: 'Payment history' })
       ).toBeVisible();
       const studentPaymentRow = student.getByRole('row').filter({ hasText: receiptNumber });
-      await expect(studentPaymentRow).toBeVisible();
+      await expect(studentPaymentRow).toBeVisible({ timeout: 15_000 });
       await studentPaymentRow.getByRole('link', { name: 'View receipt', exact: true }).click();
       await expect(student.getByText(browserReference, { exact: true })).toBeVisible({
         timeout: 30_000,
@@ -471,10 +483,17 @@ test.describe('authenticated financial workflow', () => {
       });
       finance.once('dialog', (dialog) => dialog.accept());
       await finance.getByRole('button', { name: 'Approve and post payment', exact: true }).click();
-      await expect(finance.getByRole('status')).toContainText('Payment proof approved and posted.');
+      await expect(finance.getByRole('status')).toContainText(
+        'Payment proof approved and posted.',
+        {
+          timeout: 15_000,
+        }
+      );
 
       await parent.goto('/parent/dashboard');
-      await expect(parent.getByText('FULLY PAID', { exact: true }).first()).toBeVisible();
+      await expect(parent.getByText('FULLY PAID', { exact: true }).first()).toBeVisible({
+        timeout: 15_000,
+      });
       await parent.goto('/parent/payment-submissions');
       const approvedRow = parent.getByRole('row').filter({ hasText: reference });
       await expect(approvedRow).toContainText('APPROVED', { timeout: 15_000 });

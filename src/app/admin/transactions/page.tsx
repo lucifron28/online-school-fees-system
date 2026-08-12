@@ -100,7 +100,8 @@ export default function AdminTransactionsPage() {
             Financial transactions log
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Review persisted cash and bank-deposit payments and their acknowledgment receipts.
+            Review persisted cash and bank-deposit payments and their System-Generated Payment
+            Receipts.
           </p>
         </div>
         <Link href="/admin/payments/manual">

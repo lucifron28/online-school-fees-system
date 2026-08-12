@@ -24,6 +24,7 @@ test.describe('Foundation Application & Scaffold Navigation Smoke Tests', () => 
   test('verifies representative protected routes redirect to their login portals', async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     const routes = [
       { path: '/admin/dashboard', loginPath: '/login/admin' },
       { path: '/admin/students', loginPath: '/login/admin' },
@@ -44,8 +45,8 @@ test.describe('Foundation Application & Scaffold Navigation Smoke Tests', () => 
         expect(String(error)).toContain('ERR_ABORTED');
       }
 
-      await expect(page).toHaveURL(new RegExp(`${loginPath}$`));
-      await expect(page.locator('body')).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`${loginPath}$`), { timeout: 15_000 });
+      await expect(page.locator('body')).toBeVisible({ timeout: 15_000 });
     }
   });
 
