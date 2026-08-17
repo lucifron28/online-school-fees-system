@@ -23,6 +23,9 @@ import {
   type EmailMessage,
 } from '../../server/services/notification.service';
 
+// This verifier is an explicit fictional test harness, not application runtime configuration.
+process.env.ENABLE_MOCK_PAYMENT_HARNESS = 'true';
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }

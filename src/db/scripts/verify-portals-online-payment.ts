@@ -28,6 +28,9 @@ import {
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
+// This verifier is an explicit fictional test harness, not application runtime configuration.
+process.env.ENABLE_MOCK_PAYMENT_HARNESS = 'true';
+
 function assertCheck(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
 }

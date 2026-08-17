@@ -6,7 +6,7 @@ import { getDeadlineSummary } from '@/server/services/deadline.service';
 export async function GET(request: Request) {
   try {
     await requireRequestAuth(request, ['ADMIN', 'FINANCE_STAFF']);
-    return NextResponse.json(await getDeadlineSummary({ limit: 1000 }));
+    return NextResponse.json(await getDeadlineSummary());
   } catch (error) {
     return routeErrorResponse(error);
   }

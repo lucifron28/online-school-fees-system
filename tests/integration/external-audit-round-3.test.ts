@@ -15,6 +15,9 @@ import { getPayment, getReceiptPdfData, PaymentService } from '@/server/services
 import { ReportService } from '@/server/services/report.service';
 import { listStudents } from '@/server/services/students-fees.service';
 
+// This suite intentionally exercises the persisted mock gateway harness.
+process.env.ENABLE_MOCK_PAYMENT_HARNESS = 'true';
+
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const databaseContract = testDatabaseUrl ? describe : describe.skip;
 

@@ -20,6 +20,9 @@ import {
   updateFeeStructure,
 } from '@/server/services/students-fees.service';
 
+// This suite intentionally exercises the persisted mock gateway harness.
+process.env.ENABLE_MOCK_PAYMENT_HARNESS = 'true';
+
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const databaseContract = testDatabaseUrl ? describe : describe.skip;
 
