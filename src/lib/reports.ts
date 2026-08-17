@@ -123,6 +123,19 @@ export interface OutstandingBalanceItem {
   postedAssessmentCount: number;
 }
 
+export interface OutstandingBalanceReportPage {
+  items: OutstandingBalanceItem[];
+  totals: {
+    totalOutstandingBalanceCentavos: number;
+  };
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
+}
+
 export interface ReversalReportItem {
   id: string;
   paymentId: string;
@@ -135,6 +148,17 @@ export interface ReversalReportItem {
   reason: string;
   reversedByName: string | null;
   reversedAt: Date;
+}
+
+export interface ReversalReportPage {
+  dateRange: Pick<ReportDateRange, 'from' | 'to'>;
+  items: ReversalReportItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
 }
 
 export interface StatementEntry {

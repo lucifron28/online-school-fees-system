@@ -23,7 +23,7 @@ This document records the final audit protections for the fictional, single-scho
 ## Privacy, recipients, and pagination
 
 - Notification recipient queries exclude inactive users. The console provider logs only delivery metadata and a truncated recipient hash; it never logs email addresses, subject text, message bodies, names, or financial content.
-- Admin proof review, portal payment history, and finance collection reports use paginated responses. The UI displays page state and totals instead of rendering an unbounded table.
+- Admin proof review, portal payment history, child-detail previews, and finance collection/outstanding/reversal reports use SQL `LIMIT`/`OFFSET` queries with total counts. The UI displays page state and totals instead of rendering an unbounded table; full CSV exports remain explicit download operations.
 
 ## Reviewer attribution and demo fixtures
 

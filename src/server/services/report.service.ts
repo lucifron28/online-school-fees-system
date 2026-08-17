@@ -26,9 +26,11 @@ import {
   type CollectionReportPage,
   type DashboardMetrics,
   type OutstandingBalanceItem,
+  type OutstandingBalanceReportPage,
   type ReportDateRange,
   type ReportDateRangeInput,
   type ReportKind,
+  type ReversalReportPage,
   type ReversalReportItem,
   type StatementEntry,
   type StudentStatement,
@@ -83,25 +85,16 @@ type CollectionRow = {
 
 async function selectCollectionRows(
   db: DatabaseInstance,
-  options: { range?: ReportDateRange; studentId?: string; search?: string } = {}
+  options: {
+    range?: ReportDateRange;
+    studentId?: string;
+    search?: string;
+    pagination?: { limit: number; offset: number };
+  } = {}
 ): Promise<CollectionRow[]> {
-  const conditions: SQL[] = [];
-  if (options.range) conditions.push(...getDateRangeConditions(options.range));
-  if (options.studentId) conditions.push(eq(schema.payments.studentId, options.studentId));
-  if (options.search) {
-    const pattern = `%${options.search}%`;
-    conditions.push(
-      or(
-        ilike(schema.students.studentNumber, pattern),
-        ilike(schema.students.firstName, pattern),
-        ilike(schema.students.lastName, pattern),
-        ilike(schema.receipts.receiptNumber, pattern),
-        ilike(schema.payments.referenceNumber, pattern)
-      ) as SQL
-    );
-  }
+  const conditions = buildCollectionConditions(options);
 
-  return db
+  const query = db
     .select({
       id: schema.payments.id,
       receiptId: schema.receipts.id,
@@ -145,7 +138,34 @@ async function selectCollectionRows(
       schema.payments.status,
       schema.payments.createdAt
     )
-    .orderBy(desc(schema.payments.createdAt));
+    .orderBy(desc(schema.payments.createdAt), asc(schema.payments.id));
+
+  return options.pagination
+    ? query.limit(options.pagination.limit).offset(options.pagination.offset)
+    : query;
+}
+
+function buildCollectionConditions(options: {
+  range?: ReportDateRange;
+  studentId?: string;
+  search?: string;
+}) {
+  const conditions: SQL[] = [];
+  if (options.range) conditions.push(...getDateRangeConditions(options.range));
+  if (options.studentId) conditions.push(eq(schema.payments.studentId, options.studentId));
+  if (options.search) {
+    const pattern = `%${options.search}%`;
+    conditions.push(
+      or(
+        ilike(schema.students.studentNumber, pattern),
+        ilike(schema.students.firstName, pattern),
+        ilike(schema.students.lastName, pattern),
+        ilike(schema.receipts.receiptNumber, pattern),
+        ilike(schema.payments.referenceNumber, pattern)
+      ) as SQL
+    );
+  }
+  return conditions;
 }
 
 function toCollectionItem(row: CollectionRow): CollectionReportItem {
@@ -245,10 +265,223 @@ function getCollectionTotals(items: CollectionReportItem[]) {
   };
 }
 
+async function selectCollectionSummary(db: DatabaseInstance, range: ReportDateRange) {
+  const where = and(...buildCollectionConditions({ range }));
+  const [statusRows, paymentMethodRows, gradeLevelRows] = await Promise.all([
+    db
+      .select({
+        status: schema.payments.status,
+        amountCentavos: sql<number>`coalesce(sum(${schema.payments.amountCentavos}), 0)`,
+        transactionCount: count(),
+      })
+      .from(schema.payments)
+      .innerJoin(schema.students, eq(schema.students.id, schema.payments.studentId))
+      .where(where)
+      .groupBy(schema.payments.status),
+    db
+      .select({
+        paymentMethod: schema.payments.paymentMethod,
+        amountCentavos: sql<number>`coalesce(sum(${schema.payments.amountCentavos}), 0)`,
+        transactionCount: count(),
+      })
+      .from(schema.payments)
+      .innerJoin(schema.students, eq(schema.students.id, schema.payments.studentId))
+      .where(and(where, eq(schema.payments.status, 'POSTED')))
+      .groupBy(schema.payments.paymentMethod),
+    db
+      .select({
+        gradeLevelName: schema.gradeLevels.name,
+        amountCentavos: sql<number>`coalesce(sum(${schema.payments.amountCentavos}), 0)`,
+        transactionCount: count(),
+      })
+      .from(schema.payments)
+      .innerJoin(schema.students, eq(schema.students.id, schema.payments.studentId))
+      .leftJoin(schema.gradeLevels, eq(schema.gradeLevels.id, schema.students.gradeLevelId))
+      .where(and(where, eq(schema.payments.status, 'POSTED')))
+      .groupBy(schema.gradeLevels.name),
+  ]);
+
+  const totals = emptyTotals();
+  for (const row of statusRows) {
+    const amountCentavos = toNumber(row.amountCentavos);
+    const transactionCount = toNumber(row.transactionCount);
+    if (row.status === 'POSTED') {
+      totals.grossCollectionsCentavos = addCentavos(
+        totals.grossCollectionsCentavos,
+        amountCentavos
+      );
+      totals.netCollectionsCentavos = addCentavos(totals.netCollectionsCentavos, amountCentavos);
+      totals.postedTransactionCount += transactionCount;
+    } else if (row.status === 'REVERSED') {
+      totals.grossCollectionsCentavos = addCentavos(
+        totals.grossCollectionsCentavos,
+        amountCentavos
+      );
+      totals.reversedCentavos = addCentavos(totals.reversedCentavos, amountCentavos);
+      totals.reversedTransactionCount += transactionCount;
+    }
+  }
+
+  return {
+    totals,
+    byPaymentMethod: paymentMethodRows
+      .map((row) => ({
+        key: row.paymentMethod,
+        label: row.paymentMethod,
+        amountCentavos: toNumber(row.amountCentavos),
+        transactionCount: toNumber(row.transactionCount),
+      }))
+      .sort((a, b) => b.amountCentavos - a.amountCentavos),
+    byGradeLevel: gradeLevelRows
+      .map((row) => ({
+        key: row.gradeLevelName ?? 'UNASSIGNED',
+        label: row.gradeLevelName ?? 'Unassigned',
+        amountCentavos: toNumber(row.amountCentavos),
+        transactionCount: toNumber(row.transactionCount),
+      }))
+      .sort((a, b) => b.amountCentavos - a.amountCentavos),
+  };
+}
+
 function csvSafeCell(value: string | number | null | undefined): string {
   const text = String(value ?? '');
   const safeText = /^[\t\r\n=+\-@]/.test(text) ? `'${text}` : text;
   return `"${safeText.replace(/"/g, '""')}"`;
+}
+
+function createOutstandingLedgerTotals(db: DatabaseInstance) {
+  return db
+    .select({
+      studentId: schema.ledgerEntries.studentId,
+      debitCentavos: sql<number>`coalesce(sum(${schema.ledgerEntries.debitCentavos}), 0)`.as(
+        'debit_centavos'
+      ),
+      creditCentavos: sql<number>`coalesce(sum(${schema.ledgerEntries.creditCentavos}), 0)`.as(
+        'credit_centavos'
+      ),
+    })
+    .from(schema.ledgerEntries)
+    .groupBy(schema.ledgerEntries.studentId)
+    .as('outstanding_ledger_totals');
+}
+
+function createOutstandingAssessmentCounts(db: DatabaseInstance) {
+  return db
+    .select({
+      studentId: schema.studentAssessments.studentId,
+      postedAssessmentCount: sql<number>`count(*)`.as('posted_assessment_count'),
+    })
+    .from(schema.studentAssessments)
+    .where(eq(schema.studentAssessments.status, 'POSTED'))
+    .groupBy(schema.studentAssessments.studentId)
+    .as('outstanding_assessment_counts');
+}
+
+function outstandingBalanceExpression(
+  ledgerTotals: ReturnType<typeof createOutstandingLedgerTotals>
+) {
+  return sql<number>`greatest(coalesce(${ledgerTotals.debitCentavos}, 0) - coalesce(${ledgerTotals.creditCentavos}, 0), 0)`;
+}
+
+async function selectOutstandingBalanceRows(
+  db: DatabaseInstance,
+  pagination?: { limit: number; offset: number }
+) {
+  const ledgerTotals = createOutstandingLedgerTotals(db);
+  const assessmentCounts = createOutstandingAssessmentCounts(db);
+  const outstandingBalance = outstandingBalanceExpression(ledgerTotals);
+  const query = db
+    .select({
+      studentId: schema.students.id,
+      studentNumber: schema.students.studentNumber,
+      firstName: schema.students.firstName,
+      lastName: schema.students.lastName,
+      status: schema.students.status,
+      gradeLevelName: schema.gradeLevels.name,
+      sectionName: schema.sections.name,
+      outstandingBalanceCentavos: outstandingBalance,
+      postedAssessmentCount: sql<number>`coalesce(${assessmentCounts.postedAssessmentCount}, 0)`,
+    })
+    .from(schema.students)
+    .leftJoin(schema.gradeLevels, eq(schema.gradeLevels.id, schema.students.gradeLevelId))
+    .leftJoin(schema.sections, eq(schema.sections.id, schema.students.sectionId))
+    .leftJoin(ledgerTotals, eq(ledgerTotals.studentId, schema.students.id))
+    .leftJoin(assessmentCounts, eq(assessmentCounts.studentId, schema.students.id))
+    .where(sql`${outstandingBalance} > 0`)
+    .orderBy(
+      asc(schema.students.lastName),
+      asc(schema.students.firstName),
+      asc(schema.students.id)
+    );
+
+  return pagination ? query.limit(pagination.limit).offset(pagination.offset) : query;
+}
+
+async function selectOutstandingBalanceSummary(db: DatabaseInstance) {
+  const ledgerTotals = createOutstandingLedgerTotals(db);
+  const outstandingBalance = outstandingBalanceExpression(ledgerTotals);
+  const rows = await db
+    .select({
+      total: count(),
+      totalOutstandingBalanceCentavos: sql<number>`coalesce(sum(${outstandingBalance}), 0)`,
+    })
+    .from(schema.students)
+    .leftJoin(ledgerTotals, eq(ledgerTotals.studentId, schema.students.id))
+    .where(sql`${outstandingBalance} > 0`);
+  return {
+    total: Number(rows[0]?.total ?? 0),
+    totalOutstandingBalanceCentavos: toNumber(rows[0]?.totalOutstandingBalanceCentavos),
+  };
+}
+
+async function selectReversalRows(
+  db: DatabaseInstance,
+  dateRange: ReportDateRange,
+  pagination?: { limit: number; offset: number }
+) {
+  const query = db
+    .select({
+      id: schema.paymentReversals.id,
+      paymentId: schema.paymentReversals.paymentId,
+      receiptNumber: schema.receipts.receiptNumber,
+      studentNumber: schema.students.studentNumber,
+      studentFirstName: schema.students.firstName,
+      studentLastName: schema.students.lastName,
+      gradeLevelName: schema.gradeLevels.name,
+      amountCentavos: schema.payments.amountCentavos,
+      paymentMethod: schema.payments.paymentMethod,
+      reason: schema.paymentReversals.reason,
+      reversedByName: schema.users.name,
+      reversedAt: schema.paymentReversals.createdAt,
+    })
+    .from(schema.paymentReversals)
+    .innerJoin(schema.payments, eq(schema.payments.id, schema.paymentReversals.paymentId))
+    .innerJoin(schema.students, eq(schema.students.id, schema.payments.studentId))
+    .leftJoin(schema.gradeLevels, eq(schema.gradeLevels.id, schema.students.gradeLevelId))
+    .leftJoin(schema.receipts, eq(schema.receipts.id, schema.paymentReversals.receiptId))
+    .leftJoin(schema.users, eq(schema.users.id, schema.paymentReversals.reversedByUserId))
+    .where(and(...getDateRangeConditions(dateRange, schema.paymentReversals.createdAt)))
+    .orderBy(desc(schema.paymentReversals.createdAt), asc(schema.paymentReversals.id));
+
+  return pagination ? query.limit(pagination.limit).offset(pagination.offset) : query;
+}
+
+function toReversalReportItem(
+  row: Awaited<ReturnType<typeof selectReversalRows>>[number]
+): ReversalReportItem {
+  return {
+    id: row.id,
+    paymentId: row.paymentId,
+    receiptNumber: row.receiptNumber,
+    studentNumber: row.studentNumber,
+    studentName: `${row.studentFirstName} ${row.studentLastName}`,
+    gradeLevelName: row.gradeLevelName,
+    amountCentavos: row.amountCentavos,
+    paymentMethod: row.paymentMethod,
+    reason: row.reason,
+    reversedByName: row.reversedByName,
+    reversedAt: row.reversedAt,
+  };
 }
 
 export function protectSpreadsheetFormula(value: string): string {
@@ -328,19 +561,35 @@ export class ReportService {
     pageSizeInput = 20,
     db: DatabaseInstance = getDb()
   ): Promise<CollectionReportPage> {
-    const report = await ReportService.getCollectionReport(input, db);
+    const dateRange = resolveReportDateRange(input);
     const pageSize = Math.min(50, Math.max(1, Math.floor(pageSizeInput || 20)));
-    const pageCount = Math.max(1, Math.ceil(report.items.length / pageSize));
+    const where = and(...buildCollectionConditions({ range: dateRange }));
+    const totalRows = await db
+      .select({ total: count() })
+      .from(schema.payments)
+      .innerJoin(schema.students, eq(schema.students.id, schema.payments.studentId))
+      .where(where);
+    const total = Number(totalRows[0]?.total ?? 0);
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const page = Math.min(pageCount, Math.max(1, Math.floor(pageInput || 1)));
-    const start = (page - 1) * pageSize;
+    const [rows, summary] = await Promise.all([
+      selectCollectionRows(db, {
+        range: dateRange,
+        pagination: { limit: pageSize, offset: (page - 1) * pageSize },
+      }),
+      selectCollectionSummary(db, dateRange),
+    ]);
 
     return {
-      ...report,
-      items: report.items.slice(start, start + pageSize),
+      dateRange,
+      items: rows.map(toCollectionItem),
+      totals: summary.totals,
+      byPaymentMethod: summary.byPaymentMethod,
+      byGradeLevel: summary.byGradeLevel,
       pagination: {
         page,
         pageSize,
-        total: report.items.length,
+        total,
         pageCount,
       },
     };
@@ -349,64 +598,54 @@ export class ReportService {
   static async getOutstandingBalanceReport(
     db: DatabaseInstance = getDb()
   ): Promise<OutstandingBalanceItem[]> {
-    const [students, ledgerRows, assessmentRows] = await Promise.all([
-      db
-        .select({
-          id: schema.students.id,
-          studentNumber: schema.students.studentNumber,
-          firstName: schema.students.firstName,
-          lastName: schema.students.lastName,
-          status: schema.students.status,
-          gradeLevelName: schema.gradeLevels.name,
-          sectionName: schema.sections.name,
-        })
-        .from(schema.students)
-        .leftJoin(schema.gradeLevels, eq(schema.gradeLevels.id, schema.students.gradeLevelId))
-        .leftJoin(schema.sections, eq(schema.sections.id, schema.students.sectionId))
-        .orderBy(asc(schema.students.lastName), asc(schema.students.firstName)),
-      db
-        .select({
-          studentId: schema.ledgerEntries.studentId,
-          debitCentavos: sql<number>`coalesce(sum(${schema.ledgerEntries.debitCentavos}), 0)`,
-          creditCentavos: sql<number>`coalesce(sum(${schema.ledgerEntries.creditCentavos}), 0)`,
-        })
-        .from(schema.ledgerEntries)
-        .groupBy(schema.ledgerEntries.studentId),
-      db
-        .select({
-          studentId: schema.studentAssessments.studentId,
-          count: sql<number>`count(*)`,
-        })
-        .from(schema.studentAssessments)
-        .where(eq(schema.studentAssessments.status, 'POSTED'))
-        .groupBy(schema.studentAssessments.studentId),
-    ]);
+    const rows = await selectOutstandingBalanceRows(db);
+    return rows.map((student) => ({
+      studentId: student.studentId,
+      studentNumber: student.studentNumber,
+      studentName: `${student.firstName} ${student.lastName}`,
+      status: student.status,
+      gradeLevelName: student.gradeLevelName,
+      sectionName: student.sectionName,
+      outstandingBalanceCentavos: toNumber(student.outstandingBalanceCentavos),
+      postedAssessmentCount: toNumber(student.postedAssessmentCount),
+    }));
+  }
 
-    const ledgerByStudent = new Map(
-      ledgerRows.map((row) => [
-        row.studentId,
-        { debit: toNumber(row.debitCentavos), credit: toNumber(row.creditCentavos) },
-      ])
-    );
-    const assessmentCountByStudent = new Map(
-      assessmentRows.map((row) => [row.studentId, toNumber(row.count)])
-    );
+  static async getOutstandingBalanceReportPage(
+    pageInput = 1,
+    pageSizeInput = 12,
+    db: DatabaseInstance = getDb()
+  ): Promise<OutstandingBalanceReportPage> {
+    const pageSize = Math.min(50, Math.max(1, Math.floor(pageSizeInput || 12)));
+    const summary = await selectOutstandingBalanceSummary(db);
+    const pageCount = Math.max(1, Math.ceil(summary.total / pageSize));
+    const page = Math.min(pageCount, Math.max(1, Math.floor(pageInput || 1)));
+    const rows = await selectOutstandingBalanceRows(db, {
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    });
 
-    return students
-      .map((student) => {
-        const ledger = ledgerByStudent.get(student.id) ?? { debit: 0, credit: 0 };
-        return {
-          studentId: student.id,
-          studentNumber: student.studentNumber,
-          studentName: `${student.firstName} ${student.lastName}`,
-          status: student.status,
-          gradeLevelName: student.gradeLevelName,
-          sectionName: student.sectionName,
-          outstandingBalanceCentavos: Math.max(0, ledger.debit - ledger.credit),
-          postedAssessmentCount: assessmentCountByStudent.get(student.id) ?? 0,
-        };
-      })
-      .filter((student) => student.outstandingBalanceCentavos > 0);
+    return {
+      items: rows.map((student) => ({
+        studentId: student.studentId,
+        studentNumber: student.studentNumber,
+        studentName: `${student.firstName} ${student.lastName}`,
+        status: student.status,
+        gradeLevelName: student.gradeLevelName,
+        sectionName: student.sectionName,
+        outstandingBalanceCentavos: toNumber(student.outstandingBalanceCentavos),
+        postedAssessmentCount: toNumber(student.postedAssessmentCount),
+      })),
+      totals: {
+        totalOutstandingBalanceCentavos: summary.totalOutstandingBalanceCentavos,
+      },
+      pagination: {
+        page,
+        pageSize,
+        total: summary.total,
+        pageCount,
+      },
+    };
   }
 
   static async getReversalReport(
@@ -414,45 +653,43 @@ export class ReportService {
     db: DatabaseInstance = getDb()
   ): Promise<{ dateRange: Pick<ReportDateRange, 'from' | 'to'>; items: ReversalReportItem[] }> {
     const dateRange = resolveReportDateRange(input);
-    const rows = await db
-      .select({
-        id: schema.paymentReversals.id,
-        paymentId: schema.paymentReversals.paymentId,
-        receiptNumber: schema.receipts.receiptNumber,
-        studentNumber: schema.students.studentNumber,
-        studentFirstName: schema.students.firstName,
-        studentLastName: schema.students.lastName,
-        gradeLevelName: schema.gradeLevels.name,
-        amountCentavos: schema.payments.amountCentavos,
-        paymentMethod: schema.payments.paymentMethod,
-        reason: schema.paymentReversals.reason,
-        reversedByName: schema.users.name,
-        reversedAt: schema.paymentReversals.createdAt,
-      })
-      .from(schema.paymentReversals)
-      .innerJoin(schema.payments, eq(schema.payments.id, schema.paymentReversals.paymentId))
-      .innerJoin(schema.students, eq(schema.students.id, schema.payments.studentId))
-      .leftJoin(schema.gradeLevels, eq(schema.gradeLevels.id, schema.students.gradeLevelId))
-      .leftJoin(schema.receipts, eq(schema.receipts.id, schema.paymentReversals.receiptId))
-      .leftJoin(schema.users, eq(schema.users.id, schema.paymentReversals.reversedByUserId))
-      .where(and(...getDateRangeConditions(dateRange, schema.paymentReversals.createdAt)))
-      .orderBy(desc(schema.paymentReversals.createdAt));
+    const rows = await selectReversalRows(db, dateRange);
 
     return {
       dateRange,
-      items: rows.map((row) => ({
-        id: row.id,
-        paymentId: row.paymentId,
-        receiptNumber: row.receiptNumber,
-        studentNumber: row.studentNumber,
-        studentName: `${row.studentFirstName} ${row.studentLastName}`,
-        gradeLevelName: row.gradeLevelName,
-        amountCentavos: row.amountCentavos,
-        paymentMethod: row.paymentMethod,
-        reason: row.reason,
-        reversedByName: row.reversedByName,
-        reversedAt: row.reversedAt,
-      })),
+      items: rows.map(toReversalReportItem),
+    };
+  }
+
+  static async getReversalReportPage(
+    input: ReportDateRangeInput = {},
+    pageInput = 1,
+    pageSizeInput = 12,
+    db: DatabaseInstance = getDb()
+  ): Promise<ReversalReportPage> {
+    const dateRange = resolveReportDateRange(input);
+    const pageSize = Math.min(50, Math.max(1, Math.floor(pageSizeInput || 12)));
+    const totalRows = await db
+      .select({ total: count() })
+      .from(schema.paymentReversals)
+      .where(and(...getDateRangeConditions(dateRange, schema.paymentReversals.createdAt)));
+    const total = Number(totalRows[0]?.total ?? 0);
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    const page = Math.min(pageCount, Math.max(1, Math.floor(pageInput || 1)));
+    const rows = await selectReversalRows(db, dateRange, {
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    });
+
+    return {
+      dateRange,
+      items: rows.map(toReversalReportItem),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        pageCount,
+      },
     };
   }
 
@@ -563,7 +800,7 @@ export class ReportService {
       todayReport,
       monthReport,
       trendReport,
-      outstanding,
+      outstandingSummary,
       activeStudents,
       postedCount,
       recent,
@@ -573,7 +810,7 @@ export class ReportService {
       ReportService.getCollectionReport({ from: today, to: today }, db),
       ReportService.getCollectionReport({ from: monthStart, to: today }, db),
       ReportService.getCollectionReport({ from: trendStart, to: today }, db),
-      ReportService.getOutstandingBalanceReport(db),
+      selectOutstandingBalanceSummary(db),
       db
         .select({ total: count() })
         .from(schema.students)
@@ -582,7 +819,7 @@ export class ReportService {
         .select({ total: count() })
         .from(schema.payments)
         .where(eq(schema.payments.status, 'POSTED')),
-      selectCollectionRows(db),
+      selectCollectionRows(db, { pagination: { limit: 8, offset: 0 } }),
       getDeadlineSummary({ now, limit: 12 }, db),
       db
         .select({ total: count() })
@@ -613,12 +850,9 @@ export class ReportService {
       activeStudents: Number(activeStudents[0]?.total ?? 0),
       collectionsTodayCentavos: todayReport.totals.netCollectionsCentavos,
       collectionsMonthCentavos: monthReport.totals.netCollectionsCentavos,
-      outstandingBalanceCentavos: outstanding.reduce(
-        (total, student) => addCentavos(total, student.outstandingBalanceCentavos),
-        0
-      ),
+      outstandingBalanceCentavos: outstandingSummary.totalOutstandingBalanceCentavos,
       postedTransactionsCount: Number(postedCount[0]?.total ?? 0),
-      recentTransactions: recent.slice(0, 8).map(toCollectionItem),
+      recentTransactions: recent.map(toCollectionItem),
       collectionTrend,
       paymentMethodBreakdown: monthReport.byPaymentMethod,
       dueSoonCount: deadlineSummary.dueSoonCount,
