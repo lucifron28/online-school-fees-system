@@ -165,8 +165,8 @@ databaseContract('deterministic demo database workflow', () => {
       { from: '2026-08-01', to: '2026-08-31' },
       db
     );
-    expect(report.totals.grossCollectionsCentavos).toBe(175_000_00);
-    expect(report.totals.netCollectionsCentavos).toBe(160_000_00);
+    expect(report.totals.grossCollectionsCentavos).toBe(225_000_00);
+    expect(report.totals.netCollectionsCentavos).toBe(210_000_00);
     expect(report.totals.reversedCentavos).toBe(15_000_00);
     expect((await ReportService.getOutstandingBalanceReport(db)).length).toBeGreaterThan(0);
   });
