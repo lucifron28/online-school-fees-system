@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Building2, Download, RefreshCw } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
-import type { PortalPayment } from '@/lib/portal-types';
+import type { PortalPaymentsPage } from '@/lib/portal-types';
 import { formatCentavos } from '@/lib/utils/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,9 +15,10 @@ export default function StudentReceiptPage({ params }: { params: Promise<{ id: s
   const { id } = React.use(params);
   const paymentsQuery = useQuery({
     queryKey: ['student-payments'],
-    queryFn: () => requestJson<PortalPayment[]>('/api/portal/student/payments'),
+    queryFn: () =>
+      requestJson<PortalPaymentsPage>('/api/portal/student/payments?page=1&pageSize=50'),
   });
-  const payment = paymentsQuery.data?.find(
+  const payment = paymentsQuery.data?.items.find(
     (candidate) => candidate.receiptId === id || candidate.receiptNumber === id
   );
 

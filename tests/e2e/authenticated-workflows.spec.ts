@@ -1,6 +1,7 @@
 import { expect, test, type APIResponse, type Page } from '@playwright/test';
 import { fictionalPaymentProof } from '../fixtures/fictional-payment-proof';
 import { formatCentavos } from '@/lib/utils/currency';
+import type { PortalPaymentsPage } from '@/lib/portal-types';
 
 const PASSWORD = 'DemoPass123!';
 
@@ -228,10 +229,10 @@ test.describe('authenticated financial workflow', () => {
       ).toBe(true);
       await parent.goto(`/parent/children/${createdStudent.id}`);
       await expect(parent.getByText(assessment.dueDate!, { exact: true }).first()).toBeVisible();
-      const parentPaymentsBeforeOnline = await jsonResponse<Array<{ id: string }>>(
+      const parentPaymentsBeforeOnline = await jsonResponse<PortalPaymentsPage>(
         await parent.request.get('/api/portal/parent/payments')
       );
-      expect(parentPaymentsBeforeOnline.some((item) => item.id === payment.id)).toBe(true);
+      expect(parentPaymentsBeforeOnline.items.some((item) => item.id === payment.id)).toBe(true);
 
       const checkout = await jsonResponse<{ paymentReference: string; status: string }>(
         await parent.request.post('/api/portal/parent/checkouts', {
@@ -500,6 +501,7 @@ test.describe('authenticated financial workflow', () => {
 
       const parent = await parentContext.newPage();
       await login(parent, 'parent', 'parent@demo.school');
+      await waitForAnnouncementPreview(parent);
       const children = await jsonResponse<
         Array<{ studentId: string; studentNumber: string; outstandingBalanceCentavos: number }>
       >(await parent.request.get('/api/portal/parent/children'));
@@ -525,7 +527,7 @@ test.describe('authenticated financial workflow', () => {
       await parent
         .getByLabel('Transaction date and time')
         .fill(new Date(Date.now() - 60_000).toISOString().slice(0, 16));
-      await parent.getByLabel('Screenshot/proof').setInputFiles({
+      await parent.getByLabel('Payment screenshot').setInputFiles({
         name: 'fictional-payment-proof.png',
         mimeType: 'image/png',
         buffer: fictionalPaymentProof,
@@ -622,7 +624,7 @@ test.describe('authenticated financial workflow', () => {
       await parent
         .getByLabel('Transaction date and time')
         .fill(new Date(Date.now() - 60_000).toISOString().slice(0, 16));
-      await parent.getByLabel('Screenshot/proof').setInputFiles({
+      await parent.getByLabel('Payment screenshot').setInputFiles({
         name: 'fictional-maya-proof.png',
         mimeType: 'image/png',
         buffer: fictionalPaymentProof,
