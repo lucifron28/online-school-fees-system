@@ -16,12 +16,14 @@ function vercelDeploymentUrl(value: string | undefined) {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`;
 }
 
-export function resolveAuthBaseUrl(options: {
-  betterAuthUrl?: string;
-  nextPublicAppUrl?: string;
-  vercelEnv?: string;
-  vercelUrl?: string;
-} = {}) {
+export function resolveAuthBaseUrl(
+  options: {
+    betterAuthUrl?: string;
+    nextPublicAppUrl?: string;
+    vercelEnv?: string;
+    vercelUrl?: string;
+  } = {}
+) {
   const betterAuthUrl = options.betterAuthUrl ?? process.env.BETTER_AUTH_URL ?? '';
   const nextPublicAppUrl = options.nextPublicAppUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? '';
   const vercelEnv = options.vercelEnv ?? process.env.VERCEL_ENV;
