@@ -82,14 +82,22 @@ export function PaymentSubmissionQueue() {
         }
       );
     },
-    onSuccess: (_result, action) => {
+    onSuccess: async (_result, action) => {
+      setRequestError(null);
+      setRejectionReason('');
+      const completedSubmissionId = selectedId;
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-payment-submissions'] }),
+        completedSubmissionId
+          ? queryClient.invalidateQueries({
+              queryKey: ['admin-payment-submission', completedSubmissionId],
+            })
+          : Promise.resolve(),
+      ]);
+      setSelectedId(null);
       setNotice(
         action === 'approve' ? 'Payment proof approved and posted.' : 'Payment proof rejected.'
       );
-      setRequestError(null);
-      setRejectionReason('');
-      void queryClient.invalidateQueries({ queryKey: ['admin-payment-submissions'] });
-      void queryClient.invalidateQueries({ queryKey: ['admin-payment-submission', selectedId] });
     },
     onError: (error) => {
       setNotice(null);
