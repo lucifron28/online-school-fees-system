@@ -621,6 +621,8 @@ export const paymentSubmissions = pgTable(
     amountCentavos: integer('amount_centavos').notNull(),
     referenceNumber: text('reference_number').notNull(),
     normalizedReferenceNumber: text('normalized_reference_number').notNull(),
+    destinationAccountName: text('destination_account_name'),
+    destinationAccountNumber: text('destination_account_number'),
     paidAt: timestamp('paid_at', { withTimezone: true }).notNull(),
     status: paymentSubmissionStatusEnum('status').default('PENDING_VERIFICATION').notNull(),
     reviewedByUserId: text('reviewed_by_user_id').references(() => users.id),
@@ -646,6 +648,14 @@ export const paymentSubmissions = pgTable(
     approvedPaymentRequired: check(
       'payment_submissions_approved_payment_required',
       sql`${table.status} <> 'APPROVED' OR ${table.approvedPaymentId} IS NOT NULL`
+    ),
+    destinationSnapshotConsistent: check(
+      'payment_submissions_destination_snapshot_consistent',
+      sql`(${table.destinationAccountName} IS NULL AND ${table.destinationAccountNumber} IS NULL) OR (${table.destinationAccountName} IS NOT NULL AND length(trim(${table.destinationAccountName})) > 0 AND ${table.destinationAccountNumber} IS NOT NULL AND length(trim(${table.destinationAccountNumber})) > 0)`
+    ),
+    lifecycleConsistent: check(
+      'payment_submissions_lifecycle_consistent',
+      sql`(${table.status} = 'PENDING_VERIFICATION' AND ${table.reviewedByUserId} IS NULL AND ${table.reviewedAt} IS NULL AND ${table.rejectionReason} IS NULL AND ${table.approvedPaymentId} IS NULL) OR (${table.status} = 'APPROVED' AND ${table.reviewedByUserId} IS NOT NULL AND ${table.reviewedAt} IS NOT NULL AND ${table.rejectionReason} IS NULL AND ${table.approvedPaymentId} IS NOT NULL) OR (${table.status} = 'REJECTED' AND ${table.reviewedByUserId} IS NOT NULL AND ${table.reviewedAt} IS NOT NULL AND ${table.rejectionReason} IS NOT NULL AND length(trim(${table.rejectionReason})) > 0 AND ${table.approvedPaymentId} IS NULL)`
     ),
     statusChannelCreatedIndex: index('payment_submissions_status_channel_created_idx').on(
       table.status,

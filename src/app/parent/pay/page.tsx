@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowLeft, CheckCircle2, RefreshCw, Send, Smartphone, Upload, Wallet } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
@@ -40,8 +40,6 @@ function destinationFor(options: PaymentDestinationOptions | undefined, channel:
 export default function ParentPayPage() {
   const searchParams = useSearchParams();
   const initialStudentId = searchParams.get('studentId') ?? '';
-  const [selectedStudentId, setSelectedStudentId] = useState(initialStudentId);
-  const [selectedChannel, setSelectedChannel] = useState<PaymentChannel>('GCASH');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreviewUrl, setProofPreviewUrl] = useState<string | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
@@ -58,12 +56,6 @@ export default function ParentPayPage() {
       requestJson<PaymentDestinationOptions>('/api/portal/parent/payment-submissions/options'),
   });
   const children = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
-  const selectedChild = children.find((child) => child.studentId === selectedStudentId);
-  const destination = destinationFor(optionsQuery.data, selectedChannel);
-
-  useEffect(() => {
-    if (!selectedStudentId && children[0]) setSelectedStudentId(children[0].studentId);
-  }, [children, selectedStudentId]);
 
   useEffect(() => {
     if (!proofFile) {
@@ -75,17 +67,6 @@ export default function ParentPayPage() {
     return () => URL.revokeObjectURL(url);
   }, [proofFile]);
 
-  const submissionMutation = useMutation({
-    mutationFn: (body: FormData) =>
-      requestForm<PortalPaymentSubmission>('/api/portal/parent/payment-submissions', body),
-    onSuccess: (submission) => {
-      setSuccessSubmission(submission);
-      setProofFile(null);
-      setFileInputKey((value) => value + 1);
-      form.reset();
-    },
-  });
-
   const form = useForm({
     defaultValues: {
       studentId: initialStudentId,
@@ -96,11 +77,13 @@ export default function ParentPayPage() {
     },
     onSubmit: async ({ value }) => {
       setFormError('');
-      if (!selectedChild) {
+      const submittedChild = children.find((child) => child.studentId === value.studentId);
+      const submittedDestination = destinationFor(optionsQuery.data, value.paymentChannel);
+      if (!submittedChild) {
         setFormError('Select a linked child.');
         return;
       }
-      if (!destination) {
+      if (!submittedDestination) {
         setFormError('This payment channel is not currently configured by the school.');
         return;
       }
@@ -114,7 +97,7 @@ export default function ParentPayPage() {
         const paidAt = new Date(value.paidAt);
         if (!Number.isFinite(paidAt.getTime())) throw new Error('Enter the payment date and time.');
         const body = new FormData();
-        body.set('studentId', selectedChild.studentId);
+        body.set('studentId', value.studentId);
         body.set('paymentChannel', value.paymentChannel);
         body.set('amountCentavos', String(amountCentavos));
         body.set('referenceNumber', value.referenceNumber);
@@ -125,6 +108,51 @@ export default function ParentPayPage() {
       } catch (error) {
         setFormError(getClientErrorMessage(error));
       }
+    },
+  });
+
+  const formValues = useStore(form.store, (state) => state.values);
+  const selectedChild = children.find((child) => child.studentId === formValues.studentId);
+  const destination = destinationFor(optionsQuery.data, formValues.paymentChannel);
+
+  useEffect(() => {
+    const firstStudentId = children[0]?.studentId;
+    if (firstStudentId && !children.some((child) => child.studentId === formValues.studentId)) {
+      form.setFieldValue('studentId', firstStudentId);
+    }
+  }, [children, form, formValues.studentId]);
+
+  useEffect(() => {
+    if (!optionsQuery.data || destination) return;
+    const fallbackChannel: PaymentChannel | null = optionsQuery.data.gcash
+      ? 'GCASH'
+      : optionsQuery.data.maya
+        ? 'MAYA'
+        : null;
+    if (fallbackChannel) form.setFieldValue('paymentChannel', fallbackChannel);
+  }, [destination, form, formValues.paymentChannel, optionsQuery.data]);
+
+  const submissionMutation = useMutation({
+    mutationFn: (body: FormData) =>
+      requestForm<PortalPaymentSubmission>('/api/portal/parent/payment-submissions', body),
+    onSuccess: (submission) => {
+      setSuccessSubmission(submission);
+      setFormError('');
+      setProofFile(null);
+      setFileInputKey((value) => value + 1);
+      const resetStudentId = children[0]?.studentId ?? initialStudentId;
+      const resetChannel: PaymentChannel = optionsQuery.data?.gcash
+        ? 'GCASH'
+        : optionsQuery.data?.maya
+          ? 'MAYA'
+          : 'GCASH';
+      form.reset({
+        studentId: resetStudentId,
+        paymentChannel: resetChannel,
+        amount: '',
+        referenceNumber: '',
+        paidAt: '',
+      });
     },
   });
 
@@ -207,11 +235,8 @@ export default function ParentPayPage() {
                     Linked child
                     <select
                       className="mt-1 flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
-                      value={field.state.value || selectedStudentId}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                        setSelectedStudentId(event.target.value);
-                      }}
+                      value={field.state.value}
+                      onChange={(event) => field.handleChange(event.target.value)}
                     >
                       {children.map((child) => (
                         <option key={child.studentId} value={child.studentId}>
@@ -253,10 +278,7 @@ export default function ParentPayPage() {
                           type="button"
                           disabled={!account}
                           aria-pressed={field.state.value === channel}
-                          onClick={() => {
-                            field.handleChange(channel);
-                            setSelectedChannel(channel);
-                          }}
+                          onClick={() => field.handleChange(channel)}
                           className={`flex items-center gap-3 rounded-xl border p-4 text-left ${
                             field.state.value === channel
                               ? 'border-emerald-600 bg-emerald-50 font-bold ring-2 ring-emerald-500/20'
@@ -279,12 +301,14 @@ export default function ParentPayPage() {
 
               {destination && (
                 <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-xs text-blue-900">
-                  <p className="font-semibold">Transfer to the school {selectedChannel} account</p>
+                  <p className="font-semibold">
+                    Transfer to the school {formValues.paymentChannel} account
+                  </p>
                   <p className="mt-2">Account name: {destination.accountName}</p>
                   <p>Account number: {destination.accountNumber}</p>
                   <p className="mt-2 text-blue-700">
-                    Complete the transfer in the external {selectedChannel} app. This system does
-                    not initiate or automatically verify the transfer.
+                    Complete the transfer in the external {formValues.paymentChannel} app. This
+                    system does not initiate or automatically verify the transfer.
                   </p>
                 </div>
               )}

@@ -14,6 +14,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         'Content-Type': proof.mimeType,
         'Content-Disposition': `inline; filename="${proof.originalFileName.replace(/"/g, '')}"`,
         'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch (error) {

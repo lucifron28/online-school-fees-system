@@ -18,6 +18,7 @@ import { PaymentService } from './payment.service';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '@/server/errors';
 
 export const MAX_PAYMENT_PROOF_BYTES = 3 * 1024 * 1024;
+export const MAX_PAYMENT_PROOF_REQUEST_BYTES = MAX_PAYMENT_PROOF_BYTES + 256 * 1024;
 
 const allowedProofMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
@@ -135,6 +136,15 @@ function validateProof(proof: PaymentProofInput) {
   };
 }
 
+export function assertPaymentProofRequestSize(request: Request) {
+  const contentLength = request.headers.get('content-length');
+  if (!contentLength) return;
+  const parsedLength = Number(contentLength);
+  if (Number.isFinite(parsedLength) && parsedLength > MAX_PAYMENT_PROOF_REQUEST_BYTES) {
+    throw new ValidationError('The payment proof upload is too large.');
+  }
+}
+
 function parsePaidAt(value: string) {
   const paidAt = new Date(value);
   if (!Number.isFinite(paidAt.getTime())) throw new ValidationError('Payment date is invalid.');
@@ -224,6 +234,8 @@ function submissionSelection() {
     paymentChannel: schema.paymentSubmissions.paymentChannel,
     amountCentavos: schema.paymentSubmissions.amountCentavos,
     referenceNumber: schema.paymentSubmissions.referenceNumber,
+    destinationAccountName: schema.paymentSubmissions.destinationAccountName,
+    destinationAccountNumber: schema.paymentSubmissions.destinationAccountNumber,
     paidAt: schema.paymentSubmissions.paidAt,
     status: schema.paymentSubmissions.status,
     reviewedByUserId: schema.paymentSubmissions.reviewedByUserId,
@@ -253,6 +265,8 @@ type SelectedSubmission = {
   paymentChannel: 'GCASH' | 'MAYA';
   amountCentavos: number;
   referenceNumber: string;
+  destinationAccountName: string | null;
+  destinationAccountNumber: string | null;
   paidAt: Date;
   status: 'PENDING_VERIFICATION' | 'APPROVED' | 'REJECTED';
   reviewedByUserId: string | null;
@@ -284,6 +298,13 @@ function toSubmissionItem(
     paymentChannel: row.paymentChannel,
     amountCentavos: row.amountCentavos,
     referenceNumber: row.referenceNumber,
+    paymentDestination:
+      row.destinationAccountName && row.destinationAccountNumber
+        ? {
+            accountName: row.destinationAccountName,
+            accountNumber: row.destinationAccountNumber,
+          }
+        : null,
     paidAt: row.paidAt,
     status: row.status,
     reviewedByUserId: row.reviewedByUserId,
@@ -296,7 +317,6 @@ function toSubmissionItem(
     proofMimeType: row.proofMimeType,
     proofSizeBytes: row.proofSizeBytes,
     currentBalanceCentavos: balances.get(row.studentId) ?? 0,
-    paymentDestination: null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -404,11 +424,6 @@ export async function createPaymentSubmission(
   const proof = validateProof(input.proof);
   await assertParentOwnsStudent(submittedByUserId, values.studentId, db);
 
-  const destinations = await getPaymentDestinationOptions(db);
-  if (!destinations[values.paymentChannel === 'GCASH' ? 'gcash' : 'maya']) {
-    throw new ValidationError(`${values.paymentChannel} proof submissions are not enabled.`);
-  }
-
   const existing = await db
     .select()
     .from(schema.paymentSubmissions)
@@ -428,6 +443,21 @@ export async function createPaymentSubmission(
   try {
     const created = await db.transaction(async (tx) => {
       const transactionDb = tx as unknown as DatabaseInstance;
+      const settings = await getOrCreateSchoolSettings(transactionDb);
+      const destination =
+        values.paymentChannel === 'GCASH'
+          ? settings.gcashEnabled && settings.gcashAccountName && settings.gcashAccountNumber
+            ? {
+                accountName: settings.gcashAccountName,
+                accountNumber: settings.gcashAccountNumber,
+              }
+            : null
+          : settings.mayaEnabled && settings.mayaAccountName && settings.mayaAccountNumber
+            ? { accountName: settings.mayaAccountName, accountNumber: settings.mayaAccountNumber }
+            : null;
+      if (!destination) {
+        throw new ValidationError(`${values.paymentChannel} proof submissions are not enabled.`);
+      }
       const [submission] = await tx
         .insert(schema.paymentSubmissions)
         .values({
@@ -437,6 +467,8 @@ export async function createPaymentSubmission(
           amountCentavos: values.amountCentavos,
           referenceNumber: values.referenceNumber,
           normalizedReferenceNumber,
+          destinationAccountName: destination.accountName,
+          destinationAccountNumber: destination.accountNumber,
           paidAt,
           idempotencyKey: values.idempotencyKey,
         })
@@ -517,11 +549,7 @@ export async function getPaymentSubmission(submissionId: string, db: DatabaseIns
     eq(schema.paymentSubmissions.id, submissionId),
   ]);
   if (!values.items[0]) throw new NotFoundError('The payment proof submission does not exist.');
-  const options = await getPaymentDestinationOptions(db);
-  return {
-    ...values.items[0],
-    paymentDestination: options[values.items[0].paymentChannel === 'GCASH' ? 'gcash' : 'maya'],
-  };
+  return values.items[0];
 }
 
 export async function getPaymentProof(

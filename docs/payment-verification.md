@@ -10,14 +10,17 @@ not initiate, query, or automatically confirm either provider transaction.
 2. A parent selects a linked child, reviews the server-calculated outstanding balance, transfers
    money externally, and submits the channel, amount, reference, timestamp, and screenshot.
 3. The submission is stored as `PENDING_VERIFICATION`. The screenshot is validated as JPEG, PNG, or
-   WebP, limited to 3 MiB, hashed with SHA-256, and stored in PostgreSQL bytea storage.
-4. The parent can view only submissions they created for their linked children. Proof bytes are
+   WebP, limited to 3 MiB at both the request and file boundaries, hashed with SHA-256, and stored
+   in PostgreSQL bytea storage. Proof responses are authenticated, `no-store`, and `nosniff`.
+4. The selected destination name and account number are snapshotted on the submission. Legacy rows
+   without that snapshot are shown as historical destination unavailable.
+5. The parent can view only submissions they created for their linked children. Proof bytes are
    served through an authenticated, non-cacheable endpoint.
 
 ## Finance workflow
 
-Finance staff and administrators review the queue, current balance, destination details, reference,
-timestamp, and proof. Rejection requires a reason and creates no financial records.
+Finance staff and administrators review the queue, current balance, captured destination snapshot,
+reference, timestamp, and proof. Rejection requires a reason and creates no financial records.
 
 Approval locks the submission and student, re-reads the authoritative ledger balance, rejects
 overpayments or duplicate references, and uses the existing `PaymentService` transaction to create
@@ -32,5 +35,5 @@ sent after commit; pending and rejected states also notify the submitting parent
 - `tests/integration/payment-submissions.test.ts` covers ownership, file validation, idempotency,
   duplicate-reference protection, rejection, overpayment rechecks, Maya/GCash posting, and
   concurrent approval.
-- The existing mock checkout remains available only for internal test coverage. It is not the
-  parent portal payment path.
+- The existing mock checkout remains available only for internal test coverage and requires
+  `ENABLE_MOCK_PAYMENT_HARNESS=true`. It is not the parent portal payment path.
