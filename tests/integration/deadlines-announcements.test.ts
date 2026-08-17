@@ -6,9 +6,12 @@ import * as schema from '@/db/schema';
 import { addManilaDays, getManilaDateString } from '@/lib/reports';
 import { calculateAssessmentDueDate, evaluateDeadline } from '@/lib/deadlines';
 import {
+  archiveAnnouncement,
   createAnnouncement,
   listVisibleAnnouncements,
+  publishAnnouncement,
   publishDueAnnouncements,
+  updateAnnouncement,
 } from '@/server/services/announcement.service';
 import { getOrCreateSchoolSettings } from '@/server/services/administration.service';
 import { AssessmentService } from '@/server/services/assessment.service';
@@ -363,6 +366,19 @@ databaseContract('Payment deadlines and announcements PostgreSQL contract', () =
     expect(rows.some((row) => row.userId === unrelatedParentId)).toBe(false);
   });
 
+  it('excludes inactive linked parents from reminder recipients', async () => {
+    const dueSoon = await createAssessment({ dueDate: addManilaDays(getManilaDateString(now), 1) });
+    const inactiveParentId = await createParentLink(dueSoon.student.id);
+    await db
+      .update(schema.users)
+      .set({ active: false, updatedAt: new Date() })
+      .where(eq(schema.users.id, inactiveParentId));
+
+    await ReminderService.runDueReminders({ now }, db, new ConsoleEmailProvider());
+    const rows = await notificationRows(dueSoon.assessment.id, 'PAYMENT_DUE_REMINDER');
+    expect(rows.some((row) => row.userId === inactiveParentId)).toBe(false);
+  });
+
   it('keeps drafts, future schedules, and expired announcements out of current portal visibility', async () => {
     const draft = await createAnnouncement(
       {
@@ -395,7 +411,7 @@ databaseContract('Payment deadlines and announcements PostgreSQL contract', () =
         title: 'Expired payment notice',
         body: 'Expired body',
         audience: 'PARENT',
-        status: 'PUBLISHED',
+        status: 'DRAFT',
         publishAt: new Date(now.getTime() - 172_800_000),
         expiresAt: new Date(now.getTime() - 86_400_000),
       },
@@ -410,7 +426,7 @@ databaseContract('Payment deadlines and announcements PostgreSQL contract', () =
     expect(visible.some((announcement) => announcement.id === expired.id)).toBe(false);
   });
 
-  it('publishes due schedules for portal visibility and deduplicates announcement notifications', async () => {
+  it('keeps portal reads pure and publishes due schedules only through the processor', async () => {
     const [scheduled] = await db
       .insert(schema.announcements)
       .values({
@@ -426,6 +442,21 @@ databaseContract('Payment deadlines and announcements PostgreSQL contract', () =
       .returning();
     if (!scheduled) throw new Error('Scheduled announcement could not be created.');
     announcementIds.push(scheduled.id);
+    const beforeRead = await db
+      .select({ status: schema.announcements.status, updatedAt: schema.announcements.updatedAt })
+      .from(schema.announcements)
+      .where(eq(schema.announcements.id, scheduled.id));
+    const notificationsBeforeRead = await notificationRows(scheduled.id, 'ANNOUNCEMENT');
+    const firstRead = await listVisibleAnnouncements({ audience: 'PARENT', now }, db);
+    const secondRead = await listVisibleAnnouncements({ audience: 'PARENT', now }, db);
+    expect(firstRead.some((announcement) => announcement.id === scheduled.id)).toBe(false);
+    expect(secondRead.some((announcement) => announcement.id === scheduled.id)).toBe(false);
+    const afterRead = await db
+      .select({ status: schema.announcements.status, updatedAt: schema.announcements.updatedAt })
+      .from(schema.announcements)
+      .where(eq(schema.announcements.id, scheduled.id));
+    expect(afterRead).toEqual(beforeRead);
+    expect(await notificationRows(scheduled.id, 'ANNOUNCEMENT')).toEqual(notificationsBeforeRead);
     const result = await publishDueAnnouncements({ now }, db, new ConsoleEmailProvider());
     expect(result.published).toBe(1);
     const visibleParent = await listVisibleAnnouncements({ audience: 'PARENT', now }, db);
@@ -439,5 +470,50 @@ databaseContract('Payment deadlines and announcements PostgreSQL contract', () =
     const second = await notificationRows(scheduled.id, 'ANNOUNCEMENT');
     expect(first.length).toBeGreaterThan(0);
     expect(second.length).toBe(first.length);
+  });
+
+  it('keeps published announcements published on edit and makes archived announcements terminal', async () => {
+    const announcement = await createAnnouncement(
+      {
+        title: 'Lifecycle payment notice',
+        body: 'Lifecycle body',
+        audience: 'PARENT',
+        status: 'DRAFT',
+        publishAt: now,
+      },
+      adminUserId,
+      db,
+      new ConsoleEmailProvider()
+    );
+    announcementIds.push(announcement.id);
+
+    const published = await publishAnnouncement(
+      announcement.id,
+      adminUserId,
+      db,
+      new ConsoleEmailProvider()
+    );
+    expect(published.status).toBe('PUBLISHED');
+    const edited = await updateAnnouncement(
+      announcement.id,
+      { title: 'Edited published payment notice' },
+      adminUserId,
+      db,
+      new ConsoleEmailProvider()
+    );
+    expect(edited.status).toBe('PUBLISHED');
+    await expect(
+      updateAnnouncement(announcement.id, { status: 'DRAFT' }, adminUserId, db)
+    ).rejects.toThrow('cannot be unpublished');
+
+    const archived = await archiveAnnouncement(announcement.id, adminUserId, db);
+    expect(archived.status).toBe('ARCHIVED');
+    expect((await archiveAnnouncement(announcement.id, adminUserId, db)).status).toBe('ARCHIVED');
+    await expect(
+      updateAnnouncement(announcement.id, { title: 'Archived edit' }, adminUserId, db)
+    ).rejects.toThrow('cannot be edited');
+    await expect(publishAnnouncement(announcement.id, adminUserId, db)).rejects.toThrow(
+      'cannot be published'
+    );
   });
 });

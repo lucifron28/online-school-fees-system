@@ -419,13 +419,16 @@ test.describe('authenticated financial workflow', () => {
             title: announcementTitle,
             body: 'Fictional payment verification hours are available in the parent portal.',
             audience: 'PARENT_AND_STUDENT',
-            status: 'PUBLISHED',
+            status: 'DRAFT',
             publishAt: new Date(Date.now() - 60_000).toISOString(),
             expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
           },
         })
       );
       expect(announcement.id).toBeTruthy();
+      await jsonResponse(
+        await admin.request.post(`/api/admin/announcements/${announcement.id}/publish`)
+      );
 
       const parent = await parentContext.newPage();
       await login(parent, 'parent', 'parent@demo.school');

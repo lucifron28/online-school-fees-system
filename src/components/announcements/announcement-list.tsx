@@ -31,7 +31,7 @@ type FormState = {
   title: string;
   body: string;
   audience: Audience;
-  status: 'DRAFT' | 'SCHEDULED';
+  status: 'DRAFT' | 'SCHEDULED' | 'PUBLISHED';
   publishAt: string;
   expiresAt: string;
 };
@@ -130,12 +130,13 @@ export function AdminAnnouncementManagement() {
   });
 
   const beginEdit = (announcement: Announcement) => {
+    if (announcement.status === 'ARCHIVED') return;
     setEditingId(announcement.id);
     setForm({
       title: announcement.title,
       body: announcement.body,
       audience: announcement.audience,
-      status: announcement.status === 'SCHEDULED' ? 'SCHEDULED' : 'DRAFT',
+      status: announcement.status,
       publishAt: localDateTime(new Date(announcement.publishAt)),
       expiresAt: announcement.expiresAt ? localDateTime(new Date(announcement.expiresAt)) : '',
     });
@@ -221,6 +222,9 @@ export function AdminAnnouncementManagement() {
                 >
                   <option value="DRAFT">Draft</option>
                   <option value="SCHEDULED">Scheduled</option>
+                  {editingId && form.status === 'PUBLISHED' && (
+                    <option value="PUBLISHED">Published (preserved)</option>
+                  )}
                 </select>
               </label>
               <label className="grid gap-1 text-xs font-medium">
@@ -228,6 +232,7 @@ export function AdminAnnouncementManagement() {
                 <Input
                   type="datetime-local"
                   value={form.publishAt}
+                  disabled={form.status === 'PUBLISHED'}
                   onChange={(event) => setForm({ ...form, publishAt: event.target.value })}
                   required
                 />
