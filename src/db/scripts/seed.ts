@@ -1156,7 +1156,7 @@ async function ensureDemoPaymentProofs(
   };
 
   await ensureSubmission({
-    studentNumber: 'DEMO-0002',
+    studentNumber: 'DEMO-0001',
     paymentChannel: 'GCASH',
     amountCentavos: 50_000_00,
     referenceNumber: 'DEMO-GCASH-APPROVED',
