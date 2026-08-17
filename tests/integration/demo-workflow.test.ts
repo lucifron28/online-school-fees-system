@@ -107,7 +107,7 @@ databaseContract('deterministic demo database workflow', () => {
     const deliveries = await db.select().from(schema.notificationDeliveries);
 
     expect(new Set(payments.map((payment) => payment.paymentMethod))).toEqual(
-      new Set(['CASH', 'BANK_DEPOSIT', 'MOCK_ONLINE'])
+      new Set(['CASH', 'BANK_DEPOSIT', 'GCASH', 'MOCK_ONLINE'])
     );
     expect(payments.filter((payment) => payment.status === 'REVERSED')).toHaveLength(1);
     expect(reversals).toHaveLength(1);
