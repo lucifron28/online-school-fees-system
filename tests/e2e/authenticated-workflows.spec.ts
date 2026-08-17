@@ -28,7 +28,7 @@ async function waitForAnnouncementPreview(page: Page) {
   );
 }
 
-async function createUniqueMayaFixture(admin: Page, suffix: number) {
+async function createUniqueProofFixture(admin: Page, suffix: number, channel: 'GCASH' | 'MAYA') {
   await login(admin, 'admin', 'admin@demo.school');
   const options = await jsonResponse<{
     schoolYears: Array<{ id: string; status: string }>;
@@ -45,14 +45,14 @@ async function createUniqueMayaFixture(admin: Page, suffix: number) {
   const section = sections.find((item) => item.code === 'G7-A');
   expect(section).toBeDefined();
 
-  const studentNumber = `E2E-MAYA-${suffix}`;
+  const studentNumber = `E2E-${channel}-${suffix}`;
   const student = await jsonResponse<{ id: string; studentNumber: string }>(
     await admin.request.post('/api/admin/students', {
       data: {
         studentNumber,
-        firstName: 'Maya',
+        firstName: channel === 'MAYA' ? 'Maya' : 'Gcash',
         lastName: 'Fixture',
-        email: `e2e.maya.${suffix}@schoolfees.example.com`,
+        email: `e2e.${channel.toLowerCase()}.${suffix}@schoolfees.example.com`,
         userId: null,
         gradeLevelId: gradeSeven!.id,
         sectionId: section!.id,
@@ -479,6 +479,7 @@ test.describe('authenticated financial workflow', () => {
     try {
       const admin = await adminContext.newPage();
       await login(admin, 'admin', 'admin@demo.school');
+      const fixture = await createUniqueProofFixture(admin, suffix, 'GCASH');
       const announcementTitle = `E2E payment update ${suffix}`;
       const announcement = await jsonResponse<{ id: string }>(
         await admin.request.post('/api/admin/announcements', {
@@ -502,8 +503,10 @@ test.describe('authenticated financial workflow', () => {
       const children = await jsonResponse<
         Array<{ studentId: string; studentNumber: string; outstandingBalanceCentavos: number }>
       >(await parent.request.get('/api/portal/parent/children'));
-      const child = children.find((item) => item.outstandingBalanceCentavos > 0);
+      const child = children.find((item) => item.studentNumber === fixture.studentNumber);
       expect(child).toBeDefined();
+      expect(child!.studentId).toBe(fixture.studentId);
+      expect(child!.outstandingBalanceCentavos).toBeGreaterThan(0);
       const amount = child!.outstandingBalanceCentavos;
       const reference = `E2E-MANUAL-GCASH-${suffix}`;
 
@@ -595,7 +598,7 @@ test.describe('authenticated financial workflow', () => {
 
     try {
       const admin = await adminContext.newPage();
-      const fixture = await createUniqueMayaFixture(admin, suffix);
+      const fixture = await createUniqueProofFixture(admin, suffix, 'MAYA');
       const parent = await parentContext.newPage();
       await login(parent, 'parent', 'parent@demo.school');
       await parent.goto('/parent/dashboard');
