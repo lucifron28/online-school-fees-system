@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNull, lte, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, lte, or } from 'drizzle-orm';
 import { getDb, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import {
@@ -272,5 +272,5 @@ export async function listVisibleAnnouncements(
         or(isNull(schema.announcements.expiresAt), gt(schema.announcements.expiresAt, now))
       )
     )
-    .orderBy(asc(schema.announcements.publishAt));
+    .orderBy(desc(schema.announcements.publishAt), desc(schema.announcements.createdAt));
 }
