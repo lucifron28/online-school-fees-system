@@ -16,6 +16,21 @@ interface HeaderProps {
 
 const pageCopy = [
   {
+    path: '/parent/children',
+    title: 'Child account',
+    subtitle: 'Review this child’s balance, assessments, and payment history.',
+  },
+  {
+    path: '/parent/receipts',
+    title: 'Payment receipt',
+    subtitle: 'Review a system-generated payment receipt and its immutable snapshot.',
+  },
+  {
+    path: '/student/receipts',
+    title: 'Payment receipt',
+    subtitle: 'Review a system-generated payment receipt and its immutable snapshot.',
+  },
+  {
     path: '/admin/dashboard',
     title: 'Dashboard',
     subtitle: 'A clear view of school collections and balances.',
@@ -124,15 +139,24 @@ const pageCopy = [
   },
 ];
 
-function getPageCopy(pathname: string, fallbackTitle: string, fallbackSubtitle?: string) {
+const detailPageCopy = [
+  {
+    prefix: '/admin/transactions/',
+    title: 'Transaction details',
+    subtitle: 'Review the posted payment, allocation, receipt, and audit-preserved state.',
+  },
+];
+
+export function getPageCopy(pathname: string, fallbackTitle: string, fallbackSubtitle?: string) {
+  const detailMatch = detailPageCopy.find((item) => pathname.startsWith(item.prefix));
   const match = pageCopy
     .slice()
     .sort((a, b) => b.path.length - a.path.length)
     .find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`));
 
   return {
-    title: match?.title ?? fallbackTitle,
-    subtitle: match?.subtitle ?? fallbackSubtitle,
+    title: detailMatch?.title ?? match?.title ?? fallbackTitle,
+    subtitle: detailMatch?.subtitle ?? match?.subtitle ?? fallbackSubtitle,
   };
 }
 

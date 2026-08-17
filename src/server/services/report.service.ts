@@ -23,6 +23,7 @@ import {
   type CollectionBreakdown,
   type CollectionReport,
   type CollectionReportItem,
+  type CollectionReportPage,
   type DashboardMetrics,
   type OutstandingBalanceItem,
   type ReportDateRange,
@@ -318,6 +319,30 @@ export class ReportService {
       totals: breakdowns.totals,
       byPaymentMethod: breakdowns.byPaymentMethod,
       byGradeLevel: breakdowns.byGradeLevel,
+    };
+  }
+
+  static async getCollectionReportPage(
+    input: ReportDateRangeInput = {},
+    pageInput = 1,
+    pageSizeInput = 20,
+    db: DatabaseInstance = getDb()
+  ): Promise<CollectionReportPage> {
+    const report = await ReportService.getCollectionReport(input, db);
+    const pageSize = Math.min(50, Math.max(1, Math.floor(pageSizeInput || 20)));
+    const pageCount = Math.max(1, Math.ceil(report.items.length / pageSize));
+    const page = Math.min(pageCount, Math.max(1, Math.floor(pageInput || 1)));
+    const start = (page - 1) * pageSize;
+
+    return {
+      ...report,
+      items: report.items.slice(start, start + pageSize),
+      pagination: {
+        page,
+        pageSize,
+        total: report.items.length,
+        pageCount,
+      },
     };
   }
 

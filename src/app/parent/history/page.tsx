@@ -1,14 +1,18 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { Eye, RefreshCw } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
 import { formatCentavos } from '@/lib/utils/currency';
-import type { PortalPayment } from '@/lib/portal-types';
+import type { PortalPaymentsPage } from '@/lib/portal-types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 import {
   Table,
   TableBody,
@@ -19,11 +23,21 @@ import {
 } from '@/components/ui/table';
 
 export default function ParentPaymentHistoryPage() {
+  const searchParams = useSearchParams();
+  const studentId = searchParams.get('studentId') ?? undefined;
+  const [page, setPage] = useState(1);
+
+  useEffect(() => setPage(1), [studentId]);
+
   const paymentsQuery = useQuery({
-    queryKey: ['parent-payments'],
-    queryFn: () => requestJson<PortalPayment[]>('/api/portal/parent/payments'),
+    queryKey: ['parent-payments', studentId, page],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page), pageSize: '20' });
+      if (studentId) params.set('studentId', studentId);
+      return requestJson<PortalPaymentsPage>(`/api/portal/parent/payments?${params}`);
+    },
   });
-  const payments = paymentsQuery.data ?? [];
+  const payments = paymentsQuery.data?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -31,7 +45,9 @@ export default function ParentPaymentHistoryPage() {
         <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
           Parent payment history
         </Badge>
-        <h2 className="mt-1 text-2xl font-bold tracking-tight">Payment history</h2>
+        <h2 className="mt-1 text-2xl font-bold tracking-tight">
+          {studentId ? 'Child payment history' : 'Payment history'}
+        </h2>
         <p className="text-xs text-slate-500">Finance-posted transactions for linked children.</p>
       </div>
 
@@ -50,9 +66,14 @@ export default function ParentPaymentHistoryPage() {
         <Card className="shadow-sm">
           <CardContent className="p-0">
             {payments.length === 0 ? (
-              <p className="p-8 text-center text-sm text-slate-500">
-                No finance-posted payments yet.
-              </p>
+              <EmptyState
+                title="No posted payments yet"
+                description={
+                  studentId
+                    ? 'This child has no finance-posted transactions in the selected account.'
+                    : 'Finance-posted transactions for linked children will appear here.'
+                }
+              />
             ) : (
               <Table>
                 <TableHeader>
@@ -98,6 +119,13 @@ export default function ParentPaymentHistoryPage() {
                   ))}
                 </TableBody>
               </Table>
+            )}
+            {paymentsQuery.data && (
+              <PaginationControls
+                {...paymentsQuery.data.pagination}
+                isFetching={paymentsQuery.isFetching}
+                onPageChange={setPage}
+              />
             )}
           </CardContent>
         </Card>

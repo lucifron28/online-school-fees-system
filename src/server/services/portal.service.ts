@@ -11,6 +11,15 @@ import { getStudentAssessments, getStudentLedger } from './assessment.service';
 
 export type PortalRole = 'PARENT' | 'STUDENT';
 
+const PORTAL_PAYMENT_PAGE_SIZE = 20;
+const PORTAL_PAYMENT_MAX_PAGE_SIZE = 50;
+
+export interface OwnedPaymentsPageInput {
+  studentId?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 export interface LinkedChildSummary {
   studentId: string;
   studentNumber: string;
@@ -276,6 +285,35 @@ export async function listOwnedPayments(
       parseReceiptSnapshot(row.issuanceSnapshot)?.payment.balanceAfterPaymentCentavos ?? null,
     allocations: allocationsByPayment.get(row.id) ?? [],
   }));
+}
+
+export async function listOwnedPaymentsPage(
+  userId: string,
+  role: PortalRole,
+  input: OwnedPaymentsPageInput = {},
+  db: DatabaseInstance = getDb()
+) {
+  const allPayments = await listOwnedPayments(userId, role, db);
+  const filteredPayments = input.studentId
+    ? allPayments.filter((payment) => payment.studentId === input.studentId)
+    : allPayments;
+  const pageSize = Math.min(
+    PORTAL_PAYMENT_MAX_PAGE_SIZE,
+    Math.max(1, Math.floor(input.pageSize ?? PORTAL_PAYMENT_PAGE_SIZE))
+  );
+  const pageCount = Math.max(1, Math.ceil(filteredPayments.length / pageSize));
+  const page = Math.min(pageCount, Math.max(1, Math.floor(input.page ?? 1)));
+  const start = (page - 1) * pageSize;
+
+  return {
+    items: filteredPayments.slice(start, start + pageSize),
+    pagination: {
+      page,
+      pageSize,
+      total: filteredPayments.length,
+      pageCount,
+    },
+  };
 }
 
 export async function getParentChildren(

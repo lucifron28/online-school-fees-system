@@ -109,7 +109,7 @@ export default function AdminDashboardPage() {
 
       {data && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
                 title: 'Active Students',
@@ -228,7 +228,7 @@ export default function AdminDashboardPage() {
                         <span className="text-[10px] text-slate-500">
                           {item.amountCentavos > 0
                             ? formatCentavos(item.amountCentavos)
-                            : 'No collections'}
+                            : formatCentavos(0)}
                         </span>
                         <div
                           className="w-full max-w-10 rounded-t-md bg-blue-600/80 transition-all"
@@ -327,7 +327,15 @@ export default function AdminDashboardPage() {
                 <CardTitle className="text-base font-semibold">Payment deadlines</CardTitle>
                 <p className="text-xs text-slate-500">Accounts needing attention now.</p>
               </div>
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/admin/reports"
+                  className="text-xs font-semibold text-blue-600 hover:underline"
+                >
+                  View report
+                </Link>
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {data.deadlineAssessments.length === 0 && (
@@ -335,7 +343,7 @@ export default function AdminDashboardPage() {
               )}
               {data.deadlineAssessments.length > 0 && (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {data.deadlineAssessments.map((item) => (
+                  {data.deadlineAssessments.slice(0, 8).map((item) => (
                     <div
                       key={item.assessmentId}
                       className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"

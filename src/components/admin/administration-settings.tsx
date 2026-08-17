@@ -315,24 +315,26 @@ function InstitutionProfile({
                   Enable GCash proof submissions
                 </label>
               </div>
-              <Input
-                aria-label="GCash account name"
-                value={form.gcashAccountName ?? ''}
-                onChange={(event) =>
-                  setForm({ ...form, gcashAccountName: event.target.value || null })
-                }
-                placeholder="Fictional school account name"
-                disabled={!form.gcashEnabled}
-              />
-              <Input
-                aria-label="GCash account number"
-                value={form.gcashAccountNumber ?? ''}
-                onChange={(event) =>
-                  setForm({ ...form, gcashAccountNumber: event.target.value || null })
-                }
-                placeholder="Fictional school account number"
-                disabled={!form.gcashEnabled}
-              />
+              <Field label="GCash account name">
+                <Input
+                  value={form.gcashAccountName ?? ''}
+                  onChange={(event) =>
+                    setForm({ ...form, gcashAccountName: event.target.value || null })
+                  }
+                  placeholder="Fictional school account name"
+                  disabled={!form.gcashEnabled}
+                />
+              </Field>
+              <Field label="GCash account number">
+                <Input
+                  value={form.gcashAccountNumber ?? ''}
+                  onChange={(event) =>
+                    setForm({ ...form, gcashAccountNumber: event.target.value || null })
+                  }
+                  placeholder="Fictional school account number"
+                  disabled={!form.gcashEnabled}
+                />
+              </Field>
             </div>
             <div className="space-y-3 rounded-lg border border-emerald-100 bg-emerald-50/40 p-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
               <div className="flex items-center gap-3">
@@ -347,24 +349,26 @@ function InstitutionProfile({
                   Enable Maya proof submissions
                 </label>
               </div>
-              <Input
-                aria-label="Maya account name"
-                value={form.mayaAccountName ?? ''}
-                onChange={(event) =>
-                  setForm({ ...form, mayaAccountName: event.target.value || null })
-                }
-                placeholder="Fictional school account name"
-                disabled={!form.mayaEnabled}
-              />
-              <Input
-                aria-label="Maya account number"
-                value={form.mayaAccountNumber ?? ''}
-                onChange={(event) =>
-                  setForm({ ...form, mayaAccountNumber: event.target.value || null })
-                }
-                placeholder="Fictional school account number"
-                disabled={!form.mayaEnabled}
-              />
+              <Field label="Maya account name">
+                <Input
+                  value={form.mayaAccountName ?? ''}
+                  onChange={(event) =>
+                    setForm({ ...form, mayaAccountName: event.target.value || null })
+                  }
+                  placeholder="Fictional school account name"
+                  disabled={!form.mayaEnabled}
+                />
+              </Field>
+              <Field label="Maya account number">
+                <Input
+                  value={form.mayaAccountNumber ?? ''}
+                  onChange={(event) =>
+                    setForm({ ...form, mayaAccountNumber: event.target.value || null })
+                  }
+                  placeholder="Fictional school account number"
+                  disabled={!form.mayaEnabled}
+                />
+              </Field>
             </div>
             <Field label="Active school year">
               <select
@@ -469,27 +473,33 @@ function SchoolYearManagement({
             save.mutate();
           }}
         >
-          <Input
-            aria-label="School year name"
-            placeholder="e.g. SY 2026 to 2027"
-            value={form.name}
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
-            required
-          />
-          <Input
-            aria-label="School year start date"
-            type="date"
-            value={form.startDate}
-            onChange={(event) => setForm({ ...form, startDate: event.target.value })}
-            required
-          />
-          <Input
-            aria-label="School year end date"
-            type="date"
-            value={form.endDate}
-            onChange={(event) => setForm({ ...form, endDate: event.target.value })}
-            required
-          />
+          <label className="grid gap-1 text-xs font-medium">
+            School year name
+            <Input
+              placeholder="e.g. SY 2026 to 2027"
+              value={form.name}
+              onChange={(event) => setForm({ ...form, name: event.target.value })}
+              required
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-medium">
+            Start date
+            <Input
+              type="date"
+              value={form.startDate}
+              onChange={(event) => setForm({ ...form, startDate: event.target.value })}
+              required
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-medium">
+            End date
+            <Input
+              type="date"
+              value={form.endDate}
+              onChange={(event) => setForm({ ...form, endDate: event.target.value })}
+              required
+            />
+          </label>
           <div className="flex gap-2">
             <Button type="submit" disabled={save.isPending} className="bg-blue-600 text-white">
               {editingId ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
@@ -647,28 +657,36 @@ function AcademicStructureManagement({
               saveGrade.mutate();
             }}
           >
-            <Input
-              aria-label="Grade level name"
-              placeholder="Grade 7"
-              value={gradeForm.name}
-              onChange={(event) => setGradeForm({ ...gradeForm, name: event.target.value })}
-              required
-            />
-            <Input
-              aria-label="Grade level code"
-              placeholder="G7"
-              value={gradeForm.code}
-              onChange={(event) => setGradeForm({ ...gradeForm, code: event.target.value })}
-              required
-            />
-            <Input
-              aria-label="Grade level display order"
-              type="number"
-              min="0"
-              value={gradeForm.displayOrder}
-              onChange={(event) => setGradeForm({ ...gradeForm, displayOrder: event.target.value })}
-              required
-            />
+            <label className="grid gap-1 text-xs font-medium">
+              Grade level name
+              <Input
+                placeholder="Grade 7"
+                value={gradeForm.name}
+                onChange={(event) => setGradeForm({ ...gradeForm, name: event.target.value })}
+                required
+              />
+            </label>
+            <label className="grid gap-1 text-xs font-medium">
+              Grade level code
+              <Input
+                placeholder="G7"
+                value={gradeForm.code}
+                onChange={(event) => setGradeForm({ ...gradeForm, code: event.target.value })}
+                required
+              />
+            </label>
+            <label className="grid gap-1 text-xs font-medium">
+              Display order
+              <Input
+                type="number"
+                min="0"
+                value={gradeForm.displayOrder}
+                onChange={(event) =>
+                  setGradeForm({ ...gradeForm, displayOrder: event.target.value })
+                }
+                required
+              />
+            </label>
             <Button type="submit" disabled={saveGrade.isPending} className="bg-blue-600 text-white">
               {editingGradeId ? 'Update' : 'Add'}
             </Button>
@@ -720,54 +738,62 @@ function AcademicStructureManagement({
               saveSection.mutate();
             }}
           >
-            <select
-              aria-label="Section grade level"
-              value={sectionForm.gradeLevelId}
-              onChange={(event) =>
-                setSectionForm({ ...sectionForm, gradeLevelId: event.target.value })
-              }
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-900"
-              required
-            >
-              <option value="">Select grade level</option>
-              {gradeLevels.map((grade) => (
-                <option key={grade.id} value={grade.id}>
-                  {grade.name}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Section school year"
-              value={sectionForm.schoolYearId}
-              onChange={(event) =>
-                setSectionForm({ ...sectionForm, schoolYearId: event.target.value })
-              }
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-900"
-              required
-            >
-              <option value="">Select school year</option>
-              {schoolYears
-                .filter((year) => year.status !== 'ARCHIVED')
-                .map((year) => (
-                  <option key={year.id} value={year.id}>
-                    {year.name}
+            <label className="grid gap-1 text-xs font-medium">
+              Grade level
+              <select
+                value={sectionForm.gradeLevelId}
+                onChange={(event) =>
+                  setSectionForm({ ...sectionForm, gradeLevelId: event.target.value })
+                }
+                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-900"
+                required
+              >
+                <option value="">Select grade level</option>
+                {gradeLevels.map((grade) => (
+                  <option key={grade.id} value={grade.id}>
+                    {grade.name}
                   </option>
                 ))}
-            </select>
-            <Input
-              aria-label="Section name"
-              placeholder="Section A"
-              value={sectionForm.name}
-              onChange={(event) => setSectionForm({ ...sectionForm, name: event.target.value })}
-              required
-            />
-            <Input
-              aria-label="Section code"
-              placeholder="G7-A"
-              value={sectionForm.code}
-              onChange={(event) => setSectionForm({ ...sectionForm, code: event.target.value })}
-              required
-            />
+              </select>
+            </label>
+            <label className="grid gap-1 text-xs font-medium">
+              School year
+              <select
+                value={sectionForm.schoolYearId}
+                onChange={(event) =>
+                  setSectionForm({ ...sectionForm, schoolYearId: event.target.value })
+                }
+                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-900"
+                required
+              >
+                <option value="">Select school year</option>
+                {schoolYears
+                  .filter((year) => year.status !== 'ARCHIVED')
+                  .map((year) => (
+                    <option key={year.id} value={year.id}>
+                      {year.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-xs font-medium">
+              Section name
+              <Input
+                placeholder="Section A"
+                value={sectionForm.name}
+                onChange={(event) => setSectionForm({ ...sectionForm, name: event.target.value })}
+                required
+              />
+            </label>
+            <label className="grid gap-1 text-xs font-medium">
+              Section code
+              <Input
+                placeholder="G7-A"
+                value={sectionForm.code}
+                onChange={(event) => setSectionForm({ ...sectionForm, code: event.target.value })}
+                required
+              />
+            </label>
             <Button
               type="submit"
               disabled={

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { LogoutButton } from '@/components/auth/logout-button';
+import { isNavigationItemActive } from '@/components/layout/navigation';
 import {
   BellRing,
   Building2,
@@ -57,10 +58,7 @@ function NavigationLinks({
         Navigation
       </div>
       {items.map((item) => {
-        const isDashboard = item.href === `${portalPath}/dashboard` && item.name === 'Dashboard';
-        const isActive = isDashboard
-          ? pathname === item.href
-          : item.href !== `${portalPath}/dashboard` && pathname.startsWith(item.href);
+        const isActive = isNavigationItemActive({ ...item, pathname, portalPath });
         const Icon = item.icon;
 
         return (
@@ -134,7 +132,6 @@ export function Sidebar({
 
   const parentNav: NavItem[] = [
     { name: 'Dashboard', href: '/parent/dashboard', icon: LayoutDashboard },
-    { name: 'My Children', href: '/parent/dashboard', icon: Users },
     { name: 'Payment History', href: '/parent/history', icon: History },
     { name: 'Payment Proofs', href: '/parent/payment-submissions', icon: ClipboardCheck },
     { name: 'Make Payment', href: '/parent/pay', icon: CreditCard },

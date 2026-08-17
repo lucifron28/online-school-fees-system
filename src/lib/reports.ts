@@ -103,6 +103,15 @@ export interface CollectionReport {
   byGradeLevel: CollectionBreakdown[];
 }
 
+export interface CollectionReportPage extends CollectionReport {
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
+}
+
 export interface OutstandingBalanceItem {
   studentId: string;
   studentNumber: string;

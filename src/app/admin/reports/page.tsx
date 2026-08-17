@@ -15,6 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -28,7 +29,7 @@ import { getClientErrorMessage, requestJson } from '@/lib/client-api';
 import { paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
 import {
   getManilaDateString,
-  type CollectionReport,
+  type CollectionReportPage,
   type OutstandingBalanceItem,
   type ReversalReportItem,
 } from '@/lib/reports';
@@ -88,12 +89,13 @@ export default function AdminReportsPage() {
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [applied, setApplied] = useState(initial);
+  const [collectionPage, setCollectionPage] = useState(1);
 
   const collectionsQuery = useQuery({
-    queryKey: ['admin-report-collections', applied.from, applied.to],
+    queryKey: ['admin-report-collections', applied.from, applied.to, collectionPage],
     queryFn: () =>
-      requestJson<CollectionReport>(
-        `/api/reports/collections?from=${applied.from}&to=${applied.to}`
+      requestJson<CollectionReportPage>(
+        `/api/reports/collections?from=${applied.from}&to=${applied.to}&page=${collectionPage}&pageSize=20`
       ),
   });
   const outstandingQuery = useQuery({
@@ -118,6 +120,7 @@ export default function AdminReportsPage() {
 
   function applyRange(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setCollectionPage(1);
     setApplied({ from, to });
   }
 
@@ -286,6 +289,13 @@ export default function AdminReportsPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+          {collections && (
+            <PaginationControls
+              {...collections.pagination}
+              isFetching={collectionsQuery.isFetching}
+              onPageChange={setCollectionPage}
+            />
           )}
         </CardContent>
       </Card>
