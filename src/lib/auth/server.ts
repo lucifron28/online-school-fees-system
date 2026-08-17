@@ -11,9 +11,33 @@ export interface AuthFactoryOptions {
   database?: DatabaseInstance;
 }
 
+function vercelDeploymentUrl(value: string | undefined) {
+  if (!value) return null;
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+export function resolveAuthBaseUrl(options: {
+  betterAuthUrl?: string;
+  nextPublicAppUrl?: string;
+  vercelEnv?: string;
+  vercelUrl?: string;
+} = {}) {
+  const betterAuthUrl = options.betterAuthUrl ?? process.env.BETTER_AUTH_URL ?? '';
+  const nextPublicAppUrl = options.nextPublicAppUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? '';
+  const vercelEnv = options.vercelEnv ?? process.env.VERCEL_ENV;
+  const deploymentUrl = vercelDeploymentUrl(options.vercelUrl ?? process.env.VERCEL_URL);
+
+  if (betterAuthUrl) return betterAuthUrl;
+  if (vercelEnv === 'preview' && deploymentUrl) return deploymentUrl;
+  return nextPublicAppUrl || deploymentUrl || 'http://localhost:3000';
+}
+
 export function createAuth({ allowSignUp = false, database }: AuthFactoryOptions = {}) {
   const env = getServerEnv();
-  const baseURL = env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseURL = resolveAuthBaseUrl({
+    betterAuthUrl: env.BETTER_AUTH_URL,
+    nextPublicAppUrl: process.env.NEXT_PUBLIC_APP_URL,
+  });
   const baseOrigin = new URL(baseURL).origin;
   const trustedOrigins = Array.from(
     new Set([
