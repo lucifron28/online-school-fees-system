@@ -23,7 +23,12 @@ This document records the final audit protections for the fictional, single-scho
 ## Privacy, recipients, and pagination
 
 - Notification recipient queries exclude inactive users. The console provider logs only delivery metadata and a truncated recipient hash; it never logs email addresses, subject text, message bodies, names, or financial content.
-- Admin proof review and parent proof history use server-side pagination. The UI displays page state and totals instead of loading an unbounded history into the browser.
+- Admin proof review, portal payment history, and finance collection reports use paginated responses. The UI displays page state and totals instead of rendering an unbounded table.
+
+## Reviewer attribution and demo fixtures
+
+- Migration `0008_normal_shotgun.sql` is a forward correction for the already-applied `0007` lifecycle migration. It clears unverifiable legacy submitter/self-review attribution while preserving the terminal decision, and permits an explicitly unknown reviewer as `NULL`; new approval and rejection paths still require the actual finance/admin reviewer.
+- The disposable demo reset clears announcements and payment-proof rows before reseeding deterministic published announcements plus one approved GCash and one rejected Maya proof. Do not run the reset against a shared or production database.
 
 ## Verification checklist
 
