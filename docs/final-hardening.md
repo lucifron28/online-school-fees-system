@@ -62,4 +62,4 @@ pnpm test:e2e
 
 Database verifiers and integration tests must use an isolated `TEST_DATABASE_URL`; no demo or production database reset is part of this hardening pass.
 
-The latest hosted Foundation CI run also passed 21 unit-test files/83 tests, 7 PostgreSQL integration-test files/68 tests, formatting, linting, typecheck, production build, 9 Playwright tests, and the repeated 10-run Maya check. These results verify the pushed feature branch; they do not constitute production, accounting, security-certification, or real payment-provider approval.
+The latest hosted Foundation CI run also passed 21 unit-test files/85 tests, 7 PostgreSQL integration-test files/68 tests, formatting, linting, typecheck, production build, 9 Playwright tests, and the repeated 10-run Maya check. These results verify the pushed feature branch; they do not constitute production, accounting, security-certification, or real payment-provider approval.
