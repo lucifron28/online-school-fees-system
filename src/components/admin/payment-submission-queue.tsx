@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, FileImage, RefreshCw, Search, XCircle } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  FileImage,
+  RefreshCw,
+  Search,
+  XCircle,
+} from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
 import type { PortalPaymentSubmission } from '@/lib/portal-types';
 import { formatCentavos } from '@/lib/utils/currency';
@@ -40,15 +48,20 @@ export function PaymentSubmissionQueue() {
   const [status, setStatus] = useState<SubmissionStatus | ''>('PENDING_VERIFICATION');
   const [channel, setChannel] = useState<'GCASH' | 'MAYA' | ''>('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setPage(1);
+  }, [status, channel, search]);
+
   const listQuery = useQuery({
-    queryKey: ['admin-payment-submissions', status, channel, search],
+    queryKey: ['admin-payment-submissions', status, channel, search, page],
     queryFn: () => {
-      const params = new URLSearchParams({ page: '1', pageSize: '50' });
+      const params = new URLSearchParams({ page: String(page), pageSize: '50' });
       if (status) params.set('status', status);
       if (channel) params.set('paymentChannel', channel);
       if (search.trim()) params.set('search', search.trim());
@@ -247,6 +260,36 @@ export function PaymentSubmissionQueue() {
                 </Table>
               )}
             </CardContent>
+            {listQuery.data.pageCount > 0 && (
+              <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-slate-500">
+                <span>
+                  Page {listQuery.data.page} of {listQuery.data.pageCount} · {listQuery.data.total}{' '}
+                  total
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={page <= 1 || listQuery.isFetching}
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  >
+                    <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={page >= listQuery.data.pageCount || listQuery.isFetching}
+                    onClick={() =>
+                      setPage((current) => Math.min(listQuery.data!.pageCount, current + 1))
+                    }
+                  >
+                    Next <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
 
           <Card>
@@ -298,11 +341,15 @@ export function PaymentSubmissionQueue() {
                       <span className="text-slate-500">Submitted at:</span>{' '}
                       {new Date(selected.createdAt).toLocaleString('en-PH')}
                     </p>
-                    {selected.paymentDestination && (
+                    {selected.paymentDestination ? (
                       <p>
-                        <span className="text-slate-500">School destination:</span>{' '}
+                        <span className="text-slate-500">Historical destination:</span>{' '}
                         {selected.paymentDestination.accountName} ·{' '}
                         {selected.paymentDestination.accountNumber}
+                      </p>
+                    ) : (
+                      <p className="text-amber-700">
+                        Historical destination unavailable for this legacy submission.
                       </p>
                     )}
                   </div>

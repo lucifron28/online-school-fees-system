@@ -3,11 +3,13 @@ import { portalCheckoutInputSchema } from '@/lib/portal';
 import { requireRequestAuth } from '@/server/auth/guards';
 import { readJson, routeErrorResponse } from '@/server/http';
 import { MockPaymentGateway } from '@/server/services/payment-gateway.service';
+import { assertMockPaymentHarnessEnabled } from '@/server/services/mock-payment-harness';
 import { getStudentAccountForUser } from '@/server/services/portal.service';
 import { ValidationError } from '@/server/errors/index';
 
 export async function POST(request: Request) {
   try {
+    assertMockPaymentHarnessEnabled();
     const actor = await requireRequestAuth(request, ['PARENT']);
     const input = portalCheckoutInputSchema.parse(await readJson(request));
     const account = await getStudentAccountForUser(actor.id, 'PARENT', input.studentId);

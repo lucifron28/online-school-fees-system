@@ -388,3 +388,11 @@ CodeGraph was used before editing to trace payment, gateway, ledger, administrat
 - The hosted browser workflow also asserts that the persisted assessment due date renders in both the parent child detail and student account screens.
 - Corrective PR #22 final self-review `4910560642` and hosted Foundation run #169 passed the full audit branch; all nine Playwright tests passed on the first attempt.
 - The normal parent flow remains manual external transfer proof. No GCash/Maya API, automatic transfer verification, official tax receipt, production-readiness, security-certification, accounting, tax-compliance, or deployment claim is made. Academic grades/gradebook data, attendance, conduct, academic-performance analytics, impact tagging, restriction tracking, predictive analytics, and general SIS features remain out of scope.
+
+## Final payment-monitoring hardening — current branch
+
+- Branch: `feature/final-payment-monitoring-hardening`; starting main: `84ee753e2a676788ca1eb48b90c6e5cab006999c`.
+- Added default-off server gates for the persisted mock checkout/callback harness, with explicit CI, Playwright, seed, and verifier opt-ins only.
+- Added immutable GCash/Maya destination snapshots, legacy-null labeling, proof request/header hardening, database lifecycle checks, side-effect-free announcement reads, terminal announcement lifecycle handling, protected shared scheduled processing, active-recipient filtering, sanitized console-provider metadata, and real admin/parent pagination.
+- Added focused unit and PostgreSQL integration regressions for mock gating, cron credentials, destination immutability, lifecycle constraints, inactive recipients, announcement lifecycle, and pagination metadata. PostgreSQL cases remain authoritative in hosted CI because this workstation has no isolated `TEST_DATABASE_URL`.
+- Local verification currently passes: frozen-lockfile install, strict typecheck, ESLint, 77 unit tests, reset-safety integration tests, production build, migration generation with no pending schema diff, focused formatting, and diff checks. Full-repository Prettier remains a pre-existing baseline failure across untouched files and preserved QA artifacts; deployment is intentionally not performed.

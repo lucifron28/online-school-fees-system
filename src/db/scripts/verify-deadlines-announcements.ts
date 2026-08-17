@@ -7,6 +7,7 @@ import { evaluateDeadline } from '../../lib/deadlines';
 import {
   createAnnouncement,
   listVisibleAnnouncements,
+  publishAnnouncement,
 } from '../../server/services/announcement.service';
 import {
   ConsoleEmailProvider,
@@ -73,19 +74,20 @@ async function main() {
     );
     assert(overdue.deadlineState === 'OVERDUE', 'OVERDUE deadline state failed.');
 
-    const published = await createAnnouncement(
+    const draftForPublish = await createAnnouncement(
       {
         title: `Deadline verification ${suffix}`,
         body: 'Persisted payment announcement verification.',
         audience: 'PARENT',
-        status: 'PUBLISHED',
+        status: 'DRAFT',
         publishAt: new Date(),
       },
       admin.id,
       db,
       provider
     );
-    announcementIds.push(published.id);
+    announcementIds.push(draftForPublish.id);
+    const published = await publishAnnouncement(draftForPublish.id, admin.id, db, provider);
     const visible = await listVisibleAnnouncements({ audience: 'PARENT' }, db);
     assert(
       visible.some((announcement) => announcement.id === published.id),

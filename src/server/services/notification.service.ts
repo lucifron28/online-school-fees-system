@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { Resend } from 'resend';
 import { getDb, type DatabaseInstance } from '@/db';
@@ -15,8 +15,8 @@ import { getServerEnv } from '@/lib/env';
 import { NotFoundError } from '@/server/errors';
 import { logSanitizedError } from '@/server/logging';
 
-// There is no scheduler in this scope. This is the maximum persisted delivery
-// attempts shared by the initial dispatch and explicit manual retries.
+// This is the maximum persisted delivery attempts shared by initial dispatch,
+// scheduled processing, and explicit manual retries.
 const MAX_DELIVERY_ATTEMPTS = 3;
 
 type NotificationChannel = (typeof schema.notificationChannelEnum.enumValues)[number];
@@ -43,11 +43,18 @@ export class ConsoleEmailProvider implements EmailProvider {
   readonly channel = 'CONSOLE' as const;
 
   async send(message: EmailMessage): Promise<EmailProviderResult> {
+    const providerMessageId = `console-${randomUUID()}`;
     console.info(
       '[notification:console]',
-      JSON.stringify({ to: message.to, subject: message.subject, text: message.text })
+      JSON.stringify({
+        channel: this.channel,
+        providerMessageId,
+        recipientHash: createHash('sha256').update(message.to).digest('hex').slice(0, 12),
+        subjectLength: message.subject.length,
+        bodyLength: message.text.length,
+      })
     );
-    return { providerMessageId: `console-${randomUUID()}` };
+    return { providerMessageId };
   }
 }
 
@@ -173,7 +180,7 @@ async function selectRecipient(userId: string, db: DatabaseInstance) {
       email: schema.users.email,
     })
     .from(schema.users)
-    .where(eq(schema.users.id, userId))
+    .where(and(eq(schema.users.id, userId), eq(schema.users.active, true)))
     .limit(1);
   return rows[0] ?? null;
 }
@@ -188,7 +195,7 @@ async function selectStudentRecipients(studentId: string, db: DatabaseInstance) 
       })
       .from(schema.students)
       .innerJoin(schema.users, eq(schema.users.id, schema.students.userId))
-      .where(eq(schema.students.id, studentId)),
+      .where(and(eq(schema.students.id, studentId), eq(schema.users.active, true))),
     db
       .select({
         userId: schema.users.id,
@@ -198,7 +205,7 @@ async function selectStudentRecipients(studentId: string, db: DatabaseInstance) 
       .from(schema.guardianStudents)
       .innerJoin(schema.guardians, eq(schema.guardians.id, schema.guardianStudents.guardianId))
       .innerJoin(schema.users, eq(schema.users.id, schema.guardians.userId))
-      .where(eq(schema.guardianStudents.studentId, studentId)),
+      .where(and(eq(schema.guardianStudents.studentId, studentId), eq(schema.users.active, true))),
   ]);
 
   const recipients = new Map<string, NotificationRecipient>();
@@ -222,7 +229,7 @@ async function selectReminderRecipients(studentId: string, db: DatabaseInstance)
     .from(schema.guardianStudents)
     .innerJoin(schema.guardians, eq(schema.guardians.id, schema.guardianStudents.guardianId))
     .innerJoin(schema.users, eq(schema.users.id, schema.guardians.userId))
-    .where(eq(schema.guardianStudents.studentId, studentId));
+    .where(and(eq(schema.guardianStudents.studentId, studentId), eq(schema.users.active, true)));
 }
 
 async function selectAnnouncementRecipients(

@@ -9,6 +9,11 @@ const serverEnvSchema = z.object({
   EMAIL_FROM: z.string().email().optional().or(z.literal('')),
   CRON_SECRET: z.string().min(1).optional().or(z.literal('')),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  ENABLE_MOCK_PAYMENT_HARNESS: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true')
+    .default('false'),
   ENABLE_STUDENT_PORTAL: z
     .string()
     .optional()
@@ -35,6 +40,7 @@ export function getServerEnv() {
     EMAIL_FROM: process.env.EMAIL_FROM,
     CRON_SECRET: process.env.CRON_SECRET,
     NODE_ENV: process.env.NODE_ENV,
+    ENABLE_MOCK_PAYMENT_HARNESS: process.env.ENABLE_MOCK_PAYMENT_HARNESS,
     ENABLE_STUDENT_PORTAL: process.env.ENABLE_STUDENT_PORTAL,
   });
 }

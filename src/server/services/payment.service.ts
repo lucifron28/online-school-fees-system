@@ -16,6 +16,7 @@ import {
 } from '@/lib/receipt-snapshot';
 import { addCentavos, formatCentavos, subtractCentavos } from '@/lib/utils/currency';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '@/server/errors';
+import { assertMockPaymentHarnessEnabled } from './mock-payment-harness';
 import {
   assertStudentAssessmentReconciliation,
   reconcileStudentAssessmentBalances,
@@ -647,11 +648,10 @@ export async function getReceiptPdfData(receiptIdentifier: string, db: DatabaseI
 }
 
 export class PaymentService {
-  static async recordPayment(
-    input: OtcPaymentInput | OnlinePaymentInput,
-    db: DatabaseInstance = getDb()
-  ) {
+  static async recordPayment(input: OtcPaymentInput | OnlinePaymentInput, db?: DatabaseInstance) {
+    if (input.paymentMethod === 'MOCK_ONLINE') assertMockPaymentHarnessEnabled();
     const values = paymentPostInputSchema.parse(input);
+    db ??= getDb();
     const processedByUserId = input.processedByUserId;
     if (values.paymentMethod !== 'MOCK_ONLINE' && !processedByUserId) {
       throw new ValidationError('An authenticated finance user is required to post a payment.');

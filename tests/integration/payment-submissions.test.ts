@@ -442,6 +442,48 @@ databaseContract('manual GCash and Maya payment verification PostgreSQL contract
     });
     expect(submission.paymentDestination).toEqual(options.gcash);
 
+    const settingsBeforeChange = await getOrCreateSchoolSettings(db);
+    await db
+      .update(schema.schoolSettings)
+      .set({
+        gcashAccountName: 'Phase 2 Changed GCash Account',
+        gcashAccountNumber: '0999 999 9999',
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.schoolSettings.singletonKey, 'default'));
+    try {
+      expect((await getPaymentSubmission(submission.id, db)).paymentDestination).toEqual(
+        options.gcash
+      );
+      expect(
+        (await listParentPaymentSubmissions(fixture.parentUserId, {}, db)).items.find(
+          (row) => row.id === submission.id
+        )?.paymentDestination
+      ).toEqual(options.gcash);
+    } finally {
+      await db
+        .update(schema.schoolSettings)
+        .set({
+          gcashAccountName: settingsBeforeChange.gcashAccountName,
+          gcashAccountNumber: settingsBeforeChange.gcashAccountNumber,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.schoolSettings.singletonKey, 'default'));
+    }
+
+    await expect(
+      db
+        .update(schema.paymentSubmissions)
+        .set({ reviewedAt: new Date() })
+        .where(eq(schema.paymentSubmissions.id, submission.id))
+    ).rejects.toThrow();
+    await expect(
+      db
+        .update(schema.paymentSubmissions)
+        .set({ status: 'APPROVED' })
+        .where(eq(schema.paymentSubmissions.id, submission.id))
+    ).rejects.toThrow();
+
     const proof = await getPaymentProof(
       submission.id,
       { id: fixture.parentUserId, role: 'PARENT' },
@@ -456,6 +498,14 @@ databaseContract('manual GCash and Maya payment verification PostgreSQL contract
     expect(parentRows.items.map((row) => row.id)).toContain(submission.id);
     const pendingRows = await listPaymentSubmissions({ status: 'PENDING_VERIFICATION' }, db);
     expect(pendingRows.items.map((row) => row.id)).toContain(submission.id);
+    const firstQueuePage = await listPaymentSubmissions(
+      { status: 'PENDING_VERIFICATION', page: 1, pageSize: 1 },
+      db
+    );
+    expect(firstQueuePage.page).toBe(1);
+    expect(firstQueuePage.pageSize).toBe(1);
+    expect(firstQueuePage.items.length).toBeLessThanOrEqual(1);
+    expect(firstQueuePage.total).toBeGreaterThanOrEqual(1);
     expect((await notificationsFor(submission.id)).map((row) => row.type)).toContain(
       'PAYMENT_PROOF_SUBMITTED'
     );

@@ -11,6 +11,9 @@ import { calculateAssessmentDueDate } from '../../lib/deadlines';
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
+// Seeding is an explicit fictional demo fixture, so it opts into the mock-only records below.
+process.env.ENABLE_MOCK_PAYMENT_HARNESS = 'true';
+
 export const DEMO_PASSWORD = 'DemoPass123!';
 export const DEMO_SCHOOL_YEAR_NAME = 'SY 2026–2027';
 export const DEMO_STUDENT_COUNT = 20;

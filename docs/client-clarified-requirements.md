@@ -26,7 +26,10 @@ The system does not implement or claim to implement academic grades/gradebook da
 ## Known boundaries
 
 - GCash and Maya transfers happen outside the application. There is no GCash API, Maya API, automatic transfer verification, card integration, bank integration, or payment-provider integration.
-- The legacy `MOCK_ONLINE` checkout/callback path remains only as historical test-harness coverage; it is not the normal parent payment flow.
+- The legacy `MOCK_ONLINE` checkout/callback path remains only as historical test-harness coverage; it is not the normal parent payment flow and is disabled unless `ENABLE_MOCK_PAYMENT_HARNESS=true` is explicitly set for fictional CI/test use.
+- Payment proof history stores the GCash/Maya destination snapshot captured at submission time. Legacy rows without that snapshot are labeled as unavailable rather than populated from current settings.
+- Portal announcement reads are side-effect free. Draft, scheduled, expired, and archived records are not current portal content; scheduled publication is performed by the protected processor or explicit publish action.
+- Scheduled reminder processing requires `CRON_SECRET`, and its declared Vercel cron schedule is configuration only—not deployment or delivery evidence.
 - Receipts are fictional system-generated records, not official tax receipts or accounting documents.
 - All demo records are fictional. No production-readiness, security certification, accounting approval, tax compliance, or deployment-success claim is made.
 

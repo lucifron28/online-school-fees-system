@@ -16,6 +16,7 @@ jobs:
       BETTER_AUTH_URL: http://localhost:3000
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NODE_ENV: test
+      ENABLE_MOCK_PAYMENT_HARNESS: 'true'
       ENABLE_STUDENT_PORTAL: 'true'
       NEXT_PUBLIC_ENABLE_DEMO_NAV: 'true'
     services:

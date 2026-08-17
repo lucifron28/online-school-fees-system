@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireRequestAuth } from '@/server/auth/guards';
 import { routeErrorResponse } from '@/server/http';
 import { getMockCheckout } from '@/server/services/payment-gateway.service';
+import { assertMockPaymentHarnessEnabled } from '@/server/services/mock-payment-harness';
 import { PortalService } from '@/server/services/portal.service';
 
 export async function GET(
@@ -9,6 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ reference: string }> }
 ) {
   try {
+    assertMockPaymentHarnessEnabled();
     const actor = await requireRequestAuth(request, ['PARENT']);
     const { reference } = await params;
     const checkout = await getMockCheckout(reference);

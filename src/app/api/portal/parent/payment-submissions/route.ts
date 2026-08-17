@@ -6,6 +6,7 @@ import {
 import { requireRequestAuth } from '@/server/auth/guards';
 import { routeErrorResponse } from '@/server/http';
 import {
+  assertPaymentProofRequestSize,
   createPaymentSubmission,
   listParentPaymentSubmissions,
 } from '@/server/services/payment-submission.service';
@@ -26,6 +27,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    assertPaymentProofRequestSize(request);
     const actor = await requireRequestAuth(request, ['PARENT']);
     const formData = await request.formData();
     const proof = formData.get('proof');

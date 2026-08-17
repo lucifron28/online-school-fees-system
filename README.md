@@ -4,7 +4,7 @@
 
 ## Current status
 
-The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, persisted core administration, persisted student/guardian/fee administration, persisted assessment/ledger posting, serialized CASH/BANK_DEPOSIT/GCASH/MAYA/MOCK_ONLINE ledger mutations, database-backed receipt sequences, reversal-aware parent/student accounts, database-backed reports and reconciliation, persisted notification history with atomic retry claims, and manual GCash/Maya proof review. The final client-scope pass adds ledger-derived FULLY PAID/WITH REMAINING BALANCE states, current payment-announcement previews, System-Generated Payment Receipt wording, and browser coverage for proof approval and rejection. The seed is deterministic fictional data with 20 students, 10 guardians, persisted links, financial fixtures, mock checkout outcomes, notification history, and a withdrawn student with existing debt. External deployment remains pending configured fictional Vercel/Neon credentials.
+The repository currently contains a polished Next.js App Router UI, a committed Drizzle/PostgreSQL schema and migration contract, a connected Better Auth/RBAC workflow, persisted core administration, persisted student/guardian/fee administration, persisted assessment/ledger posting, serialized CASH/BANK_DEPOSIT/GCASH/MAYA/MOCK_ONLINE ledger mutations, database-backed receipt sequences, reversal-aware parent/student accounts, database-backed reports and reconciliation, persisted notification history with atomic retry claims, and manual GCash/Maya proof review. The final client-scope pass adds ledger-derived FULLY PAID/WITH REMAINING BALANCE states, current payment-announcement previews, System-Generated Payment Receipt wording, and browser coverage for proof approval and rejection. The final hardening pass adds default-off mock-harness gates, immutable payment-destination snapshots, side-effect-free portal reads, protected scheduled processing, inactive-recipient filtering, sanitized console delivery logs, and server-side proof-history pagination. The seed is deterministic fictional data with 20 students, 10 guardians, persisted links, financial fixtures, mock checkout outcomes, notification history, and a withdrawn student with existing debt. External deployment remains an environment-dependent gate and is not claimed by this repository.
 
 The following scope statements remain important:
 
@@ -18,6 +18,7 @@ Final-head Round 3 evidence is hosted Foundation run [#123](https://github.com/l
 - Parent and student portal queries are filtered from authenticated database relationships and expose persisted payment targets on receipt detail. Manual GCash/Maya proof submissions store validated proof bytes in PostgreSQL and change the ledger only after finance approval. The legacy mock checkout/callback path remains persisted for historical test-harness coverage.
 - GCash and Maya transfers happen outside this system. There is no GCash API, Maya API, automatic transfer verification, card, bank, or payment-provider integration.
 - No production-readiness, accounting, security-certification, or tax-receipt claim is made.
+- The mock payment harness is disabled unless `ENABLE_MOCK_PAYMENT_HARNESS=true` is explicitly set for fictional CI/test fixtures. The normal parent payment path is manual external-transfer proof review.
 
 The completion checklist and verified evidence are tracked in [docs/goal-progress.md](docs/goal-progress.md) and [docs/goal-findings.md](docs/goal-findings.md).
 
@@ -45,6 +46,7 @@ The final accepted scope and explicit exclusions are recorded in [docs/client-cl
 - Better Auth route handler: `/api/auth/*`
 - Health check: `/api/health`
 - Mock payment callback: `/api/payments/mock-callback`
+- Protected scheduled processor: `/api/internal/reminders/run` (requires `CRON_SECRET`; see `vercel.json` for the declared UTC schedule)
 - Parent portal APIs: `/api/portal/parent/children`, `/api/portal/parent/children/[id]`, `/api/portal/parent/payments`, `/api/portal/parent/checkouts`, and manual proof submission/options/history routes
 - Student portal APIs: `/api/portal/student/account`, `/api/portal/student/payments`, and the shared current-announcements route
 - Persisted receipt PDF route: `/api/receipts/[id]/pdf`
@@ -120,3 +122,4 @@ The target server flow is:
 `Route Handler or Server Action -> Zod validation -> Better Auth session -> server authorization -> service layer -> Drizzle transaction -> PostgreSQL`
 
 See [docs/architecture.md](docs/architecture.md), [docs/assumptions.md](docs/assumptions.md), and the decision records in `docs/decisions/` for the current contract.
+The final corrective controls are summarized in [docs/final-hardening.md](docs/final-hardening.md).

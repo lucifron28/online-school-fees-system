@@ -49,14 +49,14 @@ Client Components must not import server-only services. Financial rules must rem
 - Mock checkout statuses `SUCCEEDED`, `FAILED`, `CANCELLED`, and `EXPIRED` are terminal. Conflicting callbacks are retained as failed/ignored events and cannot create or reverse financial movement.
 - Localhost PostgreSQL URLs use node-postgres for seed/reset/integration tooling, while remote deployment URLs continue to use Neon.
 - Assessment generation, ledger balance calculation, OTC payment posting, portal ownership, mock online-payment completion, report aggregation, and notification history are PostgreSQL-backed. External deployment remains a later environment-dependent gate.
-- The mock payment gateway is allowed by scope. Its checkout records, callback events, and idempotency state are persisted, while no real payment-provider integration is claimed.
+- The mock payment gateway is a test harness. Its checkout records, callback events, and idempotency state are persisted, but every public/server entry point is disabled unless `ENABLE_MOCK_PAYMENT_HARNESS=true`; no real payment-provider integration is claimed.
 
 ## Final client-scope boundary
 
 - `assessment.service.ts` and the portal/report services derive FULLY PAID, WITH REMAINING BALANCE, and deadline states from persisted ledger entries; no mutable paid flag is accepted from the browser.
-- `announcement.service.ts` filters portal content by audience, publication time, and expiry. Parent and enabled student dashboards preview current payment announcements, while dedicated announcement pages remain available.
-- `payment-submission.service.ts` stores validated GCash/Maya proof bytes in PostgreSQL. Approval locks and rechecks the student ledger before using the shared payment transaction; rejection requires a reason and does not mutate financial state.
-- The normal portal payment flow is manual external-transfer proof. There is no GCash/Maya API or automatic verification. The `MOCK_ONLINE` checkout/callback path is retained only as a historical test harness.
+- `announcement.service.ts` filters portal content by audience, publication time, and expiry without writing. Parent and enabled student dashboards preview current payment announcements, while explicit publish and the protected scheduled processor own lifecycle changes.
+- `payment-submission.service.ts` stores validated GCash/Maya proof bytes and the destination snapshot in PostgreSQL. Approval locks and rechecks the student ledger before using the shared payment transaction; rejection requires a reason and does not mutate financial state. Legacy null snapshots are surfaced as unavailable history.
+- The normal portal payment flow is manual external-transfer proof. There is no GCash/Maya API or automatic verification. The `MOCK_ONLINE` checkout/callback path is retained only as a default-off historical test harness.
 - Academic grades/gradebook data, attendance, conduct, academic-performance analytics, impact tagging, restriction tracking, predictive analytics, and general SIS behavior are outside this payment-monitoring scope. Administrative grade levels used to organize fee structures remain metadata. See `docs/client-clarified-requirements.md`.
 
 ## State ownership
@@ -163,6 +163,6 @@ The Phase 9 invariants are:
 - recipients are resolved from the persisted student-user and guardian-user relationships; caller-supplied recipient lists are not accepted;
 - notification dedupe keys include the persisted event entity and recipient user, while the delivery table enforces one channel row per notification;
 - Resend is selected only when its API key and sender address are configured; otherwise the console provider records a deterministic local/CI-safe delivery outcome;
-- delivery attempts record channel, status, attempt count, provider message ID, timestamps, and failure text, with an atomic database claim, persisted attempt history, and an authenticated admin/finance manual retry route; `SENT` is terminal and no scheduler claim is assumed in this scope;
+- delivery attempts record channel, status, attempt count, provider message ID, timestamps, and failure text, with an atomic database claim, persisted attempt history, and an authenticated admin/finance manual retry route; inactive users are excluded, console delivery logs are metadata-only, and `SENT` is terminal;
 - duplicate payment idempotency requests and duplicate mock callback events do not create or deliver duplicate notification records;
-- due-date reminders and payment announcements are generated only from persisted assessment/announcement records; no scheduler or external messaging provider is claimed as part of the demo deployment.
+- due-date reminders and payment announcements are generated only from persisted assessment/announcement records. The shared processor is protected by `CRON_SECRET` and declared in `vercel.json`; schedule configuration is not evidence that a deployment or cron delivery exists, and no external messaging provider is claimed.

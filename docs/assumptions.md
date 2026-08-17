@@ -93,8 +93,10 @@ Receipts use the label **System-Generated Payment Receipt** and state: “This s
 - A parent may view only students linked through the persisted guardian-to-student relationship for the authenticated `PARENT` user.
 - A student may view only the student row linked to the authenticated `STUDENT` user. Caller-supplied student IDs, child lists, balances, and receipt ownership are not authorization evidence.
 - Parents submit external GCash or Maya transfer details and a validated proof image; the submission is persisted in PostgreSQL and does not change the ledger while pending.
+- The proof request and stored image are capped at 3 MiB, with a request-size guard, MIME/signature validation, and protected no-store/nosniff proof responses.
+- The selected GCash/Maya destination name and account number are snapshotted on submission. Legacy null snapshots remain explicitly unavailable in history rather than being replaced by current settings.
 - Finance approval rechecks ownership, amount, and current balance inside a transaction before using the shared payment service. Rejection requires a reason and leaves the ledger unchanged.
-- The legacy mock checkout state, callback events, payment-channel binding, expiry, and idempotency keys remain persisted only for historical test-harness coverage. They do not represent a real provider integration or the normal parent flow.
+- The legacy mock checkout state, callback events, payment-channel binding, expiry, and idempotency keys remain persisted only for historical test-harness coverage and are disabled unless `ENABLE_MOCK_PAYMENT_HARNESS=true`. They do not represent a real provider integration or the normal parent flow.
 - There is no GCash API, Maya API, automatic transfer verification, card network, bank integration, or payment-provider integration.
 
 ## 15. Reports and reconciliation
@@ -111,8 +113,9 @@ Receipts use the label **System-Generated Payment Receipt** and state: “This s
 - Assessment posting, successful payment, receipt availability, and reversal events create one persisted notification per linked student or guardian account.
 - Notification dedupe keys include the event entity and recipient user, and the notification-delivery unique key prevents multiple channel rows for one notification.
 - Resend is used only when both `RESEND_API_KEY` and `EMAIL_FROM` are configured. Local and CI environments use the console provider and do not require real email delivery.
+- Inactive student and guardian users are excluded from recipient resolution. The console provider logs only delivery metadata and a truncated recipient hash, never message content or financial data.
 - Delivery failures are recorded with attempt counts and retry timestamps. A provider failure is isolated from the already-committed financial transaction; manual retries use the persisted delivery row.
-- Due dates and ON TRACK/DUE SOON/OVERDUE status are displayed for unpaid assessments. Zero-balance assessments are FULLY PAID and never overdue. Published, audience-matched payment announcements are visible in portal announcement pages and dashboard previews; expired, draft, and future announcements are excluded.
+- Due dates and ON TRACK/DUE SOON/OVERDUE status are displayed for unpaid assessments. Zero-balance assessments are FULLY PAID and never overdue. Published, audience-matched payment announcements are visible in portal announcement pages and dashboard previews; expired, draft, scheduled, and archived announcements are excluded until explicit or scheduled publication. The protected processor requires `CRON_SECRET`; its Vercel schedule is configuration, not delivery evidence.
 
 ## 17. External Audit Round 3 financial-history rules
 

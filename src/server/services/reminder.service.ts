@@ -6,6 +6,7 @@ import {
   type NotificationDispatchSummary,
 } from '@/server/services/notification.service';
 import { listAssessmentDeadlineMonitor } from '@/server/services/deadline.service';
+import { publishDueAnnouncements } from '@/server/services/announcement.service';
 
 export interface ReminderRunResult extends NotificationDispatchSummary {
   assessed: number;
@@ -41,7 +42,7 @@ export class ReminderService {
     provider: EmailProvider = getEmailProvider()
   ): Promise<ReminderRunResult> {
     const result = emptySummary();
-    const candidates = await listAssessmentDeadlineMonitor({ now: input.now, limit: 1000 }, db);
+    const candidates = await listAssessmentDeadlineMonitor({ now: input.now }, db);
     result.assessed = candidates.length;
 
     for (const candidate of candidates) {
@@ -57,5 +58,15 @@ export class ReminderService {
     }
 
     return result;
+  }
+
+  static async runScheduledProcessing(
+    input: { now?: Date } = {},
+    db: DatabaseInstance = getDb(),
+    provider: EmailProvider = getEmailProvider()
+  ) {
+    const announcements = await publishDueAnnouncements({ now: input.now }, db, provider);
+    const reminders = await ReminderService.runDueReminders(input, db, provider);
+    return { announcements, reminders };
   }
 }

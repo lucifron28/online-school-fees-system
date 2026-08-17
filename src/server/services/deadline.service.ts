@@ -107,23 +107,26 @@ export async function listAssessmentDeadlineMonitor(
     } satisfies AssessmentDeadlineMonitorItem;
   });
 
-  const limit = Math.min(Math.max(input.limit ?? evaluated.length, 1), 1000);
-  return evaluated
-    .filter((item) => item.deadlineState === 'DUE_SOON' || item.deadlineState === 'OVERDUE')
-    .slice(0, limit);
+  const matching = evaluated.filter(
+    (item) => item.deadlineState === 'DUE_SOON' || item.deadlineState === 'OVERDUE'
+  );
+  if (input.limit === undefined) return matching;
+  const limit = Math.max(Math.trunc(input.limit), 0);
+  return matching.slice(0, limit);
 }
 
 export async function getDeadlineSummary(
   input: { now?: Date; limit?: number } = {},
   db: DatabaseInstance = getDb()
 ): Promise<DeadlineSummary> {
-  const items = await listAssessmentDeadlineMonitor({ ...input, limit: 1000 }, db);
+  const items = await listAssessmentDeadlineMonitor({ ...input, limit: undefined }, db);
   const dueSoon = items.filter((item) => item.deadlineState === 'DUE_SOON');
   const overdue = items.filter((item) => item.deadlineState === 'OVERDUE');
+  const displayLimit = input.limit === undefined ? undefined : Math.max(Math.trunc(input.limit), 0);
   return {
     dueSoonCount: dueSoon.length,
     overdueCount: overdue.length,
-    dueSoon,
-    overdue,
+    dueSoon: displayLimit === undefined ? dueSoon : dueSoon.slice(0, displayLimit),
+    overdue: displayLimit === undefined ? overdue : overdue.slice(0, displayLimit),
   };
 }

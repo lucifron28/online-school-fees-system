@@ -4,6 +4,7 @@ import { getDb, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import { mockCallbackInputSchema, type MockCallbackInput } from '@/lib/portal';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '@/server/errors/index';
+import { assertMockPaymentHarnessEnabled } from './mock-payment-harness';
 import { NotificationService } from './notification.service';
 import { PaymentService } from './payment.service';
 
@@ -175,14 +176,16 @@ function callbackResult(
 }
 
 export class MockPaymentGateway implements PaymentGateway {
-  constructor(private readonly db: DatabaseInstance = getDb()) {}
+  constructor(private readonly db?: DatabaseInstance) {}
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
+    assertMockPaymentHarnessEnabled();
+    const db = this.db ?? getDb();
     if (input.amountCentavos <= 0) {
       throw new ValidationError('Checkout amount must be greater than zero.');
     }
 
-    const existing = await this.db
+    const existing = await db
       .select()
       .from(schema.mockPaymentCheckouts)
       .where(eq(schema.mockPaymentCheckouts.idempotencyKey, input.idempotencyKey))
@@ -193,7 +196,7 @@ export class MockPaymentGateway implements PaymentGateway {
     }
 
     try {
-      const [checkout] = await this.db
+      const [checkout] = await db
         .insert(schema.mockPaymentCheckouts)
         .values({
           checkoutReference: `MOCK-${randomUUID()}`,
@@ -210,7 +213,7 @@ export class MockPaymentGateway implements PaymentGateway {
       return this.checkoutResult(checkout);
     } catch (error) {
       if (isUniqueViolation(error)) {
-        const replay = await this.db
+        const replay = await db
           .select()
           .from(schema.mockPaymentCheckouts)
           .where(eq(schema.mockPaymentCheckouts.idempotencyKey, input.idempotencyKey))
@@ -225,7 +228,8 @@ export class MockPaymentGateway implements PaymentGateway {
   }
 
   async verifyPayment(paymentReference: string): Promise<PaymentVerification> {
-    const checkout = await getMockCheckout(paymentReference, this.db);
+    assertMockPaymentHarnessEnabled();
+    const checkout = await getMockCheckout(paymentReference, this.db ?? getDb());
     return {
       paymentReference: checkout.checkoutReference,
       status: statusForCheckout(checkout.status),
@@ -248,18 +252,19 @@ export class MockPaymentGateway implements PaymentGateway {
   }
 }
 
-export async function getMockCheckout(paymentReference: string, db: DatabaseInstance = getDb()) {
-  return db.transaction(async (tx) => {
+export async function getMockCheckout(paymentReference: string, db?: DatabaseInstance) {
+  assertMockPaymentHarnessEnabled();
+  const database = db ?? getDb();
+  return database.transaction(async (tx) => {
     const transactionDb = tx as unknown as DatabaseInstance;
     const checkout = await selectCheckoutByReference(paymentReference, transactionDb, true);
     return expireCheckoutIfNeeded(checkout, transactionDb, new Date());
   });
 }
 
-export async function processMockCallback(
-  input: MockCallbackInput,
-  db: DatabaseInstance = getDb()
-) {
+export async function processMockCallback(input: MockCallbackInput, db?: DatabaseInstance) {
+  assertMockPaymentHarnessEnabled();
+  db ??= getDb();
   const values = mockCallbackInputSchema.parse(input);
   const existing = await selectExistingCallback(values, db);
   if (existing) {

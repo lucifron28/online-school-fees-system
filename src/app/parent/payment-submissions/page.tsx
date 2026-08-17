@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Eye, FileImage, Plus, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
 import type { PortalPaymentSubmission } from '@/lib/portal-types';
@@ -33,10 +34,13 @@ function statusClass(status: PortalPaymentSubmission['status']) {
 }
 
 export default function ParentPaymentSubmissionsPage() {
+  const [page, setPage] = useState(1);
   const query = useQuery({
-    queryKey: ['parent-payment-submissions'],
+    queryKey: ['parent-payment-submissions', page],
     queryFn: () =>
-      requestJson<SubmissionResponse>('/api/portal/parent/payment-submissions?page=1&pageSize=50'),
+      requestJson<SubmissionResponse>(
+        `/api/portal/parent/payment-submissions?page=${page}&pageSize=20`
+      ),
   });
   const items = query.data?.items ?? [];
 
@@ -93,6 +97,7 @@ export default function ParentPaymentSubmissionsPage() {
                     <TableHead>Reference</TableHead>
                     <TableHead>Payment date</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Destination</TableHead>
                     <TableHead className="text-right">Links</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -126,6 +131,11 @@ export default function ParentPaymentSubmissionsPage() {
                           </p>
                         )}
                       </TableCell>
+                      <TableCell className="text-xs text-slate-500">
+                        {item.paymentDestination
+                          ? `${item.paymentDestination.accountName} · ${item.paymentDestination.accountNumber}`
+                          : 'Historical destination unavailable'}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           {item.proofId && (
@@ -156,6 +166,35 @@ export default function ParentPaymentSubmissionsPage() {
                   ))}
                 </TableBody>
               </Table>
+            )}
+            {query.data.pageCount > 0 && (
+              <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-slate-500">
+                <span>
+                  Page {query.data.page} of {query.data.pageCount} · {query.data.total} total
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={page <= 1 || query.isFetching}
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={page >= query.data.pageCount || query.isFetching}
+                    onClick={() =>
+                      setPage((current) => Math.min(query.data!.pageCount, current + 1))
+                    }
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
