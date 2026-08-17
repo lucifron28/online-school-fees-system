@@ -1,14 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Eye, RefreshCw } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
-import type { PortalPayment } from '@/lib/portal-types';
+import type { PortalPaymentsPage } from '@/lib/portal-types';
 import { formatCentavos } from '@/lib/utils/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 import {
   Table,
   TableBody,
@@ -19,11 +22,13 @@ import {
 } from '@/components/ui/table';
 
 export default function StudentPaymentHistoryPage() {
+  const [page, setPage] = useState(1);
   const paymentsQuery = useQuery({
-    queryKey: ['student-payments'],
-    queryFn: () => requestJson<PortalPayment[]>('/api/portal/student/payments'),
+    queryKey: ['student-payments', page],
+    queryFn: () =>
+      requestJson<PortalPaymentsPage>(`/api/portal/student/payments?page=${page}&pageSize=20`),
   });
-  const payments = paymentsQuery.data ?? [];
+  const payments = paymentsQuery.data?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -52,7 +57,10 @@ export default function StudentPaymentHistoryPage() {
         <Card className="shadow-sm">
           <CardContent className="p-0">
             {payments.length === 0 ? (
-              <p className="p-8 text-center text-sm text-slate-500">No posted payments yet.</p>
+              <EmptyState
+                title="No posted payments yet"
+                description="Finance-posted payments and their receipts will appear here after processing."
+              />
             ) : (
               <Table>
                 <TableHeader>
@@ -92,6 +100,13 @@ export default function StudentPaymentHistoryPage() {
                   ))}
                 </TableBody>
               </Table>
+            )}
+            {paymentsQuery.data && (
+              <PaginationControls
+                {...paymentsQuery.data.pagination}
+                isFetching={paymentsQuery.isFetching}
+                onPageChange={setPage}
+              />
             )}
           </CardContent>
         </Card>

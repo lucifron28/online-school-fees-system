@@ -7,6 +7,13 @@ import { getDb, type DatabaseInstance } from '../index';
 import * as schema from '../schema';
 import { logSanitizedError } from '../../server/logging';
 import { calculateAssessmentDueDate } from '../../lib/deadlines';
+import {
+  approvePaymentSubmission,
+  createPaymentSubmission,
+  getPaymentSubmission,
+  rejectPaymentSubmission,
+} from '../../server/services/payment-submission.service';
+import { ConsoleEmailProvider } from '../../server/services/notification.service';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -1027,6 +1034,146 @@ async function ensureCheckout(
   return checkout;
 }
 
+async function ensureDemoAnnouncements(db: DatabaseInstance, adminUserId: string) {
+  const announcements = [
+    {
+      title: 'Demo: Payment verification hours',
+      body: 'Finance staff review manual GCash and Maya proof submissions during school office hours.',
+    },
+    {
+      title: 'Demo: Keep your transfer reference',
+      body: 'Include the complete transfer reference number and a clear screenshot when submitting payment proof.',
+    },
+    {
+      title: 'Demo: School fees deadline reminder',
+      body: 'Review each student account before the posted due date to keep the ledger current.',
+    },
+  ] as const;
+
+  for (const announcement of announcements) {
+    const existing = await db
+      .select({ id: schema.announcements.id })
+      .from(schema.announcements)
+      .where(eq(schema.announcements.title, announcement.title))
+      .limit(1);
+    if (existing[0]) {
+      await db
+        .update(schema.announcements)
+        .set({
+          body: announcement.body,
+          audience: 'PARENT_AND_STUDENT',
+          status: 'PUBLISHED',
+          publishAt: DEMO_NOW,
+          expiresAt: DEMO_EXPIRY,
+          updatedByUserId: adminUserId,
+          updatedAt: DEMO_NOW,
+        })
+        .where(eq(schema.announcements.id, existing[0].id));
+      continue;
+    }
+    await db.insert(schema.announcements).values({
+      ...announcement,
+      audience: 'PARENT_AND_STUDENT',
+      status: 'PUBLISHED',
+      publishAt: DEMO_NOW,
+      expiresAt: DEMO_EXPIRY,
+      createdByUserId: adminUserId,
+      updatedByUserId: adminUserId,
+      createdAt: DEMO_NOW,
+      updatedAt: DEMO_NOW,
+    });
+  }
+}
+
+async function ensureDemoPaymentProofs(
+  db: DatabaseInstance,
+  parentUserId: string,
+  financeUserId: string,
+  students: SeedStudent[],
+  assessments: Map<string, SeedAssessment>
+) {
+  const provider = new ConsoleEmailProvider();
+  const proof = {
+    mimeType: 'image/png',
+    originalFileName: 'demo-transfer-proof.png',
+    data: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  };
+
+  const studentFor = (studentNumber: string) => {
+    const student = students.find((row) => row.studentNumber === studentNumber);
+    if (!student) throw new Error(`No seeded student exists for ${studentNumber}.`);
+    return student;
+  };
+
+  const ensureSubmission = async (input: {
+    studentNumber: string;
+    paymentChannel: 'GCASH' | 'MAYA';
+    amountCentavos: number;
+    referenceNumber: string;
+    idempotencyKey: string;
+    decision: 'APPROVE' | 'REJECT';
+    rejectionReason?: string;
+  }) => {
+    const student = studentFor(input.studentNumber);
+    if (!assessments.has(input.studentNumber)) {
+      throw new Error(`No seeded assessment exists for ${input.studentNumber}.`);
+    }
+    const existing = await db
+      .select({ id: schema.paymentSubmissions.id })
+      .from(schema.paymentSubmissions)
+      .where(eq(schema.paymentSubmissions.idempotencyKey, input.idempotencyKey))
+      .limit(1);
+    let submission = existing[0]
+      ? await getPaymentSubmission(existing[0].id, db)
+      : await createPaymentSubmission(
+          {
+            studentId: student.id,
+            paymentChannel: input.paymentChannel,
+            amountCentavos: input.amountCentavos,
+            referenceNumber: input.referenceNumber,
+            paidAt: DEMO_NOW.toISOString(),
+            idempotencyKey: input.idempotencyKey,
+            proof,
+          },
+          parentUserId,
+          db,
+          provider
+        );
+
+    if (submission.status === 'PENDING_VERIFICATION') {
+      submission =
+        input.decision === 'APPROVE'
+          ? await approvePaymentSubmission(submission.id, financeUserId, db, provider)
+          : await rejectPaymentSubmission(
+              submission.id,
+              financeUserId,
+              { reason: input.rejectionReason },
+              db,
+              provider
+            );
+    }
+    return submission;
+  };
+
+  await ensureSubmission({
+    studentNumber: 'DEMO-0001',
+    paymentChannel: 'GCASH',
+    amountCentavos: 50_000_00,
+    referenceNumber: 'DEMO-GCASH-APPROVED',
+    idempotencyKey: 'seed-proof-gcash-approved',
+    decision: 'APPROVE',
+  });
+  await ensureSubmission({
+    studentNumber: 'DEMO-0001',
+    paymentChannel: 'MAYA',
+    amountCentavos: 10_000_00,
+    referenceNumber: 'DEMO-MAYA-REJECTED',
+    idempotencyKey: 'seed-proof-maya-rejected',
+    decision: 'REJECT',
+    rejectionReason: 'Demo rejection: upload a clearer transfer confirmation.',
+  });
+}
+
 export async function seedDemoData(db: DatabaseInstance = getDb()) {
   console.log('🌱 Seeding deterministic fictional demo data...');
   const schoolYear = await ensureSchoolYear(db);
@@ -1156,6 +1303,8 @@ export async function seedDemoData(db: DatabaseInstance = getDb()) {
     callbackIdempotencyKey: 'seed-callback-demo-0007',
     status: 'CANCELLED',
   });
+  await ensureDemoAnnouncements(db, admin.id);
+  await ensureDemoPaymentProofs(db, parent.id, finance.id, students, assessments);
 
   console.log(
     `✅ Demo seed ready: 1 active school year, ${students.length} students, ${guardians.length} guardians, ${assessments.size} assessments, and persisted payment/receipt/audit/notification fixtures.`

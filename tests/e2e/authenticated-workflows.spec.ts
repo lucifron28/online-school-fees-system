@@ -1,17 +1,13 @@
 import { expect, test, type APIResponse, type Page } from '@playwright/test';
 import { fictionalPaymentProof } from '../fixtures/fictional-payment-proof';
 import { formatCentavos } from '@/lib/utils/currency';
+import type { PortalPaymentsPage } from '@/lib/portal-types';
 
 const PASSWORD = 'DemoPass123!';
 
 async function login(page: Page, portal: 'admin' | 'parent' | 'student', email: string) {
   await page.goto(`/login/${portal}`);
-  const emailLabel =
-    portal === 'admin'
-      ? 'Email / Admin ID'
-      : portal === 'parent'
-        ? 'Parent Email / Account ID'
-        : 'Student Email / Account ID';
+  const emailLabel = 'Email address';
   await page.getByLabel(emailLabel).fill(email);
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: /sign in/i }).click();
@@ -23,6 +19,78 @@ async function login(page: Page, portal: 'admin' | 'parent' | 'student', email: 
 async function jsonResponse<T>(response: APIResponse) {
   expect(response.ok(), `${response.url()}`).toBe(true);
   return (await response.json()) as T;
+}
+
+async function waitForAnnouncementPreview(page: Page) {
+  await expect(page.getByTestId('portal-announcements-preview')).toHaveAttribute(
+    'data-announcements-state',
+    'ready',
+    { timeout: 15_000 }
+  );
+}
+
+async function createUniqueProofFixture(admin: Page, suffix: number, channel: 'GCASH' | 'MAYA') {
+  await login(admin, 'admin', 'admin@demo.school');
+  const options = await jsonResponse<{
+    schoolYears: Array<{ id: string; status: string }>;
+    gradeLevels: Array<{ id: string; code: string }>;
+  }>(await admin.request.get('/api/admin/fee-options'));
+  const activeYear = options.schoolYears.find((year) => year.status === 'ACTIVE');
+  const gradeSeven = options.gradeLevels.find((grade) => grade.code === 'G7');
+  expect(activeYear).toBeDefined();
+  expect(gradeSeven).toBeDefined();
+
+  const sections = await jsonResponse<Array<{ id: string; code: string }>>(
+    await admin.request.get('/api/admin/sections')
+  );
+  const section = sections.find((item) => item.code === 'G7-A');
+  expect(section).toBeDefined();
+
+  const studentNumber = `E2E-${channel}-${suffix}`;
+  const student = await jsonResponse<{ id: string; studentNumber: string }>(
+    await admin.request.post('/api/admin/students', {
+      data: {
+        studentNumber,
+        firstName: channel === 'MAYA' ? 'Maya' : 'Gcash',
+        lastName: 'Fixture',
+        email: `e2e.${channel.toLowerCase()}.${suffix}@schoolfees.example.com`,
+        userId: null,
+        gradeLevelId: gradeSeven!.id,
+        sectionId: section!.id,
+        schoolYearId: activeYear!.id,
+        status: 'ACTIVE',
+      },
+    })
+  );
+
+  const parentGuardians = await jsonResponse<Array<{ id: string; email: string }>>(
+    await admin.request.get('/api/admin/guardians?search=parent@demo.school')
+  );
+  const parentGuardian = parentGuardians.find(
+    (guardian) => guardian.email === 'parent@demo.school'
+  );
+  expect(parentGuardian).toBeDefined();
+  await jsonResponse(
+    await admin.request.post(`/api/admin/students/${student.id}/guardians`, {
+      data: { guardianId: parentGuardian!.id, isPrimary: false },
+    })
+  );
+
+  const structures = await jsonResponse<
+    Array<{ id: string; gradeLevelId: string; status: string; items: unknown[] }>
+  >(
+    await admin.request.get(
+      `/api/admin/fee-structures?schoolYearId=${activeYear!.id}&gradeLevelId=${gradeSeven!.id}&status=ACTIVE`
+    )
+  );
+  expect(structures.length).toBeGreaterThan(0);
+  await jsonResponse(
+    await admin.request.post(`/api/admin/students/${student.id}/assessments`, {
+      data: { feeStructureId: structures[0].id },
+    })
+  );
+
+  return { studentId: student.id, studentNumber };
 }
 
 test.describe('authenticated financial workflow', () => {
@@ -161,10 +229,10 @@ test.describe('authenticated financial workflow', () => {
       ).toBe(true);
       await parent.goto(`/parent/children/${createdStudent.id}`);
       await expect(parent.getByText(assessment.dueDate!, { exact: true }).first()).toBeVisible();
-      const parentPaymentsBeforeOnline = await jsonResponse<Array<{ id: string }>>(
+      const parentPaymentsBeforeOnline = await jsonResponse<PortalPaymentsPage>(
         await parent.request.get('/api/portal/parent/payments')
       );
-      expect(parentPaymentsBeforeOnline.some((item) => item.id === payment.id)).toBe(true);
+      expect(parentPaymentsBeforeOnline.items.some((item) => item.id === payment.id)).toBe(true);
 
       const checkout = await jsonResponse<{ paymentReference: string; status: string }>(
         await parent.request.post('/api/portal/parent/checkouts', {
@@ -412,6 +480,7 @@ test.describe('authenticated financial workflow', () => {
     try {
       const admin = await adminContext.newPage();
       await login(admin, 'admin', 'admin@demo.school');
+      const fixture = await createUniqueProofFixture(admin, suffix, 'GCASH');
       const announcementTitle = `E2E payment update ${suffix}`;
       const announcement = await jsonResponse<{ id: string }>(
         await admin.request.post('/api/admin/announcements', {
@@ -432,11 +501,14 @@ test.describe('authenticated financial workflow', () => {
 
       const parent = await parentContext.newPage();
       await login(parent, 'parent', 'parent@demo.school');
+      await waitForAnnouncementPreview(parent);
       const children = await jsonResponse<
         Array<{ studentId: string; studentNumber: string; outstandingBalanceCentavos: number }>
       >(await parent.request.get('/api/portal/parent/children'));
-      const child = children.find((item) => item.outstandingBalanceCentavos > 0);
+      const child = children.find((item) => item.studentNumber === fixture.studentNumber);
       expect(child).toBeDefined();
+      expect(child!.studentId).toBe(fixture.studentId);
+      expect(child!.outstandingBalanceCentavos).toBeGreaterThan(0);
       const amount = child!.outstandingBalanceCentavos;
       const reference = `E2E-MANUAL-GCASH-${suffix}`;
 
@@ -455,7 +527,7 @@ test.describe('authenticated financial workflow', () => {
       await parent
         .getByLabel('Transaction date and time')
         .fill(new Date(Date.now() - 60_000).toISOString().slice(0, 16));
-      await parent.getByLabel('Screenshot/proof').setInputFiles({
+      await parent.getByLabel('Payment screenshot').setInputFiles({
         name: 'fictional-payment-proof.png',
         mimeType: 'image/png',
         buffer: fictionalPaymentProof,
@@ -494,6 +566,7 @@ test.describe('authenticated financial workflow', () => {
       );
 
       await parent.goto('/parent/dashboard');
+      await waitForAnnouncementPreview(parent);
       await expect(parent.getByText('FULLY PAID', { exact: true }).first()).toBeVisible({
         timeout: 15_000,
       });
@@ -521,17 +594,24 @@ test.describe('authenticated financial workflow', () => {
   }) => {
     test.setTimeout(120_000);
     const suffix = Date.now();
+    const adminContext = await browser.newContext();
     const parentContext = await browser.newContext();
     const financeContext = await browser.newContext();
 
     try {
+      const admin = await adminContext.newPage();
+      const fixture = await createUniqueProofFixture(admin, suffix, 'MAYA');
       const parent = await parentContext.newPage();
       await login(parent, 'parent', 'parent@demo.school');
+      await parent.goto('/parent/dashboard');
+      await waitForAnnouncementPreview(parent);
       const children = await jsonResponse<
         Array<{ studentId: string; studentNumber: string; outstandingBalanceCentavos: number }>
       >(await parent.request.get('/api/portal/parent/children'));
-      const child = children.find((item) => item.outstandingBalanceCentavos > 0);
+      const child = children.find((item) => item.studentNumber === fixture.studentNumber);
       expect(child).toBeDefined();
+      expect(child!.studentId).toBe(fixture.studentId);
+      expect(child!.outstandingBalanceCentavos).toBeGreaterThan(0);
       const beforeBalance = child!.outstandingBalanceCentavos;
       const amount = Math.min(beforeBalance, 12_345);
       const reference = `E2E-MANUAL-MAYA-${suffix}`;
@@ -544,7 +624,7 @@ test.describe('authenticated financial workflow', () => {
       await parent
         .getByLabel('Transaction date and time')
         .fill(new Date(Date.now() - 60_000).toISOString().slice(0, 16));
-      await parent.getByLabel('Screenshot/proof').setInputFiles({
+      await parent.getByLabel('Payment screenshot').setInputFiles({
         name: 'fictional-maya-proof.png',
         mimeType: 'image/png',
         buffer: fictionalPaymentProof,
@@ -572,6 +652,8 @@ test.describe('authenticated financial workflow', () => {
         .fill('The fictional proof needs a clearer transfer reference.');
       await finance.getByRole('button', { name: 'Reject proof', exact: true }).click();
       await expect(finance.getByRole('status')).toContainText('Payment proof rejected.');
+      await expect(finance.getByLabel('Search student or reference')).toHaveValue('');
+      await expect(finance.getByText('Select a payment proof', { exact: true })).toBeVisible();
 
       await parent.goto('/parent/payment-submissions');
       await expect(
@@ -590,7 +672,7 @@ test.describe('authenticated financial workflow', () => {
         parent.getByText('WITH REMAINING BALANCE', { exact: true }).first()
       ).toBeVisible();
     } finally {
-      await Promise.all([parentContext.close(), financeContext.close()]);
+      await Promise.all([adminContext.close(), parentContext.close(), financeContext.close()]);
     }
   });
 });

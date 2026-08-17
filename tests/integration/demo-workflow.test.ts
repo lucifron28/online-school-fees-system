@@ -5,7 +5,7 @@ import * as schema from '@/db/schema';
 import { AssessmentService } from '@/server/services/assessment.service';
 import { processMockCallback } from '@/server/services/payment-gateway.service';
 import { PaymentService } from '@/server/services/payment.service';
-import { PortalService } from '@/server/services/portal.service';
+import { listOwnedPaymentsPage, PortalService } from '@/server/services/portal.service';
 import { ReportService } from '@/server/services/report.service';
 import { describe, expect, it } from 'vitest';
 
@@ -107,7 +107,7 @@ databaseContract('deterministic demo database workflow', () => {
     const deliveries = await db.select().from(schema.notificationDeliveries);
 
     expect(new Set(payments.map((payment) => payment.paymentMethod))).toEqual(
-      new Set(['CASH', 'BANK_DEPOSIT', 'MOCK_ONLINE'])
+      new Set(['CASH', 'BANK_DEPOSIT', 'GCASH', 'MOCK_ONLINE'])
     );
     expect(payments.filter((payment) => payment.status === 'REVERSED')).toHaveLength(1);
     expect(reversals).toHaveLength(1);
@@ -165,10 +165,61 @@ databaseContract('deterministic demo database workflow', () => {
       { from: '2026-08-01', to: '2026-08-31' },
       db
     );
-    expect(report.totals.grossCollectionsCentavos).toBe(175_000_00);
-    expect(report.totals.netCollectionsCentavos).toBe(160_000_00);
+    expect(report.totals.grossCollectionsCentavos).toBe(225_000_00);
+    expect(report.totals.netCollectionsCentavos).toBe(210_000_00);
     expect(report.totals.reversedCentavos).toBe(15_000_00);
     expect((await ReportService.getOutstandingBalanceReport(db)).length).toBeGreaterThan(0);
+
+    const parent = (
+      await db.select().from(schema.users).where(eq(schema.users.email, 'parent@demo.school'))
+    )[0];
+    expect(parent).toBeDefined();
+    const parentPaymentsPage = await listOwnedPaymentsPage(
+      parent!.id,
+      'PARENT',
+      { pageSize: 1 },
+      db
+    );
+    expect(parentPaymentsPage.items).toHaveLength(1);
+    expect(parentPaymentsPage.pagination.total).toBeGreaterThan(1);
+    const parentPaymentsPageTwo = await listOwnedPaymentsPage(
+      parent!.id,
+      'PARENT',
+      { page: 2, pageSize: 1 },
+      db
+    );
+    expect(parentPaymentsPageTwo.items[0]?.id).not.toBe(parentPaymentsPage.items[0]?.id);
+
+    const collectionPage = await ReportService.getCollectionReportPage(
+      { from: '2026-08-01', to: '2026-08-31' },
+      1,
+      1,
+      db
+    );
+    expect(collectionPage.items).toHaveLength(1);
+    expect(collectionPage.pagination.total).toBe(report.items.length);
+    expect(collectionPage.totals).toEqual(report.totals);
+    const collectionPageTwo = await ReportService.getCollectionReportPage(
+      { from: '2026-08-01', to: '2026-08-31' },
+      2,
+      1,
+      db
+    );
+    expect(collectionPageTwo.items[0]?.id).not.toBe(collectionPage.items[0]?.id);
+
+    const outstandingPage = await ReportService.getOutstandingBalanceReportPage(1, 1, db);
+    expect(outstandingPage.items).toHaveLength(1);
+    expect(outstandingPage.pagination.total).toBeGreaterThan(1);
+    expect(outstandingPage.totals.totalOutstandingBalanceCentavos).toBeGreaterThan(0);
+
+    const reversalPage = await ReportService.getReversalReportPage(
+      { from: '2026-08-01', to: '2026-08-31' },
+      1,
+      1,
+      db
+    );
+    expect(reversalPage.items).toHaveLength(1);
+    expect(reversalPage.pagination.total).toBe(1);
   });
 
   it('enforces ownership and duplicate assessment protection against persisted records', async () => {

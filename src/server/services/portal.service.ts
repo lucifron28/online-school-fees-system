@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
 import { getDb, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import { getServerEnv } from '@/lib/env';
@@ -10,6 +10,16 @@ import { ForbiddenError, NotFoundError, ValidationError } from '@/server/errors/
 import { getStudentAssessments, getStudentLedger } from './assessment.service';
 
 export type PortalRole = 'PARENT' | 'STUDENT';
+
+const PORTAL_PAYMENT_PAGE_SIZE = 20;
+const PORTAL_PAYMENT_MAX_PAGE_SIZE = 50;
+const PORTAL_CHILD_PAYMENT_PAGE_SIZE = 10;
+
+export interface OwnedPaymentsPageInput {
+  studentId?: string;
+  page?: number;
+  pageSize?: number;
+}
 
 export interface LinkedChildSummary {
   studentId: string;
@@ -179,34 +189,46 @@ function toChildSummary(
   };
 }
 
-export async function listOwnedPayments(
+const ownedPaymentSelection = {
+  id: schema.payments.id,
+  studentId: schema.payments.studentId,
+  studentNumber: schema.students.studentNumber,
+  studentFirstName: schema.students.firstName,
+  studentLastName: schema.students.lastName,
+  amountCentavos: schema.payments.amountCentavos,
+  paymentMethod: schema.payments.paymentMethod,
+  referenceNumber: schema.payments.referenceNumber,
+  status: schema.payments.status,
+  createdAt: schema.payments.createdAt,
+  receiptId: schema.receipts.id,
+  receiptNumber: schema.receipts.receiptNumber,
+  receiptStatus: schema.receipts.status,
+  issuanceSnapshot: schema.receipts.issuanceSnapshot,
+};
+
+type OwnedPaymentQueryOptions = {
+  studentId?: string;
+  limit?: number;
+  offset?: number;
+};
+
+function ownedPaymentWhere(userId: string, role: PortalRole, studentId?: string) {
+  const ownerCondition =
+    role === 'PARENT' ? eq(schema.guardians.userId, userId) : eq(schema.students.userId, userId);
+  return studentId ? and(ownerCondition, eq(schema.payments.studentId, studentId)) : ownerCondition;
+}
+
+async function selectOwnedPaymentRows(
   userId: string,
   role: PortalRole,
+  options: OwnedPaymentQueryOptions = {},
   db: DatabaseInstance = getDb()
-): Promise<PortalPaymentSummary[]> {
-  if (role === 'STUDENT') await assertStudentPortalEnabled();
-
-  const baseSelection = {
-    id: schema.payments.id,
-    studentId: schema.payments.studentId,
-    studentNumber: schema.students.studentNumber,
-    studentFirstName: schema.students.firstName,
-    studentLastName: schema.students.lastName,
-    amountCentavos: schema.payments.amountCentavos,
-    paymentMethod: schema.payments.paymentMethod,
-    referenceNumber: schema.payments.referenceNumber,
-    status: schema.payments.status,
-    createdAt: schema.payments.createdAt,
-    receiptId: schema.receipts.id,
-    receiptNumber: schema.receipts.receiptNumber,
-    receiptStatus: schema.receipts.status,
-    issuanceSnapshot: schema.receipts.issuanceSnapshot,
-  };
-
-  const rows =
+) {
+  const where = ownedPaymentWhere(userId, role, options.studentId);
+  const query =
     role === 'PARENT'
-      ? await db
-          .select(baseSelection)
+      ? db
+          .select(ownedPaymentSelection)
           .from(schema.payments)
           .innerJoin(schema.students, eq(schema.students.id, schema.payments.studentId))
           .innerJoin(
@@ -215,39 +237,76 @@ export async function listOwnedPayments(
           )
           .innerJoin(schema.guardians, eq(schema.guardians.id, schema.guardianStudents.guardianId))
           .leftJoin(schema.receipts, eq(schema.receipts.paymentId, schema.payments.id))
-          .where(eq(schema.guardians.userId, userId))
-          .orderBy(desc(schema.payments.createdAt))
-      : await db
-          .select(baseSelection)
+          .where(where)
+          .orderBy(desc(schema.payments.createdAt), asc(schema.payments.id))
+      : db
+          .select(ownedPaymentSelection)
           .from(schema.payments)
           .innerJoin(schema.students, eq(schema.students.id, schema.payments.studentId))
           .leftJoin(schema.receipts, eq(schema.receipts.paymentId, schema.payments.id))
-          .where(eq(schema.students.userId, userId))
-          .orderBy(desc(schema.payments.createdAt));
+          .where(where)
+          .orderBy(desc(schema.payments.createdAt), asc(schema.payments.id));
 
-  const paymentIds = rows.map((row) => row.id);
-  const allocationRows =
-    paymentIds.length === 0
-      ? []
+  return options.limit === undefined
+    ? query
+    : query.limit(options.limit).offset(options.offset ?? 0);
+}
+
+async function countOwnedPayments(
+  userId: string,
+  role: PortalRole,
+  studentId: string | undefined,
+  db: DatabaseInstance
+) {
+  const where = ownedPaymentWhere(userId, role, studentId);
+  const rows =
+    role === 'PARENT'
+      ? await db
+          .select({ total: count() })
+          .from(schema.payments)
+          .innerJoin(schema.students, eq(schema.students.id, schema.payments.studentId))
+          .innerJoin(
+            schema.guardianStudents,
+            eq(schema.guardianStudents.studentId, schema.students.id)
+          )
+          .innerJoin(schema.guardians, eq(schema.guardians.id, schema.guardianStudents.guardianId))
+          .where(where)
       : await db
-          .select({
-            paymentId: schema.paymentAllocations.paymentId,
-            adjustmentId: schema.paymentAllocations.adjustmentId,
-            itemName: schema.assessmentItems.name,
-            adjustmentReason: schema.adjustments.reason,
-            amountCentavos: schema.paymentAllocations.amountCentavos,
-          })
-          .from(schema.paymentAllocations)
-          .leftJoin(
-            schema.assessmentItems,
-            eq(schema.assessmentItems.id, schema.paymentAllocations.assessmentItemId)
-          )
-          .leftJoin(
-            schema.adjustments,
-            eq(schema.adjustments.id, schema.paymentAllocations.adjustmentId)
-          )
-          .where(inArray(schema.paymentAllocations.paymentId, paymentIds))
-          .orderBy(asc(schema.paymentAllocations.createdAt));
+          .select({ total: count() })
+          .from(schema.payments)
+          .innerJoin(schema.students, eq(schema.students.id, schema.payments.studentId))
+          .where(where);
+  return Number(rows[0]?.total ?? 0);
+}
+
+async function selectPaymentAllocations(paymentIds: string[], db: DatabaseInstance) {
+  if (paymentIds.length === 0) return [];
+  return db
+    .select({
+      paymentId: schema.paymentAllocations.paymentId,
+      adjustmentId: schema.paymentAllocations.adjustmentId,
+      itemName: schema.assessmentItems.name,
+      adjustmentReason: schema.adjustments.reason,
+      amountCentavos: schema.paymentAllocations.amountCentavos,
+    })
+    .from(schema.paymentAllocations)
+    .leftJoin(
+      schema.assessmentItems,
+      eq(schema.assessmentItems.id, schema.paymentAllocations.assessmentItemId)
+    )
+    .leftJoin(schema.adjustments, eq(schema.adjustments.id, schema.paymentAllocations.adjustmentId))
+    .where(inArray(schema.paymentAllocations.paymentId, paymentIds))
+    .orderBy(asc(schema.paymentAllocations.createdAt));
+}
+
+async function toPortalPaymentSummaries(
+  rows: Awaited<ReturnType<typeof selectOwnedPaymentRows>>,
+  db: DatabaseInstance
+): Promise<PortalPaymentSummary[]> {
+  const allocationRows = await selectPaymentAllocations(
+    rows.map((row) => row.id),
+    db
+  );
   const allocationsByPayment = new Map<string, PortalPaymentSummary['allocations']>();
   for (const allocation of allocationRows) {
     const current = allocationsByPayment.get(allocation.paymentId) ?? [];
@@ -276,6 +335,47 @@ export async function listOwnedPayments(
       parseReceiptSnapshot(row.issuanceSnapshot)?.payment.balanceAfterPaymentCentavos ?? null,
     allocations: allocationsByPayment.get(row.id) ?? [],
   }));
+}
+
+export async function listOwnedPayments(
+  userId: string,
+  role: PortalRole,
+  db: DatabaseInstance = getDb()
+): Promise<PortalPaymentSummary[]> {
+  if (role === 'STUDENT') await assertStudentPortalEnabled();
+  return toPortalPaymentSummaries(await selectOwnedPaymentRows(userId, role, {}, db), db);
+}
+
+export async function listOwnedPaymentsPage(
+  userId: string,
+  role: PortalRole,
+  input: OwnedPaymentsPageInput = {},
+  db: DatabaseInstance = getDb()
+) {
+  if (role === 'STUDENT') await assertStudentPortalEnabled();
+  const pageSize = Math.min(
+    PORTAL_PAYMENT_MAX_PAGE_SIZE,
+    Math.max(1, Math.floor(input.pageSize ?? PORTAL_PAYMENT_PAGE_SIZE))
+  );
+  const total = await countOwnedPayments(userId, role, input.studentId, db);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(pageCount, Math.max(1, Math.floor(input.page ?? 1)));
+  const rows = await selectOwnedPaymentRows(
+    userId,
+    role,
+    { studentId: input.studentId, limit: pageSize, offset: (page - 1) * pageSize },
+    db
+  );
+
+  return {
+    items: await toPortalPaymentSummaries(rows, db),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      pageCount,
+    },
+  };
 }
 
 export async function getParentChildren(
@@ -314,11 +414,16 @@ export async function getStudentAccountForUser(
   if (!studentId) throw new ValidationError('A student record is required.');
 
   await assertStudentOwnership(userId, role, studentId, db);
-  const [studentProfile, assessments, ledger, payments] = await Promise.all([
+  const [studentProfile, assessments, ledger, paymentsPage] = await Promise.all([
     selectStudentProfile(studentId, db),
     getStudentAssessments(studentId, { status: 'POSTED' }, db),
     getStudentLedger(studentId, db),
-    listOwnedPayments(userId, role, db),
+    listOwnedPaymentsPage(
+      userId,
+      role,
+      { studentId, page: 1, pageSize: PORTAL_CHILD_PAYMENT_PAGE_SIZE },
+      db
+    ),
   ]);
 
   return {
@@ -328,7 +433,7 @@ export async function getStudentAccountForUser(
     }),
     assessments,
     ledger,
-    payments: payments.filter((payment) => payment.studentId === studentId),
+    payments: paymentsPage.items,
   };
 }
 

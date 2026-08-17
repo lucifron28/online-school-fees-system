@@ -115,6 +115,10 @@ async function main() {
     const approved = await approvePaymentSubmission(created.id, finance.id, db, provider);
     paymentId = approved.approvedPaymentId;
     assert(approved.status === 'APPROVED' && paymentId, 'Proof approval did not post payment.');
+    assert(
+      approved.reviewedByUserId === finance.id && approved.reviewedAt,
+      'Approved proof was not attributed to the finance reviewer.'
+    );
     const [payment] = await db
       .select({ method: schema.payments.paymentMethod })
       .from(schema.payments)

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronRight, CreditCard, DollarSign, RefreshCw } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
-import { paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
+import { paymentBalanceAmountClass, paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
 import { formatCentavos } from '@/lib/utils/currency';
 import type { PortalAccount } from '@/lib/portal-types';
 import { Badge } from '@/components/ui/badge';
@@ -48,13 +48,15 @@ export default function StudentDashboardPage() {
         <>
           <PortalAnnouncementPreview audience="STUDENT" />
           <div className="grid gap-6 sm:grid-cols-2">
-            <Card className="border-rose-200 bg-rose-50/40 shadow-sm">
+            <Card className="border-blue-200 bg-blue-50/40 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-rose-800">Outstanding balance</span>
-                  <CreditCard className="h-5 w-5 text-rose-700" />
+                  <span className="text-xs font-semibold text-blue-800">Outstanding balance</span>
+                  <CreditCard className="h-5 w-5 text-blue-700" />
                 </div>
-                <div className="mt-3 text-3xl font-extrabold">
+                <div
+                  className={`mt-3 text-3xl font-extrabold ${paymentBalanceAmountClass(account.ledger.balanceCentavos === 0 ? 'PAID' : 'WITH_REMAINING_BALANCE')}`}
+                >
                   {formatCentavos(account.ledger.balanceCentavos)}
                 </div>
                 <p className="mt-1 text-xs text-slate-500">Current finance ledger balance</p>

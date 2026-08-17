@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { calculateAssessmentDueDate, evaluateDeadline } from '@/lib/deadlines';
+import {
+  calculateAssessmentDueDate,
+  evaluateDeadline,
+  paymentBalanceAmountClass,
+  paymentStatusClass,
+  paymentStatusLabel,
+} from '@/lib/deadlines';
 
 describe('Payment deadline rules', () => {
   it('uses Manila calendar dates across the UTC boundary', () => {
@@ -16,6 +22,13 @@ describe('Payment deadline rules', () => {
         today: '2026-08-11',
       })
     ).toMatchObject({ paymentStatus: 'PAID', deadlineState: 'PAID' });
+  });
+
+  it('uses positive semantics for a zero balance', () => {
+    expect(paymentStatusLabel('PAID')).toBe('FULLY PAID');
+    expect(paymentStatusClass('PAID')).toContain('emerald');
+    expect(paymentBalanceAmountClass('PAID')).toBe('text-emerald-700');
+    expect(paymentStatusClass('PAID')).not.toContain('rose');
   });
 
   it.each([

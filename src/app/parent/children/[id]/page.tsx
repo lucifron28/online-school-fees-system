@@ -5,7 +5,12 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, CreditCard, RefreshCw } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
-import { deadlineStateLabel, paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
+import {
+  deadlineStateLabel,
+  paymentBalanceAmountClass,
+  paymentStatusClass,
+  paymentStatusLabel,
+} from '@/lib/deadlines';
 import { formatCentavos } from '@/lib/utils/currency';
 import type { PortalAccount } from '@/lib/portal-types';
 import { Badge } from '@/components/ui/badge';
@@ -71,9 +76,11 @@ export default function ParentChildDetailsPage({ params }: { params: Promise<{ i
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <div className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-right">
-                  <span className="text-xs font-semibold text-rose-700">Outstanding balance</span>
-                  <p className="mt-1 text-2xl font-extrabold text-rose-600">
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-right">
+                  <span className="text-xs font-semibold text-blue-700">Outstanding balance</span>
+                  <p
+                    className={`mt-1 text-2xl font-extrabold ${paymentBalanceAmountClass(account.ledger.balanceCentavos === 0 ? 'PAID' : 'WITH_REMAINING_BALANCE')}`}
+                  >
                     {formatCentavos(account.ledger.balanceCentavos)}
                   </p>
                   <Badge
@@ -164,8 +171,17 @@ export default function ParentChildDetailsPage({ params }: { params: Promise<{ i
           </Card>
 
           <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">Payment history</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base">Recent payment history</CardTitle>
+                <p className="mt-1 text-xs text-slate-500">Latest 10 finance-posted payments.</p>
+              </div>
+              <Link
+                href={`/parent/history?studentId=${encodeURIComponent(account.student.studentId)}`}
+                className="text-xs font-semibold text-emerald-700 hover:underline"
+              >
+                View full history
+              </Link>
             </CardHeader>
             <CardContent className="p-0">
               {account.payments.length === 0 ? (
@@ -182,7 +198,7 @@ export default function ParentChildDetailsPage({ params }: { params: Promise<{ i
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {account.payments.map((payment) => (
+                    {account.payments.slice(0, 10).map((payment) => (
                       <TableRow key={payment.id}>
                         <TableCell className="font-mono text-xs">
                           {payment.receiptId ? (

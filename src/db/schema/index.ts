@@ -655,7 +655,7 @@ export const paymentSubmissions = pgTable(
     ),
     lifecycleConsistent: check(
       'payment_submissions_lifecycle_consistent',
-      sql`(${table.status} = 'PENDING_VERIFICATION' AND ${table.reviewedByUserId} IS NULL AND ${table.reviewedAt} IS NULL AND ${table.rejectionReason} IS NULL AND ${table.approvedPaymentId} IS NULL) OR (${table.status} = 'APPROVED' AND ${table.reviewedByUserId} IS NOT NULL AND ${table.reviewedAt} IS NOT NULL AND ${table.rejectionReason} IS NULL AND ${table.approvedPaymentId} IS NOT NULL) OR (${table.status} = 'REJECTED' AND ${table.reviewedByUserId} IS NOT NULL AND ${table.reviewedAt} IS NOT NULL AND ${table.rejectionReason} IS NOT NULL AND length(trim(${table.rejectionReason})) > 0 AND ${table.approvedPaymentId} IS NULL)`
+      sql`(${table.status} = 'PENDING_VERIFICATION' AND ${table.reviewedByUserId} IS NULL AND ${table.reviewedAt} IS NULL AND ${table.rejectionReason} IS NULL AND ${table.approvedPaymentId} IS NULL) OR (${table.status} = 'APPROVED' AND ((${table.reviewedByUserId} IS NULL AND ${table.reviewedAt} IS NULL) OR (${table.reviewedByUserId} IS NOT NULL AND ${table.reviewedAt} IS NOT NULL)) AND ${table.rejectionReason} IS NULL AND ${table.approvedPaymentId} IS NOT NULL) OR (${table.status} = 'REJECTED' AND ((${table.reviewedByUserId} IS NULL AND ${table.reviewedAt} IS NULL) OR (${table.reviewedByUserId} IS NOT NULL AND ${table.reviewedAt} IS NOT NULL)) AND ${table.rejectionReason} IS NOT NULL AND length(trim(${table.rejectionReason})) > 0 AND ${table.approvedPaymentId} IS NULL)`
     ),
     statusChannelCreatedIndex: index('payment_submissions_status_channel_created_idx').on(
       table.status,

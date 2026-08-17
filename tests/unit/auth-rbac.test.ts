@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { resolveAuthBaseUrl } from '@/lib/auth/server';
 import { UserRole } from '@/server/auth/guards';
 import { routeErrorResponse } from '@/server/http';
 
@@ -66,5 +67,26 @@ describe('Auth & RBAC Logic Tests', () => {
     } finally {
       consoleError.mockRestore();
     }
+  });
+
+  it('uses the current Vercel preview URL when no explicit auth URL is configured', () => {
+    expect(
+      resolveAuthBaseUrl({
+        betterAuthUrl: '',
+        nextPublicAppUrl: 'https://online-school-fees.vercel.app',
+        vercelEnv: 'preview',
+        vercelUrl: 'online-school-fees-preview.vercel.app',
+      })
+    ).toBe('https://online-school-fees-preview.vercel.app');
+  });
+
+  it('keeps an explicit Better Auth URL authoritative', () => {
+    expect(
+      resolveAuthBaseUrl({
+        betterAuthUrl: 'https://auth.example.test',
+        vercelEnv: 'preview',
+        vercelUrl: 'online-school-fees-preview.vercel.app',
+      })
+    ).toBe('https://auth.example.test');
   });
 });

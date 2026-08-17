@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowLeft, CheckCircle2, RefreshCw, Send, Smartphone, Upload, Wallet } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, RefreshCw, Send, Smartphone, Wallet } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
 import type {
   PaymentDestinationOptions,
@@ -13,10 +13,12 @@ import type {
   PortalPaymentSubmission,
 } from '@/lib/portal-types';
 import { formatCentavos, parseMoneyInput } from '@/lib/utils/currency';
+import { paymentBalanceAmountClass } from '@/lib/deadlines';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { ImageUploadField, MAX_FILE_SIZE } from '@/components/ui/image-upload-field';
 
 type PaymentChannel = 'GCASH' | 'MAYA';
 
@@ -156,6 +158,28 @@ export default function ParentPayPage() {
     },
   });
 
+  const handleProofChange = (file: File | null) => {
+    if (!file) {
+      setProofFile(null);
+      return;
+    }
+    const acceptedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    if (!acceptedTypes.has(file.type)) {
+      setProofFile(null);
+      setFileInputKey((value) => value + 1);
+      setFormError('Choose a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size < 1 || file.size > MAX_FILE_SIZE) {
+      setProofFile(null);
+      setFileInputKey((value) => value + 1);
+      setFormError('The payment screenshot must be smaller than 3 MB.');
+      return;
+    }
+    setFormError('');
+    setProofFile(file);
+  };
+
   const submitDisabled =
     submissionMutation.isPending ||
     !selectedChild ||
@@ -252,7 +276,9 @@ export default function ParentPayPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   Authoritative current balance
                 </p>
-                <p className="mt-1 text-2xl font-extrabold text-rose-600">
+                <p
+                  className={`mt-1 text-2xl font-extrabold ${paymentBalanceAmountClass(selectedChild?.outstandingBalanceCentavos === 0 ? 'PAID' : 'WITH_REMAINING_BALANCE')}`}
+                >
                   {formatCentavos(selectedChild?.outstandingBalanceCentavos ?? 0)}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
@@ -360,36 +386,26 @@ export default function ParentPayPage() {
                     </label>
                   )}
                 </form.Field>
-                <label className="block text-xs font-semibold">
-                  Screenshot/proof
-                  <Input
-                    key={fileInputKey}
-                    className="mt-1 h-10 pt-2"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={(event) => setProofFile(event.target.files?.[0] ?? null)}
-                    required
-                  />
-                  <span className="mt-1 block text-[11px] font-normal text-slate-500">
-                    JPEG, PNG, or WebP only; maximum 3 MiB.
-                  </span>
-                </label>
+                <ImageUploadField
+                  id="payment-proof-upload"
+                  label="Payment screenshot"
+                  file={proofFile}
+                  previewUrl={proofPreviewUrl}
+                  inputKey={fileInputKey}
+                  error={
+                    formError.startsWith('Choose a JPEG') ||
+                    formError.startsWith('The payment screenshot')
+                      ? formError
+                      : undefined
+                  }
+                  onChange={handleProofChange}
+                  onRemove={() => {
+                    setProofFile(null);
+                    setFileInputKey((value) => value + 1);
+                    setFormError('');
+                  }}
+                />
               </div>
-
-              {proofFile && proofPreviewUrl && (
-                <div className="rounded-xl border border-slate-200 p-3">
-                  <p className="mb-2 flex items-center gap-2 text-xs font-semibold">
-                    <Upload className="h-3.5 w-3.5 text-blue-600" /> {proofFile.name}
-                  </p>
-                  {/* Blob previews need a native image element; there is no stable URL for next/image to optimize. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={proofPreviewUrl}
-                    alt="Selected payment proof preview"
-                    className="max-h-64 rounded-lg border object-contain"
-                  />
-                </div>
-              )}
 
               {formError && <p className="text-xs text-rose-600">{formError}</p>}
               {submissionMutation.isError && (

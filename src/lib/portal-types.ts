@@ -32,6 +32,16 @@ export interface PortalPayment {
   }>;
 }
 
+export interface PortalPaymentsPage {
+  items: PortalPayment[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
+}
+
 export interface PortalAssessmentItem {
   id: string;
   name: string;

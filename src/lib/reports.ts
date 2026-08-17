@@ -103,6 +103,15 @@ export interface CollectionReport {
   byGradeLevel: CollectionBreakdown[];
 }
 
+export interface CollectionReportPage extends CollectionReport {
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
+}
+
 export interface OutstandingBalanceItem {
   studentId: string;
   studentNumber: string;
@@ -112,6 +121,19 @@ export interface OutstandingBalanceItem {
   sectionName: string | null;
   outstandingBalanceCentavos: number;
   postedAssessmentCount: number;
+}
+
+export interface OutstandingBalanceReportPage {
+  items: OutstandingBalanceItem[];
+  totals: {
+    totalOutstandingBalanceCentavos: number;
+  };
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
 }
 
 export interface ReversalReportItem {
@@ -126,6 +148,17 @@ export interface ReversalReportItem {
   reason: string;
   reversedByName: string | null;
   reversedAt: Date;
+}
+
+export interface ReversalReportPage {
+  dateRange: Pick<ReportDateRange, 'from' | 'to'>;
+  items: ReversalReportItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
 }
 
 export interface StatementEntry {

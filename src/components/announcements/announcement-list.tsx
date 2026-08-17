@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, BellRing, CalendarClock, Megaphone, Pencil, Send } from 'lucide-react';
+import { Archive, BellRing, CalendarClock, Megaphone, Pencil, RefreshCw, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -181,21 +181,27 @@ export function AdminAnnouncementManagement() {
               save.mutate();
             }}
           >
-            <Input
-              aria-label="Announcement title"
-              placeholder="Payment office schedule"
-              value={form.title}
-              onChange={(event) => setForm({ ...form, title: event.target.value })}
-              required
-            />
-            <textarea
-              aria-label="Announcement body"
-              className="min-h-28 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900"
-              placeholder="Share a payment-related update with families."
-              value={form.body}
-              onChange={(event) => setForm({ ...form, body: event.target.value })}
-              required
-            />
+            <label className="grid gap-1 text-xs font-medium" htmlFor="announcement-title">
+              Announcement title
+              <Input
+                id="announcement-title"
+                placeholder="Payment office schedule"
+                value={form.title}
+                onChange={(event) => setForm({ ...form, title: event.target.value })}
+                required
+              />
+            </label>
+            <label className="grid gap-1 text-xs font-medium" htmlFor="announcement-body">
+              Announcement body
+              <textarea
+                id="announcement-body"
+                className="min-h-28 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900"
+                placeholder="Share a payment-related update with families."
+                value={form.body}
+                onChange={(event) => setForm({ ...form, body: event.target.value })}
+                required
+              />
+            </label>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="grid gap-1 text-xs font-medium">
                 Audience
@@ -407,8 +413,15 @@ export function PortalAnnouncementPreview({ audience }: { audience: 'PARENT' | '
   const announcements = useMemo(() => (query.data ?? []).slice(0, 3), [query.data]);
   const href = audience === 'PARENT' ? '/parent/announcements' : '/student/announcements';
 
+  const previewState = query.isPending ? 'loading' : query.isError ? 'error' : 'ready';
+
   return (
-    <Card className="border-slate-200 shadow-sm dark:border-slate-800">
+    <Card
+      data-testid="portal-announcements-preview"
+      data-announcements-state={previewState}
+      aria-busy={query.isPending}
+      className="border-slate-200 shadow-sm dark:border-slate-800"
+    >
       <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
         <div>
           <CardTitle className="text-base">Payment announcements</CardTitle>
@@ -419,11 +432,36 @@ export function PortalAnnouncementPreview({ audience }: { audience: 'PARENT' | '
         </Link>
       </CardHeader>
       <CardContent className="space-y-3">
-        {query.isPending && <p className="text-sm text-slate-500">Loading announcements...</p>}
+        {query.isPending && (
+          <div className="space-y-3" role="status" aria-label="Loading announcements">
+            {[0, 1].map((item) => (
+              <div
+                key={item}
+                className="animate-pulse rounded-lg border border-slate-100 p-3 dark:border-slate-800"
+              >
+                <div className="h-3 w-2/5 rounded bg-slate-200 dark:bg-slate-700" />
+                <div className="mt-3 h-2.5 w-full rounded bg-slate-100 dark:bg-slate-800" />
+                <div className="mt-2 h-2.5 w-4/5 rounded bg-slate-100 dark:bg-slate-800" />
+                <div className="mt-3 h-2 w-1/3 rounded bg-slate-100 dark:bg-slate-800" />
+              </div>
+            ))}
+          </div>
+        )}
         {query.isError && (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
-            {getClientErrorMessage(query.error)}
-          </p>
+          <div
+            role="alert"
+            className="flex items-center justify-between gap-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700"
+          >
+            <span>{getClientErrorMessage(query.error)}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 text-xs"
+              onClick={() => void query.refetch()}
+            >
+              <RefreshCw className="mr-1 h-3.5 w-3.5" /> Retry
+            </Button>
+          </div>
         )}
         {query.data && announcements.length === 0 && (
           <p className="text-sm text-slate-500">No current payment announcements.</p>

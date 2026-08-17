@@ -9,7 +9,11 @@ export async function GET(request: Request) {
     await requireRequestAuth(request, ['ADMIN', 'FINANCE_STAFF']);
     const params = new URL(request.url).searchParams;
     return NextResponse.json(
-      await ReportService.getCollectionReport(parseReportDateRangeSearchParams(params))
+      await ReportService.getCollectionReportPage(
+        parseReportDateRangeSearchParams(params),
+        params.get('page') ? Number(params.get('page')) : undefined,
+        params.get('pageSize') ? Number(params.get('pageSize')) : undefined
+      )
     );
   } catch (error) {
     return routeErrorResponse(error);

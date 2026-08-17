@@ -426,6 +426,46 @@ databaseContract('Payment deadlines and announcements PostgreSQL contract', () =
     expect(visible.some((announcement) => announcement.id === expired.id)).toBe(false);
   });
 
+  it('returns the newest published announcements first for portal previews', async () => {
+    const olderPublishAt = new Date(now.getTime() - 86_400_000);
+    const newerPublishAt = new Date(now.getTime() - 3_600_000);
+    const [older] = await db
+      .insert(schema.announcements)
+      .values({
+        title: 'Older visible payment notice',
+        body: 'Older body',
+        audience: 'PARENT_AND_STUDENT',
+        status: 'PUBLISHED',
+        publishAt: olderPublishAt,
+        expiresAt: null,
+        createdByUserId: adminUserId,
+        updatedByUserId: adminUserId,
+      })
+      .returning();
+    const [newer] = await db
+      .insert(schema.announcements)
+      .values({
+        title: 'Newest visible payment notice',
+        body: 'Newest body',
+        audience: 'PARENT_AND_STUDENT',
+        status: 'PUBLISHED',
+        publishAt: newerPublishAt,
+        expiresAt: null,
+        createdByUserId: adminUserId,
+        updatedByUserId: adminUserId,
+      })
+      .returning();
+    if (!older || !newer) throw new Error('Announcement ordering fixtures could not be created.');
+    announcementIds.push(older.id, newer.id);
+
+    const visible = await listVisibleAnnouncements({ audience: 'PARENT', now }, db);
+    const olderIndex = visible.findIndex((announcement) => announcement.id === older.id);
+    const newerIndex = visible.findIndex((announcement) => announcement.id === newer.id);
+    expect(newerIndex).toBeGreaterThanOrEqual(0);
+    expect(olderIndex).toBeGreaterThanOrEqual(0);
+    expect(newerIndex).toBeLessThan(olderIndex);
+  });
+
   it('keeps portal reads pure and publishes due schedules only through the processor', async () => {
     const [scheduled] = await db
       .insert(schema.announcements)

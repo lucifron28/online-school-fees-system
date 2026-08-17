@@ -63,7 +63,7 @@ export function LoginForm({
     defaultValues: {
       email: defaultEmail,
       password: '',
-      rememberMe: true,
+      rememberMe: false,
     },
     validators: {
       onSubmit: loginSchema,
@@ -113,11 +113,7 @@ export function LoginForm({
           htmlFor={`${portal}-email`}
           className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
         >
-          {portal === 'admin'
-            ? 'Email / Admin ID'
-            : portal === 'parent'
-              ? 'Parent Email / Account ID'
-              : 'Student Email / Account ID'}
+          Email address
         </label>
         <form.Field name="email">
           {(field) => {
@@ -153,10 +149,12 @@ export function LoginForm({
           </label>
           <button
             type="button"
-            onClick={() => setFormError('Password reset is managed by the School Administrator.')}
+            onClick={() =>
+              setFormError('Password changes are managed by the School Administrator.')
+            }
             className={`min-h-10 rounded-md px-2 text-xs ${linkClass} hover:bg-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
           >
-            Forgot Password?
+            Need password help?
           </button>
         </div>
         <form.Field name="password">

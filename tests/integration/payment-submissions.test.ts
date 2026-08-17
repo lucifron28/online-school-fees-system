@@ -621,6 +621,8 @@ databaseContract('manual GCash and Maya payment verification PostgreSQL contract
       new ConsoleEmailProvider()
     );
     expect(approved.status).toBe('APPROVED');
+    expect(approved.reviewedByUserId).toBe(financeUserId);
+    expect(approved.reviewedAt).toBeTruthy();
     expect(approved.approvedPaymentId).toBeTruthy();
     createdPaymentIds.push(approved.approvedPaymentId!);
     notificationEntityIds.add(approved.approvedPaymentId!);
@@ -717,9 +719,21 @@ databaseContract('manual GCash and Maya payment verification PostgreSQL contract
       status: 'REJECTED',
       rejectionReason: 'The uploaded proof is not readable.',
       approvedPaymentId: null,
+      reviewedByUserId: financeUserId,
     });
+    expect(rejected.reviewedAt).toBeTruthy();
     expect(await paymentRows(fixture.studentId)).toHaveLength(0);
     expect(ledgerBalance(await balanceRows(fixture.studentId))).toBe(100_000);
+    await db
+      .update(schema.paymentSubmissions)
+      .set({ reviewedByUserId: null, reviewedAt: null })
+      .where(eq(schema.paymentSubmissions.id, submission.id));
+    expect(await getPaymentSubmission(submission.id, db)).toMatchObject({
+      status: 'REJECTED',
+      reviewedByUserId: null,
+      reviewedAt: null,
+      rejectionReason: 'The uploaded proof is not readable.',
+    });
     expect((await notificationsFor(submission.id)).map((row) => row.type)).toContain(
       'PAYMENT_PROOF_REJECTED'
     );

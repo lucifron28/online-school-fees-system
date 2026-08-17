@@ -15,6 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -28,9 +29,9 @@ import { getClientErrorMessage, requestJson } from '@/lib/client-api';
 import { paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
 import {
   getManilaDateString,
-  type CollectionReport,
-  type OutstandingBalanceItem,
-  type ReversalReportItem,
+  type CollectionReportPage,
+  type OutstandingBalanceReportPage,
+  type ReversalReportPage,
 } from '@/lib/reports';
 import { formatCentavos } from '@/lib/utils/currency';
 
@@ -88,23 +89,29 @@ export default function AdminReportsPage() {
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [applied, setApplied] = useState(initial);
+  const [collectionPage, setCollectionPage] = useState(1);
+  const [outstandingPage, setOutstandingPage] = useState(1);
+  const [reversalsPage, setReversalsPage] = useState(1);
 
   const collectionsQuery = useQuery({
-    queryKey: ['admin-report-collections', applied.from, applied.to],
+    queryKey: ['admin-report-collections', applied.from, applied.to, collectionPage],
     queryFn: () =>
-      requestJson<CollectionReport>(
-        `/api/reports/collections?from=${applied.from}&to=${applied.to}`
+      requestJson<CollectionReportPage>(
+        `/api/reports/collections?from=${applied.from}&to=${applied.to}&page=${collectionPage}&pageSize=20`
       ),
   });
   const outstandingQuery = useQuery({
-    queryKey: ['admin-report-outstanding'],
-    queryFn: () => requestJson<{ items: OutstandingBalanceItem[] }>('/api/reports/outstanding'),
-  });
-  const reversalsQuery = useQuery({
-    queryKey: ['admin-report-reversals', applied.from, applied.to],
+    queryKey: ['admin-report-outstanding', outstandingPage],
     queryFn: () =>
-      requestJson<{ dateRange: { from: string; to: string }; items: ReversalReportItem[] }>(
-        `/api/reports/reversals?from=${applied.from}&to=${applied.to}`
+      requestJson<OutstandingBalanceReportPage>(
+        `/api/reports/outstanding?page=${outstandingPage}&pageSize=12`
+      ),
+  });
+  const reversalsQuery = useQuery<ReversalReportPage>({
+    queryKey: ['admin-report-reversals', applied.from, applied.to, reversalsPage],
+    queryFn: () =>
+      requestJson<ReversalReportPage>(
+        `/api/reports/reversals?from=${applied.from}&to=${applied.to}&page=${reversalsPage}&pageSize=12`
       ),
   });
   const deadlinesQuery = useQuery({
@@ -118,6 +125,8 @@ export default function AdminReportsPage() {
 
   function applyRange(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setCollectionPage(1);
+    setReversalsPage(1);
     setApplied({ from, to });
   }
 
@@ -178,9 +187,9 @@ export default function AdminReportsPage() {
           ],
           [
             'Outstanding balances',
-            formatCentavos(
-              outstanding.reduce((sum, row) => sum + row.outstandingBalanceCentavos, 0)
-            ),
+            outstandingQuery.data
+              ? formatCentavos(outstandingQuery.data.totals.totalOutstandingBalanceCentavos)
+              : 'Not available',
           ],
         ].map(([label, value]) => (
           <Card key={label} className="border-slate-200 shadow-sm dark:border-slate-800">
@@ -287,6 +296,13 @@ export default function AdminReportsPage() {
               </TableBody>
             </Table>
           )}
+          {collections && (
+            <PaginationControls
+              {...collections.pagination}
+              isFetching={collectionsQuery.isFetching}
+              onPageChange={setCollectionPage}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -381,7 +397,7 @@ export default function AdminReportsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {outstanding.slice(0, 12).map((row) => (
+                  {outstanding.map((row) => (
                     <TableRow key={row.studentId}>
                       <TableCell>
                         <div className="text-xs font-semibold">{row.studentName}</div>
@@ -413,6 +429,13 @@ export default function AdminReportsPage() {
                   ))}
                 </TableBody>
               </Table>
+            )}
+            {outstandingQuery.data && (
+              <PaginationControls
+                {...outstandingQuery.data.pagination}
+                isFetching={outstandingQuery.isFetching}
+                onPageChange={setOutstandingPage}
+              />
             )}
           </CardContent>
         </Card>
@@ -455,7 +478,7 @@ export default function AdminReportsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reversals.slice(0, 12).map((row) => (
+                  {reversals.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell className="whitespace-nowrap text-xs text-slate-500">
                         {new Date(row.reversedAt).toLocaleDateString('en-PH')}
@@ -476,6 +499,13 @@ export default function AdminReportsPage() {
                   ))}
                 </TableBody>
               </Table>
+            )}
+            {reversalsQuery.data && (
+              <PaginationControls
+                {...reversalsQuery.data.pagination}
+                isFetching={reversalsQuery.isFetching}
+                onPageChange={setReversalsPage}
+              />
             )}
           </CardContent>
         </Card>
