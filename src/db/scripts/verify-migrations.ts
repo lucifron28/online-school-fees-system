@@ -25,6 +25,8 @@ const expectedTables = [
   'notifications',
   'payment_allocations',
   'payment_reversals',
+  'payment_submission_proofs',
+  'payment_submissions',
   'payments',
   'receipts',
   'receipt_number_sequences',
@@ -36,6 +38,7 @@ const expectedTables = [
   'students',
   'users',
   'verifications',
+  'announcements',
 ];
 
 const expectedIndexes = [
@@ -45,6 +48,15 @@ const expectedIndexes = [
   'receipts_payment_unique',
   'payment_reversals_payment_unique',
   'payment_allocations_payment_adjustment_unique',
+  'payment_submission_proofs_submission_unique',
+  'payment_submissions_active_reference_unique',
+  'payment_submissions_idempotency_key_unique',
+  'payment_submissions_approved_payment_id_unique',
+  'payment_submissions_status_channel_created_idx',
+  'payment_submissions_student_status_idx',
+  'payment_submissions_submitter_created_idx',
+  'announcements_status_publish_idx',
+  'announcements_expires_idx',
   'payment_allocations_adjustment_idx',
   'payments_reference_number_unique',
   'payments_idempotency_key_unique',
@@ -71,6 +83,17 @@ const expectedChecks = [
   'receipt_number_sequences_last_sequence_positive',
   'payment_allocations_exactly_one_target',
   'mock_payment_checkouts_payment_channel_valid',
+  'payment_submissions_amount_positive',
+  'payment_submissions_reference_length_valid',
+  'payment_submissions_rejection_reason_required',
+  'payment_submissions_approved_payment_required',
+  'payment_submissions_destination_snapshot_consistent',
+  'payment_submissions_lifecycle_consistent',
+  'payment_submission_proofs_mime_type_valid',
+  'payment_submission_proofs_size_valid',
+  'payment_submission_proofs_filename_length_valid',
+  'payment_submission_proofs_sha256_format_valid',
+  'announcements_dates_valid',
 ];
 
 const expectedColumns = [
@@ -88,6 +111,8 @@ const expectedEnumColumns = [
   ['student_assessments', 'status', 'assessment_status'],
   ['payments', 'payment_method', 'payment_method'],
   ['payments', 'status', 'payment_status'],
+  ['payment_submissions', 'payment_channel', 'payment_submission_channel'],
+  ['payment_submissions', 'status', 'payment_submission_status'],
   ['receipts', 'status', 'receipt_status'],
   ['mock_payment_checkouts', 'status', 'mock_checkout_status'],
   ['mock_payment_callback_events', 'event_type', 'mock_callback_event_type'],
@@ -95,6 +120,8 @@ const expectedEnumColumns = [
   ['notification_deliveries', 'channel', 'notification_channel'],
   ['notification_deliveries', 'status', 'notification_delivery_status'],
   ['notification_delivery_attempts', 'status', 'notification_attempt_status'],
+  ['announcements', 'audience', 'announcement_audience'],
+  ['announcements', 'status', 'announcement_status'],
 ] as const;
 
 const financialTimestampTables = [
@@ -107,6 +134,8 @@ const financialTimestampTables = [
   'mock_payment_checkouts',
   'mock_payment_callback_events',
   'audit_logs',
+  'payment_submissions',
+  'payment_submission_proofs',
 ];
 
 const financialHistoryTables = [
@@ -118,6 +147,8 @@ const financialHistoryTables = [
   'payment_reversals',
   'mock_payment_checkouts',
   'mock_payment_callback_events',
+  'payment_submissions',
+  'payment_submission_proofs',
 ];
 
 function assertComplete(actual: string[], expected: string[], label: string) {

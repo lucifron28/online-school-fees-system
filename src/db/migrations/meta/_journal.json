@@ -57,6 +57,13 @@
       "when": 1786949014217,
       "tag": "0007_busy_old_lace",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786959446798,
+      "tag": "0008_normal_shotgun",
+      "breakpoints": true
     }
   ]
 }
