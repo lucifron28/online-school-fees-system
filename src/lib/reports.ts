@@ -8,7 +8,10 @@ export const reportDateSchema = z
   .string()
   .regex(datePattern, 'Dates must use YYYY-MM-DD format.')
   .refine((value) => {
-    const [year, month, day] = value.split('-').map(Number);
+    const parts = value.split('-').map(Number);
+    const year = parts[0] ?? 0;
+    const month = parts[1] ?? 1;
+    const day = parts[2] ?? 1;
     const date = new Date(Date.UTC(year, month - 1, day));
     return (
       date.getUTCFullYear() === year &&
@@ -40,8 +43,13 @@ export const reportKindSchema = z.enum([
   'payment-method',
   'grade-level',
 ]);
+export const reportPaginationSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(20),
+});
 
 export type ReportDateRangeInput = z.infer<typeof reportDateRangeInputSchema>;
+export type ReportPaginationInput = z.infer<typeof reportPaginationSchema>;
 export type ReportKind = z.infer<typeof reportKindSchema>;
 
 export function parseReportDateRangeSearchParams(params: URLSearchParams): ReportDateRangeInput {
@@ -248,7 +256,10 @@ export function getManilaDateString(value: Date = new Date()): string {
 }
 
 export function addManilaDays(value: string, days: number): string {
-  const [year, month, day] = value.split('-').map(Number);
+  const parts = value.split('-').map(Number);
+  const year = parts[0] ?? 0;
+  const month = parts[1] ?? 1;
+  const day = parts[2] ?? 1;
   const date = new Date(Date.UTC(year, month - 1, day + days));
   return `${date.getUTCFullYear().toString().padStart(4, '0')}-${(date.getUTCMonth() + 1)
     .toString()
@@ -256,7 +267,9 @@ export function addManilaDays(value: string, days: number): string {
 }
 
 export function addManilaMonths(value: string, months: number): string {
-  const [year, month] = value.split('-').map(Number);
+  const parts = value.split('-').map(Number);
+  const year = parts[0] ?? 0;
+  const month = parts[1] ?? 1;
   const date = new Date(Date.UTC(year, month - 1 + months, 1));
   return `${date.getUTCFullYear().toString().padStart(4, '0')}-${(date.getUTCMonth() + 1)
     .toString()
@@ -265,7 +278,10 @@ export function addManilaMonths(value: string, months: number): string {
 
 export function parseManilaDateStart(value: string): Date {
   reportDateSchema.parse(value);
-  const [year, month, day] = value.split('-').map(Number);
+  const parts = value.split('-').map(Number);
+  const year = parts[0] ?? 0;
+  const month = parts[1] ?? 1;
+  const day = parts[2] ?? 1;
   return new Date(Date.UTC(year, month - 1, day) - MANILA_OFFSET_MINUTES * 60 * 1000);
 }
 
