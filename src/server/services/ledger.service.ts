@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { DatabaseInstance } from '@/db';
+import type { DatabaseClient } from '@/db';
 import * as schema from '@/db/schema';
 import { NotFoundError } from '@/server/errors';
 
@@ -11,7 +11,7 @@ import { NotFoundError } from '@/server/errors';
  */
 export async function lockStudentForLedgerMutation(
   studentId: string,
-  db: DatabaseInstance
+  db: DatabaseClient
 ): Promise<typeof schema.students.$inferSelect> {
   const rows = await db
     .select()

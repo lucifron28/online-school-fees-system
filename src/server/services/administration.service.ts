@@ -1,5 +1,5 @@
 import { asc, and, eq } from 'drizzle-orm';
-import { getDb, type DatabaseInstance } from '@/db';
+import { getDb, type DatabaseClient, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import { createAuth } from '@/lib/auth/server';
 import {
@@ -22,7 +22,7 @@ import { AppError, ForbiddenError, NotFoundError, ValidationError } from '@/serv
 
 const SETTINGS_KEY = 'default';
 
-export async function getOrCreateSchoolSettings(db: DatabaseInstance = getDb()) {
+export async function getOrCreateSchoolSettings(db: DatabaseClient = getDb()) {
   const existing = await db
     .select()
     .from(schema.schoolSettings)

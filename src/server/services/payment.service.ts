@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, ilike, inArray, or, type SQL } from 'drizzle-orm';
-import { getDb, type DatabaseInstance } from '@/db';
+import { getDb, type DatabaseClient, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import {
   paymentListInputSchema,
@@ -24,7 +24,25 @@ import {
 import { lockStudentForLedgerMutation } from './ledger.service';
 import { NotificationService, type EmailProvider } from './notification.service';
 import { allocateReceiptNumber } from './receipt.service';
+import {
+  allocatePaymentToItems,
+  allocatePaymentToObligations,
+  groupAllocationsByAssessment,
+  type AllocationGroup,
+  type AllocationItem,
+  type PaymentAllocation,
+  type PaymentObligation,
+} from './payment-allocation';
 
+export {
+  allocatePaymentToItems,
+  allocatePaymentToObligations,
+  groupAllocationsByAssessment,
+  type AllocationGroup,
+  type AllocationItem,
+  type PaymentAllocation,
+  type PaymentObligation,
+};
 export interface OtcPaymentInput extends PaymentPostInput {
   processedByUserId: string;
   notificationProvider?: EmailProvider;
@@ -40,122 +58,8 @@ export interface ReversalInput extends ReversalPostInput {
   reversedByUserId: string;
 }
 
-type AllocationItem = {
-  id: string;
-  name: string;
-  amountCentavos: number;
-  paidCentavos: number;
-};
-
-type PaymentObligation = AllocationItem & {
-  assessmentId: string;
-  assessmentBalanceCentavos?: number;
-  targetType: 'ASSESSMENT_ITEM' | 'DEBIT_ADJUSTMENT';
-  assessmentItemId: string | null;
-  adjustmentId: string | null;
-  createdAt: Date;
-  assessmentCreatedAt: Date;
-};
-
-type PaymentAllocation = {
-  assessmentItemId: string | null;
-  adjustmentId: string | null;
-  assessmentId: string;
-  targetType: 'ASSESSMENT_ITEM' | 'DEBIT_ADJUSTMENT';
-  name: string;
-  amountCentavos: number;
-};
-
-type AllocationGroup = {
-  assessmentId: string;
-  amountCentavos: number;
-};
-
-/**
- * Sequential allocation algorithm: oldest assessment item first, then the
- * next item in persisted order. The caller must supply database-derived items.
- */
-export function allocatePaymentToItems(paymentAmountCentavos: number, items: AllocationItem[]) {
-  let remainingPayment = paymentAmountCentavos;
-  const allocations: Array<{
-    assessmentItemId: string;
-    name: string;
-    amountCentavos: number;
-  }> = [];
-
-  for (const item of items) {
-    if (remainingPayment <= 0) break;
-
-    const unpaidAmount = subtractCentavos(item.amountCentavos, item.paidCentavos);
-    if (unpaidAmount <= 0) continue;
-
-    const allocated = Math.min(remainingPayment, unpaidAmount);
-    allocations.push({
-      assessmentItemId: item.id,
-      name: item.name,
-      amountCentavos: allocated,
-    });
-    remainingPayment = subtractCentavos(remainingPayment, allocated);
-  }
-
-  return allocations;
-}
-
-/**
- * Allocate oldest-first across every persisted positive payment obligation.
- * Assessment items and DEBIT adjustments are both payable targets; CREDIT
- * adjustments never enter this list. The caller must provide database-derived
- * obligations sorted by assessment creation, target creation, and target id.
- */
-export function allocatePaymentToObligations(
-  paymentAmountCentavos: number,
-  obligations: PaymentObligation[]
-): PaymentAllocation[] {
-  let remainingPayment = paymentAmountCentavos;
-  const allocations: PaymentAllocation[] = [];
-  const remainingAssessmentCapacity = new Map<string, number | undefined>();
-
-  for (const obligation of obligations) {
-    if (remainingPayment <= 0) break;
-
-    const unpaidAmount = subtractCentavos(obligation.amountCentavos, obligation.paidCentavos);
-    if (unpaidAmount <= 0) continue;
-
-    if (!remainingAssessmentCapacity.has(obligation.assessmentId)) {
-      remainingAssessmentCapacity.set(
-        obligation.assessmentId,
-        obligation.assessmentBalanceCentavos
-      );
-    }
-    const assessmentCapacity = remainingAssessmentCapacity.get(obligation.assessmentId);
-    const allocatable =
-      assessmentCapacity === undefined
-        ? unpaidAmount
-        : Math.min(unpaidAmount, Math.max(0, assessmentCapacity));
-    const allocated = Math.min(remainingPayment, allocatable);
-    if (allocated <= 0) continue;
-    allocations.push({
-      assessmentItemId: obligation.assessmentItemId,
-      adjustmentId: obligation.adjustmentId,
-      assessmentId: obligation.assessmentId,
-      targetType: obligation.targetType,
-      name: obligation.name,
-      amountCentavos: allocated,
-    });
-    if (assessmentCapacity !== undefined) {
-      remainingAssessmentCapacity.set(
-        obligation.assessmentId,
-        subtractCentavos(assessmentCapacity, allocated)
-      );
-    }
-    remainingPayment = subtractCentavos(remainingPayment, allocated);
-  }
-
-  return allocations;
-}
-
 async function insertAuditLog(
-  db: DatabaseInstance,
+  db: DatabaseClient,
   input: {
     userId?: string | null;
     action: string;
@@ -177,7 +81,7 @@ function isUniqueViolation(error: unknown) {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
 }
 
-async function findPaymentByIdempotencyKey(idempotencyKey: string, db: DatabaseInstance) {
+async function findPaymentByIdempotencyKey(idempotencyKey: string, db: DatabaseClient) {
   return db
     .select({
       id: schema.payments.id,
@@ -218,22 +122,9 @@ function assertPaymentRequestCompatible(
   }
 }
 
-function groupAllocationsByAssessment(allocations: PaymentAllocation[]): AllocationGroup[] {
-  const groups = new Map<string, AllocationGroup>();
-  for (const allocation of allocations) {
-    const current = groups.get(allocation.assessmentId) ?? {
-      assessmentId: allocation.assessmentId,
-      amountCentavos: 0,
-    };
-    current.amountCentavos = addCentavos(current.amountCentavos, allocation.amountCentavos);
-    groups.set(allocation.assessmentId, current);
-  }
-  return [...groups.values()];
-}
-
 async function selectOutstandingObligations(
   studentId: string,
-  db: DatabaseInstance,
+  db: DatabaseClient,
   assessmentBalances: Map<string, number>
 ): Promise<PaymentObligation[]> {
   const [items, adjustments] = await Promise.all([
@@ -374,7 +265,7 @@ async function selectOutstandingObligations(
 
 async function selectStudentLedger(
   studentId: string,
-  db: DatabaseInstance,
+  db: DatabaseClient,
   enforceReconciliation = false
 ) {
   const entries = await db
@@ -390,7 +281,7 @@ async function selectStudentLedger(
   return { entries, ...reconciliation, balanceCentavos: reconciliation.studentBalanceCentavos };
 }
 
-async function selectPaymentRow(id: string, db: DatabaseInstance) {
+async function selectPaymentRow(id: string, db: DatabaseClient) {
   const rows = await db
     .select({
       id: schema.payments.id,
@@ -429,7 +320,7 @@ async function selectPaymentRow(id: string, db: DatabaseInstance) {
   return rows[0];
 }
 
-export async function getPayment(id: string, db: DatabaseInstance = getDb()) {
+export async function getPayment(id: string, db: DatabaseClient = getDb()) {
   const payment = await selectPaymentRow(id, db);
   const [allocations, ledger] = await Promise.all([
     db
@@ -648,7 +539,7 @@ export async function getReceiptPdfData(receiptIdentifier: string, db: DatabaseI
 }
 
 export class PaymentService {
-  static async recordPayment(input: OtcPaymentInput | OnlinePaymentInput, db?: DatabaseInstance) {
+  static async recordPayment(input: OtcPaymentInput | OnlinePaymentInput, db?: DatabaseClient) {
     if (input.paymentMethod === 'MOCK_ONLINE') assertMockPaymentHarnessEnabled();
     const values = paymentPostInputSchema.parse(input);
     db ??= getDb();
@@ -665,19 +556,18 @@ export class PaymentService {
 
     try {
       const created = await db.transaction(async (tx) => {
-        const transactionDb = tx as unknown as DatabaseInstance;
-        const duplicate = await findPaymentByIdempotencyKey(values.idempotencyKey, transactionDb);
+        const duplicate = await findPaymentByIdempotencyKey(values.idempotencyKey, tx);
         if (duplicate[0]) {
           assertPaymentRequestCompatible(duplicate[0], values);
           return duplicate[0];
         }
 
-        await lockStudentForLedgerMutation(values.studentId, transactionDb);
+        await lockStudentForLedgerMutation(values.studentId, tx);
 
-        const ledger = await selectStudentLedger(values.studentId, transactionDb, true);
+        const ledger = await selectStudentLedger(values.studentId, tx, true);
         const outstandingObligations = await selectOutstandingObligations(
           values.studentId,
-          transactionDb,
+          tx,
           ledger.assessmentBalances
         );
         if (values.amountCentavos > ledger.balanceCentavos) {
@@ -705,7 +595,9 @@ export class PaymentService {
         }
         const allocationGroups = groupAllocationsByAssessment(allocations);
         const paymentAssessmentId =
-          allocationGroups.length === 1 ? allocationGroups[0].assessmentId : null;
+          allocationGroups.length === 1 && allocationGroups[0]
+            ? allocationGroups[0].assessmentId
+            : null;
 
         const [payment] = await tx
           .insert(schema.payments)
@@ -750,10 +642,10 @@ export class PaymentService {
           });
         }
 
-        const { receiptNumber } = await allocateReceiptNumber(transactionDb, payment.createdAt);
+        const { receiptNumber } = await allocateReceiptNumber(tx, payment.createdAt);
         const verificationIdentifier = `VER-${payment.id}`;
         const [paymentProfile, settings] = await Promise.all([
-          selectPaymentRow(payment.id, transactionDb),
+          selectPaymentRow(payment.id, tx),
           tx.select().from(schema.schoolSettings).limit(1),
         ]);
         const institution = settings[0];
@@ -807,7 +699,7 @@ export class PaymentService {
           .returning();
         if (!receipt) throw new AppError('The payment receipt could not be created.');
 
-        await insertAuditLog(transactionDb, {
+        await insertAuditLog(tx, {
           userId: processedByUserId,
           action: 'PAYMENT_POSTED',
           entityType: 'PAYMENT',
@@ -819,7 +711,7 @@ export class PaymentService {
             idempotencyKey: values.idempotencyKey,
           },
         });
-        await insertAuditLog(transactionDb, {
+        await insertAuditLog(tx, {
           userId: processedByUserId,
           action: 'RECEIPT_ISSUED',
           entityType: 'RECEIPT',
@@ -858,7 +750,6 @@ export class PaymentService {
     }
 
     const result = await db.transaction(async (tx) => {
-      const transactionDb = tx as unknown as DatabaseInstance;
       const paymentRows = await tx
         .select({
           id: schema.payments.id,
@@ -882,7 +773,7 @@ export class PaymentService {
         throw new ValidationError('Only a posted payment can be reversed.');
       }
 
-      await lockStudentForLedgerMutation(payment.studentId, transactionDb);
+      await lockStudentForLedgerMutation(payment.studentId, tx);
 
       const existingReversal = await tx
         .select({ id: schema.paymentReversals.id })
@@ -895,7 +786,7 @@ export class PaymentService {
         );
       }
 
-      const ledger = await selectStudentLedger(payment.studentId, transactionDb, true);
+      const ledger = await selectStudentLedger(payment.studentId, tx, true);
       const originalAllocations = await tx
         .select({
           assessmentItemId: schema.paymentAllocations.assessmentItemId,
@@ -979,7 +870,7 @@ export class PaymentService {
           createdAt: new Date(reversal.createdAt.getTime() + groupIndex),
         });
       }
-      await insertAuditLog(transactionDb, {
+      await insertAuditLog(tx, {
         userId: reversedByUserId,
         action: 'PAYMENT_REVERSED',
         entityType: 'PAYMENT',

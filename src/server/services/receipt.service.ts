@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import type { DatabaseInstance } from '@/db';
+import type { DatabaseClient } from '@/db';
 import * as schema from '@/db/schema';
 import { AppError } from '@/server/errors';
 
@@ -34,7 +34,7 @@ export function formatReceiptNumber(prefix: string, year: number, sequence: numb
  * serializes the unique-prefix/year upsert, so concurrent payments cannot
  * receive the same human-facing sequence.
  */
-export async function allocateReceiptNumber(db: DatabaseInstance, createdAt: Date) {
+export async function allocateReceiptNumber(db: DatabaseClient, createdAt: Date) {
   const settings = await db
     .select({
       receiptPrefix: schema.schoolSettings.receiptPrefix,
