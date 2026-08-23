@@ -66,6 +66,7 @@ const expectedIndexes = [
   'mock_payment_callback_events_idempotency_key_unique',
   'notification_delivery_attempts_delivery_number_unique',
   'receipt_number_sequences_prefix_year_unique',
+  'notification_deliveries_status_lease_idx',
 ];
 
 const expectedChecks = [
@@ -100,6 +101,9 @@ const expectedColumns = [
   ['payment_allocations', 'assessment_item_id'],
   ['payment_allocations', 'adjustment_id'],
   ['mock_payment_checkouts', 'payment_channel'],
+  ['notification_deliveries', 'claimed_at'],
+  ['notification_deliveries', 'lease_expires_at'],
+  ['payment_submissions', 'legacy_reviewer_unknown'],
 ] as const;
 
 const expectedEnumColumns = [
@@ -328,6 +332,23 @@ async function verifyMigrationContract() {
       [studentId],
       'Student deletion with financial history'
     );
+
+    // Verify reviewer provenance constraint: normal approved submission requires reviewer + reviewedAt
+    await expectQueryFailure(
+      client,
+      `INSERT INTO payment_submissions (
+        student_id, submitted_by_user_id, payment_channel, amount_centavos,
+        reference_number, normalized_reference_number, paid_at, status,
+        reviewed_by_user_id, reviewed_at, approved_payment_id, idempotency_key, legacy_reviewer_unknown
+      ) VALUES (
+        $1, $2, 'GCASH', 50000,
+        'REF-12345', 'REF12345', NOW(), 'APPROVED',
+        NULL, NULL, $3, 'verify-missing-reviewer-approved', false
+      )`,
+      [studentId, studentId, studentId],
+      'Approved submission with missing reviewer and legacy_reviewer_unknown = false'
+    );
+
     await client.query('ROLLBACK');
 
     console.log(
