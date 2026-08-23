@@ -19,6 +19,9 @@ describe('Application Security Headers Configuration', () => {
     const csp = securityHeaders.find((h) => h.key === 'Content-Security-Policy');
     expect(csp?.value).toContain("default-src 'self'");
     expect(csp?.value).toContain("frame-ancestors 'none'");
+    expect(csp?.value).toContain("object-src 'none'");
+    expect(csp?.value).toContain("base-uri 'self'");
+    expect(csp?.value).toContain("form-action 'self'");
   });
 
   it('configures nextConfig headers route mapping for all paths', async () => {

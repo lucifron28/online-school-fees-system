@@ -37,7 +37,7 @@ function parsePoolConfig(databaseUrl: string): PoolConfig {
   return {
     connectionString: databaseUrl,
     ...(isSslRequired && !databaseUrl.includes('localhost') && !databaseUrl.includes('127.0.0.1')
-      ? { ssl: { rejectUnauthorized: false } }
+      ? { ssl: true }
       : {}),
   };
 }

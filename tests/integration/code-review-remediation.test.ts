@@ -1,21 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
-import { createDb, getDb, type DatabaseInstance } from '@/db';
+import { and, asc, eq, inArray } from 'drizzle-orm';
+import { afterAll, describe, expect, it } from 'vitest';
+import { getDb } from '@/db';
 import * as schema from '@/db/schema';
-import { AssessmentService } from '@/server/services/assessment.service';
 import {
   ConsoleEmailProvider,
   DELIVERY_LEASE_MS,
   MAX_DELIVERY_ATTEMPTS,
   NotificationService,
-  type EmailProvider,
 } from '@/server/services/notification.service';
 import {
   approvePaymentSubmission,
   createPaymentSubmission,
   getPaymentSubmission,
-  rejectPaymentSubmission,
 } from '@/server/services/payment-submission.service';
 import { PaymentService } from '@/server/services/payment.service';
 import { getParentChildren } from '@/server/services/portal.service';
@@ -33,6 +30,107 @@ const fictionalProofBuffer = Buffer.from(
 databaseContract('Code Review Remediation Database Contract', () => {
   const db = getDb(testDatabaseUrl!);
 
+  const createdUserIds: string[] = [];
+  const createdStudentIds: string[] = [];
+  const createdGuardianIds: string[] = [];
+  const createdGuardianStudentIds: string[] = [];
+  const createdAssessmentIds: string[] = [];
+  const createdAssessmentItemIds: string[] = [];
+  const createdLedgerEntryIds: string[] = [];
+  const createdAdjustmentIds: string[] = [];
+  const createdPaymentIds: string[] = [];
+  const createdReceiptIds: string[] = [];
+  const createdAllocationIds: string[] = [];
+  const createdReversalIds: string[] = [];
+  const createdSubmissionIds: string[] = [];
+  const createdProofIds: string[] = [];
+  const createdNotificationIds: string[] = [];
+  const createdDeliveryIds: string[] = [];
+  const createdAttemptIds: string[] = [];
+
+  afterAll(async () => {
+    if (createdAttemptIds.length > 0) {
+      await db
+        .delete(schema.notificationDeliveryAttempts)
+        .where(inArray(schema.notificationDeliveryAttempts.id, createdAttemptIds));
+    }
+    if (createdDeliveryIds.length > 0) {
+      await db
+        .delete(schema.notificationDeliveries)
+        .where(inArray(schema.notificationDeliveries.id, createdDeliveryIds));
+    }
+    if (createdNotificationIds.length > 0) {
+      await db
+        .delete(schema.notifications)
+        .where(inArray(schema.notifications.id, createdNotificationIds));
+    }
+    if (createdProofIds.length > 0) {
+      await db
+        .delete(schema.paymentSubmissionProofs)
+        .where(inArray(schema.paymentSubmissionProofs.id, createdProofIds));
+    }
+    if (createdSubmissionIds.length > 0) {
+      await db
+        .delete(schema.paymentSubmissions)
+        .where(inArray(schema.paymentSubmissions.id, createdSubmissionIds));
+    }
+    if (createdReversalIds.length > 0) {
+      await db
+        .delete(schema.paymentReversals)
+        .where(inArray(schema.paymentReversals.id, createdReversalIds));
+    }
+    if (createdAllocationIds.length > 0) {
+      await db
+        .delete(schema.paymentAllocations)
+        .where(inArray(schema.paymentAllocations.id, createdAllocationIds));
+    }
+    if (createdReceiptIds.length > 0) {
+      await db.delete(schema.receipts).where(inArray(schema.receipts.id, createdReceiptIds));
+    }
+    if (createdPaymentIds.length > 0) {
+      await db.delete(schema.payments).where(inArray(schema.payments.id, createdPaymentIds));
+    }
+    if (createdAdjustmentIds.length > 0) {
+      await db
+        .delete(schema.adjustments)
+        .where(inArray(schema.adjustments.id, createdAdjustmentIds));
+    }
+    if (createdLedgerEntryIds.length > 0) {
+      await db
+        .delete(schema.ledgerEntries)
+        .where(inArray(schema.ledgerEntries.id, createdLedgerEntryIds));
+    }
+    if (createdStudentIds.length > 0) {
+      await db
+        .delete(schema.ledgerEntries)
+        .where(inArray(schema.ledgerEntries.studentId, createdStudentIds));
+    }
+    if (createdAssessmentItemIds.length > 0) {
+      await db
+        .delete(schema.assessmentItems)
+        .where(inArray(schema.assessmentItems.id, createdAssessmentItemIds));
+    }
+    if (createdAssessmentIds.length > 0) {
+      await db
+        .delete(schema.studentAssessments)
+        .where(inArray(schema.studentAssessments.id, createdAssessmentIds));
+    }
+    if (createdGuardianStudentIds.length > 0) {
+      await db
+        .delete(schema.guardianStudents)
+        .where(inArray(schema.guardianStudents.id, createdGuardianStudentIds));
+    }
+    if (createdGuardianIds.length > 0) {
+      await db.delete(schema.guardians).where(inArray(schema.guardians.id, createdGuardianIds));
+    }
+    if (createdStudentIds.length > 0) {
+      await db.delete(schema.students).where(inArray(schema.students.id, createdStudentIds));
+    }
+    if (createdUserIds.length > 0) {
+      await db.delete(schema.users).where(inArray(schema.users.id, createdUserIds));
+    }
+  });
+
   async function getAdminUser() {
     const rows = await db
       .select()
@@ -40,16 +138,6 @@ databaseContract('Code Review Remediation Database Contract', () => {
       .where(eq(schema.users.role, 'ADMIN'))
       .limit(1);
     if (!rows[0]) throw new Error('An admin user is required for test fixtures.');
-    return rows[0];
-  }
-
-  async function getFinanceUser() {
-    const rows = await db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.role, 'FINANCE_STAFF'))
-      .limit(1);
-    if (!rows[0]) throw new Error('A finance user is required for test fixtures.');
     return rows[0];
   }
 
@@ -75,6 +163,7 @@ databaseContract('Code Review Remediation Database Contract', () => {
       })
       .returning();
     if (!student) throw new Error('Student fixture creation failed.');
+    createdStudentIds.push(student.id);
     return { student, schoolYear };
   }
 
@@ -83,7 +172,6 @@ databaseContract('Code Review Remediation Database Contract', () => {
     schoolYearId: string,
     amountCentavos = 100000
   ) {
-    const admin = await getAdminUser();
     const structure = (
       await db
         .select()
@@ -98,6 +186,15 @@ databaseContract('Code Review Remediation Database Contract', () => {
     )[0];
     if (!structure) throw new Error('Active fee structure required.');
 
+    const feeCategory = (await db.select().from(schema.feeCategories).limit(1))[0];
+    if (!feeCategory) throw new Error('Fee category required.');
+
+    const feeItems = await db
+      .select()
+      .from(schema.feeStructureItems)
+      .where(eq(schema.feeStructureItems.feeStructureId, structure.id))
+      .limit(1);
+
     const [assessment] = await db
       .insert(schema.studentAssessments)
       .values({
@@ -111,16 +208,33 @@ databaseContract('Code Review Remediation Database Contract', () => {
       })
       .returning();
     if (!assessment) throw new Error('Assessment creation failed.');
+    createdAssessmentIds.push(assessment.id);
 
-    await db.insert(schema.ledgerEntries).values({
-      studentId,
-      assessmentId: assessment.id,
-      entryType: 'ASSESSMENT',
-      debitCentavos: amountCentavos,
-      creditCentavos: 0,
-      balanceCentavos: amountCentavos,
-      description: 'Initial assessment',
-    });
+    const [item] = await db
+      .insert(schema.assessmentItems)
+      .values({
+        assessmentId: assessment.id,
+        feeCategoryId: feeItems[0]?.feeCategoryId ?? feeCategory.id,
+        name: feeItems[0]?.name ?? 'Tuition Fee',
+        amountCentavos: amountCentavos,
+      })
+      .returning();
+    if (!item) throw new Error('Assessment item creation failed.');
+    createdAssessmentItemIds.push(item.id);
+
+    const [ledgerEntry] = await db
+      .insert(schema.ledgerEntries)
+      .values({
+        studentId,
+        assessmentId: assessment.id,
+        entryType: 'ASSESSMENT',
+        debitCentavos: amountCentavos,
+        creditCentavos: 0,
+        balanceCentavos: amountCentavos,
+        description: 'Initial assessment',
+      })
+      .returning();
+    if (ledgerEntry) createdLedgerEntryIds.push(ledgerEntry.id);
 
     return assessment;
   }
@@ -129,10 +243,9 @@ databaseContract('Code Review Remediation Database Contract', () => {
     it('executes interactive transaction callbacks with row locks correctly', async () => {
       const suffix = randomUUID();
       const { student, schoolYear } = await createTestStudent(suffix);
-      const assessment = await createTestAssessment(student.id, schoolYear.id, 50000);
+      await createTestAssessment(student.id, schoolYear.id, 50000);
       const admin = await getAdminUser();
 
-      // Post payment inside transaction
       const payment = await PaymentService.recordPayment(
         {
           studentId: student.id,
@@ -149,22 +262,58 @@ databaseContract('Code Review Remediation Database Contract', () => {
       expect(payment.amountCentavos).toBe(50000);
       expect(payment.receipt).toBeDefined();
       expect(payment.remainingBalanceCentavos).toBe(0);
+
+      createdPaymentIds.push(payment.id);
+      if (payment.receipt?.id) createdReceiptIds.push(payment.receipt.id);
     });
   });
 
   describe('Reviewer Provenance & Submission Lifecycle Invariants', () => {
     it('preserves historical reviewer attribution when reviewer role changes or is disabled', async () => {
       const suffix = randomUUID();
-      const { student } = await createTestStudent(suffix);
-      const parent = (
-        await db.select().from(schema.users).where(eq(schema.users.role, 'PARENT')).limit(1)
-      )[0]!;
+      const { student, schoolYear } = await createTestStudent(suffix);
+      await createTestAssessment(student.id, schoolYear.id, 50000);
 
-      // Create a temporary finance staff user
+      const parentUserId = randomUUID();
+      await db.insert(schema.users).values({
+        id: parentUserId,
+        name: `Parent ${suffix.slice(0, 4)}`,
+        email: `parent-${suffix.slice(0, 6)}@parent.test`,
+        role: 'PARENT',
+        active: true,
+        emailVerified: true,
+      });
+      createdUserIds.push(parentUserId);
+
+      const [guardian] = await db
+        .insert(schema.guardians)
+        .values({
+          userId: parentUserId,
+          firstName: 'Parent',
+          lastName: `Guardian-${suffix.slice(0, 4)}`,
+          email: `parent-${suffix.slice(0, 6)}@parent.test`,
+          phone: '+63 912 345 6789',
+          address: 'Test Address',
+        })
+        .returning();
+      if (!guardian) throw new Error('Guardian creation failed.');
+      createdGuardianIds.push(guardian.id);
+
+      const [link] = await db
+        .insert(schema.guardianStudents)
+        .values({
+          guardianId: guardian.id,
+          studentId: student.id,
+          isPrimary: true,
+        })
+        .returning();
+      if (link) createdGuardianStudentIds.push(link.id);
+
+      const reviewerUserId = randomUUID();
       const [tempReviewer] = await db
         .insert(schema.users)
         .values({
-          id: randomUUID(),
+          id: reviewerUserId,
           name: `Reviewer ${suffix.slice(0, 4)}`,
           email: `reviewer-${suffix.slice(0, 6)}@school.test`,
           role: 'FINANCE_STAFF',
@@ -173,8 +322,8 @@ databaseContract('Code Review Remediation Database Contract', () => {
         })
         .returning();
       if (!tempReviewer) throw new Error('Reviewer creation failed.');
+      createdUserIds.push(reviewerUserId);
 
-      // Create a payment submission
       const submission = await createPaymentSubmission(
         {
           studentId: student.id,
@@ -189,27 +338,33 @@ databaseContract('Code Review Remediation Database Contract', () => {
             data: fictionalProofBuffer,
           },
         },
-        parent.id,
+        parentUserId,
         db
       );
+      createdSubmissionIds.push(submission.id);
 
       expect(submission.status).toBe('PENDING_VERIFICATION');
       expect(submission.reviewedByUserId).toBeNull();
       expect(submission.reviewedAt).toBeNull();
 
-      // Reviewer approves the submission
       const approved = await approvePaymentSubmission(submission.id, tempReviewer.id, db);
       expect(approved.status).toBe('APPROVED');
       expect(approved.reviewedByUserId).toBe(tempReviewer.id);
       expect(approved.reviewedAt).toBeDefined();
+      if (approved.approvedPaymentId) {
+        createdPaymentIds.push(approved.approvedPaymentId);
+        const [receipt] = await db
+          .select({ id: schema.receipts.id })
+          .from(schema.receipts)
+          .where(eq(schema.receipts.paymentId, approved.approvedPaymentId));
+        if (receipt) createdReceiptIds.push(receipt.id);
+      }
 
-      // Now change reviewer's role to PARENT and disable account
       await db
         .update(schema.users)
         .set({ role: 'PARENT', active: false })
         .where(eq(schema.users.id, tempReviewer.id));
 
-      // Fetch submission again: historical attribution MUST remain intact
       const refreshed = await getPaymentSubmission(submission.id, db);
       expect(refreshed.status).toBe('APPROVED');
       expect(refreshed.reviewedByUserId).toBe(tempReviewer.id);
@@ -222,7 +377,6 @@ databaseContract('Code Review Remediation Database Contract', () => {
         await db.select().from(schema.users).where(eq(schema.users.role, 'PARENT')).limit(1)
       )[0]!;
 
-      // Direct insert violating lifecycle check constraint
       await expect(
         db.insert(schema.paymentSubmissions).values({
           studentId: student.id,
@@ -259,8 +413,9 @@ databaseContract('Code Review Remediation Database Contract', () => {
         })
         .returning();
       if (!notification) throw new Error('Notification creation failed.');
+      createdNotificationIds.push(notification.id);
 
-      const pastLease = new Date(Date.now() - 10000); // 10s expired
+      const pastLease = new Date(Date.now() - 10000);
       const [delivery] = await db
         .insert(schema.notificationDeliveries)
         .values({
@@ -273,8 +428,8 @@ databaseContract('Code Review Remediation Database Contract', () => {
         })
         .returning();
       if (!delivery) throw new Error('Delivery creation failed.');
+      createdDeliveryIds.push(delivery.id);
 
-      // Process due retries: stale lease must be reclaimed and transitioned to SENT
       const summary = await NotificationService.processDueNotificationRetries(
         { now: new Date() },
         db,
@@ -308,8 +463,9 @@ databaseContract('Code Review Remediation Database Contract', () => {
         })
         .returning();
       if (!notification) throw new Error('Notification creation failed.');
+      createdNotificationIds.push(notification.id);
 
-      const futureLease = new Date(Date.now() + 240000); // expires in 4 minutes
+      const futureLease = new Date(Date.now() + 240000);
       const [delivery] = await db
         .insert(schema.notificationDeliveries)
         .values({
@@ -322,8 +478,8 @@ databaseContract('Code Review Remediation Database Contract', () => {
         })
         .returning();
       if (!delivery) throw new Error('Delivery creation failed.');
+      createdDeliveryIds.push(delivery.id);
 
-      // Retry attempt should NOT claim active unexpired lease
       const retryResult = await NotificationService.retryNotification(
         notification.id,
         db,
@@ -343,11 +499,10 @@ databaseContract('Code Review Remediation Database Contract', () => {
       const assessment1 = await createTestAssessment(student1.id, schoolYear.id, 50000);
       const admin = await getAdminUser();
 
-      // Attempt inserting adjustment with assessment from student1 but studentId of student2
       await expect(
         db.insert(schema.adjustments).values({
           assessmentId: assessment1.id,
-          studentId: student2.id, // MISMATCHED!
+          studentId: student2.id,
           type: 'DEBIT',
           amountCentavos: 10000,
           reason: 'Mismatched lineage test',
@@ -363,10 +518,9 @@ databaseContract('Code Review Remediation Database Contract', () => {
       const { student: student2 } = await createTestStudent(suffix2);
       const assessment1 = await createTestAssessment(student1.id, schoolYear.id, 50000);
 
-      // Attempt inserting ledger entry for student2 referencing assessment1 of student1
       await expect(
         db.insert(schema.ledgerEntries).values({
-          studentId: student2.id, // MISMATCHED!
+          studentId: student2.id,
           assessmentId: assessment1.id,
           entryType: 'ASSESSMENT',
           debitCentavos: 10000,
@@ -381,28 +535,48 @@ databaseContract('Code Review Remediation Database Contract', () => {
   describe('Parent Multi-Child Set-Based Retrieval', () => {
     it('loads all linked children in one set-based joined query with deterministic sorting', async () => {
       const suffix = randomUUID();
-      const parent = (
-        await db.select().from(schema.users).where(eq(schema.users.role, 'PARENT')).limit(1)
-      )[0]!;
+      const parentUserId = randomUUID();
+      await db.insert(schema.users).values({
+        id: parentUserId,
+        name: `Multi Parent ${suffix.slice(0, 4)}`,
+        email: `multi-parent-${suffix.slice(0, 6)}@parent.test`,
+        role: 'PARENT',
+        active: true,
+        emailVerified: true,
+      });
+      createdUserIds.push(parentUserId);
 
-      const guardian = (
-        await db
-          .select()
-          .from(schema.guardians)
-          .where(eq(schema.guardians.userId, parent.id))
-          .limit(1)
-      )[0]!;
+      const [guardian] = await db
+        .insert(schema.guardians)
+        .values({
+          userId: parentUserId,
+          firstName: 'Multi',
+          lastName: `Guardian-${suffix.slice(0, 4)}`,
+          email: `multi-parent-${suffix.slice(0, 6)}@parent.test`,
+          phone: '+63 912 345 6789',
+          address: 'Multi Address',
+        })
+        .returning();
+      if (!guardian) throw new Error('Guardian creation failed.');
+      createdGuardianIds.push(guardian.id);
 
       const { student: child1 } = await createTestStudent(`a-${suffix}`);
       const { student: child2 } = await createTestStudent(`b-${suffix}`);
 
-      await db.insert(schema.guardianStudents).values([
-        { guardianId: guardian.id, studentId: child1.id, isPrimary: true },
-        { guardianId: guardian.id, studentId: child2.id, isPrimary: false },
-      ]);
+      const [link1] = await db
+        .insert(schema.guardianStudents)
+        .values({ guardianId: guardian.id, studentId: child1.id, isPrimary: true })
+        .returning();
+      if (link1) createdGuardianStudentIds.push(link1.id);
 
-      const children = await getParentChildren(parent.id, db);
-      expect(children.length).toBeGreaterThanOrEqual(2);
+      const [link2] = await db
+        .insert(schema.guardianStudents)
+        .values({ guardianId: guardian.id, studentId: child2.id, isPrimary: false })
+        .returning();
+      if (link2) createdGuardianStudentIds.push(link2.id);
+
+      const children = await getParentChildren(parentUserId, db);
+      expect(children.length).toBe(2);
 
       const found1 = children.find((c) => c.studentId === child1.id);
       const found2 = children.find((c) => c.studentId === child2.id);
@@ -417,9 +591,8 @@ databaseContract('Code Review Remediation Database Contract', () => {
     it('filters settled and distant future assessments at the database level', async () => {
       const suffix = randomUUID();
       const { student, schoolYear } = await createTestStudent(suffix);
-      const assessment = await createTestAssessment(student.id, schoolYear.id, 50000);
+      await createTestAssessment(student.id, schoolYear.id, 50000);
 
-      // Due in 3 days -> should be returned
       const monitor = await listAssessmentDeadlineMonitor({ now: new Date() }, db);
       expect(monitor).toBeDefined();
       expect(Array.isArray(monitor)).toBe(true);

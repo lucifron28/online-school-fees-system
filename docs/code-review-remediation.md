@@ -45,7 +45,7 @@ This document records the completed code-review remediation and hardening pass f
   - Standardized runtime database client on Drizzle's transaction-capable `node-postgres` adapter with pooled `pg.Pool`.
   - Unified DB types with `DatabaseInstance`, `TransactionInstance`, and `DatabaseClient`.
   - Removed all `as unknown as DatabaseInstance` unsafe coercions across the services layer.
-  - Enabled SSL compatibility with Neon pooled connection strings (`postgres://...-pooler.neon.tech`).
+- Enabled SSL compatibility with Neon pooled connection strings (`postgres://...-pooler.neon.tech`) using verified TLS (`ssl: true` without `rejectUnauthorized: false`).
 - **Tests added/changed**:
   - `tests/unit/db-runtime.test.ts`: verified production-style Neon pooled URL constructs a transaction-capable client with `transaction`, `select`, `insert`, `update`, `delete`.
   - `tests/integration/code-review-remediation.test.ts`: verified interactive transaction callbacks and row-locking payment flows.
@@ -55,23 +55,28 @@ This document records the completed code-review remediation and hardening pass f
 
 ### 2. Blocker: Restore Payment-Proof Reviewer Provenance
 
-- **Issue**: Migration 0008 permitted historical reviewer attribution to be lost or terminal submissions to exist without reviewer/timestamp data, violating audit integrity.
+- **Issue**: Migration 0008 previously included a current-role check (`reviewer.role IN ('ADMIN', 'FINANCE_STAFF')`) that could erase legitimate historical reviewer attribution if a staff member's role changed or account deactivated later.
 - **Affected files**:
   - `src/db/schema/index.ts`
+  - `src/db/migrations/0008_normal_shotgun.sql`
   - `src/db/migrations/0009_talented_james_howlett.sql`
   - `src/server/services/payment-submission.service.ts`
   - `src/db/scripts/verify-payment-submissions.ts`
   - `src/db/scripts/verify-migrations.ts`
+  - `tests/integration/payment-submissions.test.ts`
+  - `tests/integration/code-review-remediation.test.ts`
 - **Chosen solution**:
-  - Added `legacy_reviewer_unknown boolean NOT NULL DEFAULT false` column to `payment_submissions`.
+  - Corrected `0008_normal_shotgun.sql` to remove the destructive current-role check, preserving genuine historical reviewer attribution.
+  - Added `legacy_reviewer_unknown boolean NOT NULL DEFAULT false` column to `payment_submissions` in `0009_talented_james_howlett.sql`.
   - Hardened `payment_submissions_lifecycle_consistent` PostgreSQL CHECK constraint:
     - Normal `APPROVED` requires `reviewedByUserId NOT NULL`, `reviewedAt NOT NULL`, `approvedPaymentId NOT NULL`, `rejectionReason NULL`.
     - Normal `REJECTED` requires `reviewedByUserId NOT NULL`, `reviewedAt NOT NULL`, `rejectionReason NOT NULL`, `approvedPaymentId NULL`.
     - `PENDING_VERIFICATION` requires `reviewedByUserId NULL`, `reviewedAt NULL`, `rejectionReason NULL`, `approvedPaymentId NULL`, `legacyReviewerUnknown = false`.
-    - `legacyReviewerUnknown = true` is strictly permitted only on legacy historical records.
-  - Preserved historical reviewer attribution even when reviewer account role subsequently changes or is deactivated.
+    - `legacyReviewerUnknown = true` is strictly permitted only on legacy historical records that genuinely lack recoverable reviewer data.
+  - Updated rejection integration tests to assert that PostgreSQL rejects attempts to clear reviewer metadata from normal rejected submissions.
 - **Tests added/changed**:
   - `tests/integration/code-review-remediation.test.ts`: verified reviewer role changes/deactivation do not erase historical attribution, and unverified terminal rows with `legacyReviewerUnknown = false` are rejected.
+  - `tests/integration/payment-submissions.test.ts`: verified that clearing reviewer attribution on a rejected submission violates the database check constraint.
   - `src/db/scripts/verify-migrations.ts`: verified CHECK constraint enforces reviewer presence on normal approved submissions.
 - **Verification result**: Verified. `pnpm db:verify:migrations` and `pnpm payment-submissions:verify` pass.
 
@@ -133,29 +138,32 @@ This document records the completed code-review remediation and hardening pass f
 
 ### 6. Medium: Harden Payment-Proof Request Size Limits
 
-- **Issue**: Unbounded multipart request parsing could occur before application-level image checks.
+- **Issue**: Unbounded multipart request parsing could occur before application-level image checks, and requests lacking Content-Length could bypass request size bounds.
 - **Affected files**:
   - `src/server/services/payment-submission.service.ts`
   - `src/app/api/portal/parent/payment-submissions/route.ts`
   - `tests/unit/payment-proof.test.ts`
 - **Chosen solution**:
-  - Hardened `assertPaymentProofRequestSize` to reject requests exceeding `MAX_PAYMENT_PROOF_REQUEST_BYTES` (3.25 MiB) or invalid Content-Length upfront.
+  - Hardened `assertPaymentProofRequestSize` to reject requests with declared Content-Length exceeding `MAX_PAYMENT_PROOF_REQUEST_BYTES` (3.25 MiB) or invalid values.
+  - Implemented `readBoundedMultipartRequest` and `createBoundedStream` to stream-limit incoming request bodies and abort immediately if streamed bytes exceed `MAX_PAYMENT_PROOF_REQUEST_BYTES`, even when Content-Length is omitted or chunked.
   - Maintained image size validation (1 byte to 3 MiB) and magic bytes verification (JPEG, PNG, WebP).
 - **Tests added/changed**:
-  - `tests/unit/payment-proof.test.ts`: tested valid PNG/JPEG/WebP proofs, wrong MIME types, MIME/magic signature mismatches, corrupted bytes, oversized buffers (>3 MiB), and Content-Length header validations.
-- **Verification result**: Verified. All 8 tests pass in `pnpm test`.
+  - `tests/unit/payment-proof.test.ts`: tested valid PNG/JPEG/WebP proofs, wrong MIME types, MIME/magic signature mismatches, corrupted bytes, oversized buffers (>3 MiB), Content-Length header validations, and streaming size limits without Content-Length.
+- **Verification result**: Verified. All 11 tests pass in `pnpm test`.
 
 ---
 
 ### 7. Medium: Move Deadline Filtering Toward SQL & Bounded Batching
 
-- **Issue**: Deadline processing loaded broad historical assessment sets into memory before JS-level filtering.
+- **Issue**: Deadline processing loaded broad historical assessment sets into memory before JS-level filtering, and reminder processing processed all candidates in an unbounded sequential pass.
 - **Affected files**:
   - `src/server/services/deadline.service.ts`
+  - `src/server/services/reminder.service.ts`
 - **Chosen solution**:
   - Refactored `listAssessmentDeadlineMonitor` to compute ledger balance totals via SQL subquery join.
   - Filtered at the database level: `status = 'POSTED'`, `dueDate <= today + reminderLeadDays`, and `balanceCentavos > 0`.
   - Applied deterministic ordering (`due_date ASC, id ASC`) and supported SQL `limit` and `offset`.
+  - Implemented bounded batch processing in `ReminderService.runDueReminders` (batch size 50, offset iteration) to process large datasets without memory exhaustion.
 - **Tests added/changed**:
   - `tests/integration/code-review-remediation.test.ts`: verified SQL-bounded monitoring filters settled obligations and distant dates.
 - **Verification result**: Verified. `pnpm deadlines-announcements:verify` passes.
@@ -259,15 +267,16 @@ This document records the completed code-review remediation and hardening pass f
 
 ### 13. Medium: Application Security Headers
 
-- **Issue**: Next.js application responses lacked standard security headers (CSP, HSTS, frame options, referrer policy, permissions policy).
+- **Issue**: Next.js application responses lacked standard security headers, and production CSP included `'unsafe-eval'`.
 - **Affected files**:
   - `next.config.ts`
   - `tests/unit/security-headers.test.ts`
 - **Chosen solution**:
-  - Configured `Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, and conditional production `Strict-Transport-Security` in `next.config.ts`.
+  - Configured `Content-Security-Policy` (with strict `'self' 'unsafe-inline'` in production, excluding `'unsafe-eval'`), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, and conditional production `Strict-Transport-Security` in `next.config.ts`.
 - **Tests added/changed**:
-  - `tests/unit/security-headers.test.ts`: verified header key presence and route mapping.
-- **Verification result**: Verified. `pnpm test` passes.
+  - `tests/unit/security-headers.test.ts`: verified header key presence, production CSP restrictions, and route mapping.
+  - `tests/e2e/smoke.spec.ts`: verified security headers on HTTP responses.
+- **Verification result**: Verified. `pnpm test` and `pnpm build` pass.
 
 ---
 

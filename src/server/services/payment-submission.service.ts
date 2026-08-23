@@ -149,6 +149,56 @@ export function assertPaymentProofRequestSize(request: Request) {
   }
 }
 
+export function createBoundedStream(
+  stream: ReadableStream<Uint8Array>,
+  maxBytes: number = MAX_PAYMENT_PROOF_REQUEST_BYTES
+): ReadableStream<Uint8Array> {
+  let totalBytes = 0;
+  return new ReadableStream({
+    async start(controller) {
+      const reader = stream.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            controller.close();
+            break;
+          }
+          totalBytes += value.byteLength;
+          if (totalBytes > maxBytes) {
+            controller.error(new ValidationError('The payment proof upload is too large.'));
+            break;
+          }
+          controller.enqueue(value);
+        }
+      } catch (err) {
+        controller.error(err);
+      } finally {
+        reader.releaseLock();
+      }
+    },
+  });
+}
+
+export async function readBoundedMultipartRequest(request: Request): Promise<FormData> {
+  assertPaymentProofRequestSize(request);
+
+  const contentType = request.headers.get('content-type') || '';
+  if (!contentType.includes('multipart/form-data') || !request.body) {
+    return request.formData();
+  }
+
+  const boundedStream = createBoundedStream(request.body, MAX_PAYMENT_PROOF_REQUEST_BYTES);
+  const boundedRequest = new Request(request.url, {
+    method: request.method,
+    headers: request.headers,
+    body: boundedStream,
+    // @ts-expect-error Node duplex option
+    duplex: 'half',
+  });
+
+  return boundedRequest.formData();
+}
 function parsePaidAt(value: string) {
   const paidAt = new Date(value);
   if (!Number.isFinite(paidAt.getTime())) throw new ValidationError('Payment date is invalid.');

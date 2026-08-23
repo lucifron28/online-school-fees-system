@@ -3,6 +3,7 @@ import {
   assertPaymentProofRequestSize,
   MAX_PAYMENT_PROOF_BYTES,
   MAX_PAYMENT_PROOF_REQUEST_BYTES,
+  readBoundedMultipartRequest,
   validateProof,
 } from '@/server/services/payment-submission.service';
 
@@ -143,6 +144,59 @@ describe('Payment Proof Upload Size and Validation', () => {
       });
       expect(() => assertPaymentProofRequestSize(request)).toThrow(
         /payment proof upload is too large or invalid/i
+      );
+    });
+  });
+
+  describe('readBoundedMultipartRequest', () => {
+    it('parses multipart form data within limits', async () => {
+      const formData = new FormData();
+      formData.append('studentId', 'student-123');
+      formData.append('proof', new Blob([validPngBuffer], { type: 'image/png' }), 'receipt.png');
+
+      const mockRequest = {
+        url: 'http://localhost:3000/api/portal/parent/payment-submissions',
+        method: 'POST',
+        headers: new Headers({
+          'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryXYZ',
+          'content-length': '500',
+        }),
+        body: null,
+        formData: async () => formData,
+      } as unknown as Request;
+
+      const parsed = await readBoundedMultipartRequest(mockRequest);
+      expect(parsed.get('studentId')).toBe('student-123');
+      expect(parsed.get('proof')).toBeInstanceOf(Blob);
+    });
+
+    it('aborts and rejects oversized stream payloads even when Content-Length is absent', async () => {
+      // Stream exceeding MAX_PAYMENT_PROOF_REQUEST_BYTES
+      const hugeChunk = new Uint8Array(1024 * 1024); // 1 MB chunk
+      const totalChunks = 4; // 4 MB > 3.25 MB limit
+      let chunkIndex = 0;
+
+      const stream = new ReadableStream({
+        pull(controller) {
+          if (chunkIndex < totalChunks) {
+            controller.enqueue(hugeChunk);
+            chunkIndex += 1;
+          } else {
+            controller.close();
+          }
+        },
+      });
+
+      const request = new Request('http://localhost:3000/api/portal/parent/payment-submissions', {
+        method: 'POST',
+        headers: { 'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryXYZ' },
+        body: stream,
+        // @ts-expect-error Node duplex option
+        duplex: 'half',
+      });
+
+      await expect(readBoundedMultipartRequest(request)).rejects.toThrow(
+        /payment proof upload is too large/i
       );
     });
   });

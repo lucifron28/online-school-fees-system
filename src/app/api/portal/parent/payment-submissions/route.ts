@@ -6,9 +6,9 @@ import {
 import { requireRequestAuth } from '@/server/auth/guards';
 import { routeErrorResponse } from '@/server/http';
 import {
-  assertPaymentProofRequestSize,
   createPaymentSubmission,
   listParentPaymentSubmissions,
+  readBoundedMultipartRequest,
 } from '@/server/services/payment-submission.service';
 import { ValidationError } from '@/server/errors';
 
@@ -27,9 +27,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    assertPaymentProofRequestSize(request);
     const actor = await requireRequestAuth(request, ['PARENT']);
-    const formData = await request.formData();
+    const formData = await readBoundedMultipartRequest(request);
     const proof = formData.get('proof');
     if (!(proof instanceof File)) {
       throw new ValidationError('A JPEG, PNG, or WebP payment proof image is required.');

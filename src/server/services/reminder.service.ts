@@ -37,24 +37,37 @@ function addSummary(target: ReminderRunResult, summary: NotificationDispatchSumm
 
 export class ReminderService {
   static async runDueReminders(
-    input: { now?: Date } = {},
+    input: { now?: Date; batchSize?: number } = {},
     db: DatabaseInstance = getDb(),
     provider: EmailProvider = getEmailProvider()
   ): Promise<ReminderRunResult> {
     const result = emptySummary();
-    const candidates = await listAssessmentDeadlineMonitor({ now: input.now }, db);
-    result.assessed = candidates.length;
+    const batchSize = Math.min(100, Math.max(1, input.batchSize ?? 50));
+    let offset = 0;
 
-    for (const candidate of candidates) {
-      if (candidate.deadlineState !== 'DUE_SOON') continue;
-      result.eligible += 1;
-      const summary = await NotificationService.notifyPaymentDueReminder(
-        candidate.assessmentId,
-        { now: input.now },
-        db,
-        provider
+    while (true) {
+      const candidates = await listAssessmentDeadlineMonitor(
+        { now: input.now, limit: batchSize, offset },
+        db
       );
-      addSummary(result, summary);
+      if (candidates.length === 0) break;
+
+      result.assessed += candidates.length;
+
+      for (const candidate of candidates) {
+        if (candidate.deadlineState !== 'DUE_SOON') continue;
+        result.eligible += 1;
+        const summary = await NotificationService.notifyPaymentDueReminder(
+          candidate.assessmentId,
+          { now: input.now },
+          db,
+          provider
+        );
+        addSummary(result, summary);
+      }
+
+      if (candidates.length < batchSize) break;
+      offset += candidates.length;
     }
 
     return result;
