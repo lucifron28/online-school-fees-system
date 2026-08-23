@@ -1,4 +1,9 @@
+import dotenv from 'dotenv';
+import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 import { eq, inArray } from 'drizzle-orm';
 import { getDb } from '../index';
 import * as schema from '../schema';
@@ -396,6 +401,7 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch((error) => {
+    console.error('VERIFY NOTIFICATIONS ERROR:', error);
     logSanitizedError('verification.notifications', error);
     process.exit(1);
   });

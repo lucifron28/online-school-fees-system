@@ -67,6 +67,7 @@ export class ReminderService {
   ) {
     const announcements = await publishDueAnnouncements({ now: input.now }, db, provider);
     const reminders = await ReminderService.runDueReminders(input, db, provider);
-    return { announcements, reminders };
+    const retries = await NotificationService.processDueNotificationRetries(input, db, provider);
+    return { announcements, reminders, retries };
   }
 }

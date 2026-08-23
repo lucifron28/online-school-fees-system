@@ -1,26 +1,34 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
-import { Resend } from 'resend';
-import { getDb, type DatabaseInstance } from '@/db';
-import * as schema from '@/db/schema';
 import {
-  getOrCreateSchoolSettings,
-  isStudentPortalEnabled,
-} from '@/server/services/administration.service';
-import { evaluateDeadline } from '@/lib/deadlines';
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm';
+import { Resend } from 'resend';
+import { getDb, type DatabaseClient, type DatabaseInstance } from '@/db';
+import * as schema from '@/db/schema';
 import { getManilaDateString } from '@/lib/reports';
-import type { NotificationType } from '@/lib/notifications';
+import { evaluateDeadline } from '@/lib/deadlines';
 import { addCentavos, formatCentavos, subtractCentavos } from '@/lib/utils/currency';
+import { getOrCreateSchoolSettings, isStudentPortalEnabled } from './administration.service';
 import { getServerEnv } from '@/lib/env';
 import { NotFoundError } from '@/server/errors';
 import { logSanitizedError } from '@/server/logging';
+import type { NotificationType } from '@/lib/notifications';
 
-// This is the maximum persisted delivery attempts shared by initial dispatch,
-// scheduled processing, and explicit manual retries.
-const MAX_DELIVERY_ATTEMPTS = 3;
-
-type NotificationChannel = (typeof schema.notificationChannelEnum.enumValues)[number];
-type NotificationStatus = (typeof schema.notificationDeliveryStatusEnum.enumValues)[number];
+export type NotificationChannel = (typeof schema.notificationChannelEnum.enumValues)[number];
+export type NotificationStatus = (typeof schema.notificationDeliveryStatusEnum.enumValues)[number];
+export const MAX_DELIVERY_ATTEMPTS = 3;
+export const DELIVERY_LEASE_MS = 5 * 60 * 1000;
 type NotificationRecord = typeof schema.notifications.$inferSelect;
 type DeliveryRecord = typeof schema.notificationDeliveries.$inferSelect;
 
@@ -264,11 +272,14 @@ async function attemptDelivery(
   provider: EmailProvider
 ) {
   const attemptedAt = new Date();
+  const leaseExpiresAt = new Date(attemptedAt.getTime() + DELIVERY_LEASE_MS);
   const claim = await db.transaction(async (tx) => {
     const claimed = await tx
       .update(schema.notificationDeliveries)
       .set({
         status: 'RETRYING',
+        claimedAt: attemptedAt,
+        leaseExpiresAt,
         attemptCount: sql`${schema.notificationDeliveries.attemptCount} + 1`,
         lastAttemptAt: attemptedAt,
         nextAttemptAt: null,
@@ -277,8 +288,17 @@ async function attemptDelivery(
       .where(
         and(
           eq(schema.notificationDeliveries.id, delivery.id),
-          inArray(schema.notificationDeliveries.status, ['PENDING', 'FAILED']),
-          lt(schema.notificationDeliveries.attemptCount, MAX_DELIVERY_ATTEMPTS)
+          lt(schema.notificationDeliveries.attemptCount, MAX_DELIVERY_ATTEMPTS),
+          or(
+            inArray(schema.notificationDeliveries.status, ['PENDING', 'FAILED']),
+            and(
+              eq(schema.notificationDeliveries.status, 'RETRYING'),
+              or(
+                isNull(schema.notificationDeliveries.leaseExpiresAt),
+                lte(schema.notificationDeliveries.leaseExpiresAt, attemptedAt)
+              )
+            )
+          )
         )
       )
       .returning({
@@ -329,6 +349,8 @@ async function attemptDelivery(
           status: 'SENT',
           providerMessageId: result.providerMessageId ?? null,
           sentAt,
+          claimedAt: null,
+          leaseExpiresAt: null,
           nextAttemptAt: null,
           errorMessage: null,
           updatedAt: sentAt,
@@ -350,7 +372,14 @@ async function attemptDelivery(
         .where(eq(schema.notificationDeliveryAttempts.id, claim.attemptId));
       await tx
         .update(schema.notificationDeliveries)
-        .set({ status, nextAttemptAt, errorMessage: message, updatedAt: new Date() })
+        .set({
+          status,
+          claimedAt: null,
+          leaseExpiresAt: null,
+          nextAttemptAt,
+          errorMessage: message,
+          updatedAt: new Date(),
+        })
         .where(eq(schema.notificationDeliveries.id, delivery.id));
     });
   }
@@ -828,12 +857,72 @@ export class NotificationService {
     if (!delivery) throw new Error('The notification has no delivery record.');
     if (delivery.status === 'SENT') return delivery;
 
+    const now = new Date();
     if (
-      delivery.status === 'RETRYING' ||
-      (delivery.status === 'FAILED' && delivery.attemptCount >= MAX_DELIVERY_ATTEMPTS)
+      delivery.status === 'RETRYING' &&
+      delivery.leaseExpiresAt &&
+      delivery.leaseExpiresAt > now
     ) {
       return delivery;
     }
+    if (delivery.status === 'FAILED' && delivery.attemptCount >= MAX_DELIVERY_ATTEMPTS) {
+      return delivery;
+    }
     return attemptDelivery(notification, delivery, db, provider);
+  }
+
+  static async processDueNotificationRetries(
+    input: { now?: Date; limit?: number } = {},
+    db: DatabaseInstance = getDb(),
+    provider: EmailProvider = getEmailProvider()
+  ): Promise<NotificationDispatchSummary> {
+    const now = input.now ?? new Date();
+    const limit = Math.min(100, Math.max(1, input.limit ?? 50));
+
+    const rows = await db
+      .select({
+        delivery: schema.notificationDeliveries,
+        notification: schema.notifications,
+      })
+      .from(schema.notificationDeliveries)
+      .innerJoin(
+        schema.notifications,
+        eq(schema.notifications.id, schema.notificationDeliveries.notificationId)
+      )
+      .where(
+        and(
+          lt(schema.notificationDeliveries.attemptCount, MAX_DELIVERY_ATTEMPTS),
+          or(
+            and(
+              eq(schema.notificationDeliveries.status, 'PENDING'),
+              or(
+                isNull(schema.notificationDeliveries.nextAttemptAt),
+                lte(schema.notificationDeliveries.nextAttemptAt, now)
+              )
+            ),
+            and(
+              eq(schema.notificationDeliveries.status, 'RETRYING'),
+              or(
+                isNull(schema.notificationDeliveries.leaseExpiresAt),
+                lte(schema.notificationDeliveries.leaseExpiresAt, now)
+              )
+            )
+          )
+        )
+      )
+      .orderBy(asc(schema.notificationDeliveries.updatedAt))
+      .limit(limit);
+
+    const summary = emptySummary();
+    summary.attempted = rows.length;
+
+    for (const { delivery, notification } of rows) {
+      const outcome = await attemptDelivery(notification, delivery, db, provider);
+      if (outcome?.status === 'SENT') summary.sent += 1;
+      else if (outcome?.status === 'FAILED') summary.failed += 1;
+      else summary.retrying += 1;
+    }
+
+    return summary;
   }
 }
