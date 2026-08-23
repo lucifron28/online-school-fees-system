@@ -116,7 +116,7 @@ function hasProofSignature(mimeType: string, data: Buffer) {
   );
 }
 
-function validateProof(proof: PaymentProofInput) {
+export function validateProof(proof: PaymentProofInput) {
   if (!allowedProofMimeTypes.has(proof.mimeType)) {
     throw new ValidationError('Proof must be a JPEG, PNG, or WebP image.');
   }
@@ -140,8 +140,12 @@ export function assertPaymentProofRequestSize(request: Request) {
   const contentLength = request.headers.get('content-length');
   if (!contentLength) return;
   const parsedLength = Number(contentLength);
-  if (Number.isFinite(parsedLength) && parsedLength > MAX_PAYMENT_PROOF_REQUEST_BYTES) {
-    throw new ValidationError('The payment proof upload is too large.');
+  if (
+    !Number.isFinite(parsedLength) ||
+    parsedLength > MAX_PAYMENT_PROOF_REQUEST_BYTES ||
+    parsedLength < 1
+  ) {
+    throw new ValidationError('The payment proof upload is too large or invalid.');
   }
 }
 
@@ -592,7 +596,6 @@ export async function approvePaymentSubmission(
   let paymentId = '';
   try {
     await db.transaction(async (tx) => {
-      const transactionDb = tx as unknown as DatabaseInstance;
       const rows = await tx
         .select()
         .from(schema.paymentSubmissions)
@@ -605,7 +608,7 @@ export async function approvePaymentSubmission(
         throw new ConflictError('Only a pending payment proof can be approved.');
       }
 
-      await lockStudentForLedgerMutation(submission.studentId, transactionDb);
+      await lockStudentForLedgerMutation(submission.studentId, tx);
       const payment = await PaymentService.recordPayment(
         {
           studentId: submission.studentId,
@@ -617,7 +620,7 @@ export async function approvePaymentSubmission(
           skipNotifications: true,
           notificationProvider: provider,
         },
-        transactionDb
+        tx
       );
       paymentId = payment.id;
 

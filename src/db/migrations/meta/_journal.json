@@ -64,6 +64,13 @@
       "when": 1786959446798,
       "tag": "0008_normal_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787460669395,
+      "tag": "0009_talented_james_howlett",
+      "breakpoints": true
     }
   ]
 }
