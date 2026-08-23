@@ -47,7 +47,7 @@ Client Components must not import server-only services. Financial rules must rem
 - Outstanding debt is selected from persisted positive ledger balances for every lifecycle status, while dashboard `activeStudents` remains an `ACTIVE`-only count. The finance payment selector includes status labels and permits existing-debt settlement for non-active students; assessment generation remains active-only.
 - Student statements convert requested dates through the Manila calendar, use a start-inclusive/end-exclusive interval, calculate opening balance from pre-period entries, and recompute in-period running balances for the PDF.
 - Mock checkout statuses `SUCCEEDED`, `FAILED`, `CANCELLED`, and `EXPIRED` are terminal. Conflicting callbacks are retained as failed/ignored events and cannot create or reverse financial movement.
-- Localhost PostgreSQL URLs use node-postgres for seed/reset/integration tooling, while remote deployment URLs continue to use Neon.
+- Both local PostgreSQL and remote Neon deployments standardize on Drizzle's transaction-capable node-postgres (`pg` Pool) adapter with full interactive transaction and row-locking support.
 - Assessment generation, ledger balance calculation, OTC payment posting, portal ownership, mock online-payment completion, report aggregation, and notification history are PostgreSQL-backed. External deployment remains a later environment-dependent gate.
 - The mock payment gateway is a test harness. Its checkout records, callback events, and idempotency state are persisted, but every public/server entry point is disabled unless `ENABLE_MOCK_PAYMENT_HARNESS=true`; no real payment-provider integration is claimed.
 
