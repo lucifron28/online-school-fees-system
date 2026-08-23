@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+import { Client } from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { logSanitizedError } from '../../server/logging';
@@ -15,17 +15,20 @@ async function checkDatabaseConnection() {
     process.exit(1);
   }
 
+  const client = new Client({ connectionString: databaseUrl });
   try {
-    console.log('🔄 Checking database connection to Neon PostgreSQL...');
-    const sql = neon(databaseUrl);
-    const result = await sql`SELECT NOW() as current_time, VERSION() as version;`;
+    console.log('🔄 Checking database connection to PostgreSQL...');
+    await client.connect();
+    const result = await client.query('SELECT NOW() as current_time, VERSION() as version;');
     console.log('✅ Database connection successful!');
-    console.log('Timestamp:', result[0]?.current_time);
-    console.log('Version:', result[0]?.version);
+    console.log('Timestamp:', result.rows[0]?.current_time);
+    console.log('Version:', result.rows[0]?.version);
   } catch (error) {
     logSanitizedError('database.connection_check', error);
     process.exit(1);
+  } finally {
+    await client.end().catch(() => {});
   }
 }
 
-checkDatabaseConnection();
+void checkDatabaseConnection();

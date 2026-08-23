@@ -177,7 +177,7 @@ function drawFirstPageHeader(page: PDFPage, data: ReceiptPdfData, bold: PdfFont,
   });
   y -= 15;
 
-  const infoRows = [
+  const infoRows: Array<[string, string, string, string]> = [
     ['Student Name:', data.studentName, 'Date & Time:', data.paymentDate],
     ['Student Number:', data.studentNumber, 'Payment Method:', data.paymentMethod],
     ['Grade & Section:', data.gradeAndSection, 'Reference No:', data.referenceNumber || 'N/A'],

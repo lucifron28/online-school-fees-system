@@ -259,10 +259,13 @@ async function ensureDemoUsers(db: DatabaseInstance) {
           password: passwordHash,
         });
       } else {
-        await db
-          .update(schema.accounts)
-          .set({ password: passwordHash, updatedAt: DEMO_NOW })
-          .where(eq(schema.accounts.id, credentialAccounts[0].id));
+        const account = credentialAccounts[0];
+        if (account) {
+          await db
+            .update(schema.accounts)
+            .set({ password: passwordHash, updatedAt: DEMO_NOW })
+            .where(eq(schema.accounts.id, account.id));
+        }
       }
     }
 
@@ -324,8 +327,11 @@ async function ensureStudents(
 
   for (let index = 0; index < DEMO_STUDENT_COUNT; index += 1) {
     const number = index + 1;
-    const grade = gradesData[index % gradesData.length];
     const studentNumber = `DEMO-${String(number).padStart(4, '0')}`;
+    const grade = gradesData[index % gradesData.length];
+    if (!grade) throw new Error('Missing demo grade');
+    const firstName = firstNames[index % firstNames.length] ?? 'Student';
+    const lastName = lastNames[index % lastNames.length] ?? 'Demo';
     const existing = await db
       .select()
       .from(schema.students)
@@ -333,8 +339,8 @@ async function ensureStudents(
       .limit(1);
     const values = {
       studentNumber,
-      firstName: firstNames[index % firstNames.length],
-      lastName: lastNames[index % lastNames.length],
+      firstName,
+      lastName,
       email:
         number === 1
           ? 'student@demo.school'
@@ -346,12 +352,13 @@ async function ensureStudents(
       status: number === 12 ? ('WITHDRAWN' as const) : ('ACTIVE' as const),
       updatedAt: DEMO_NOW,
     };
-    const row = existing[0]
+    const existingStudent = existing[0];
+    const row = existingStudent
       ? (
           await db
             .update(schema.students)
             .set(values)
-            .where(eq(schema.students.id, existing[0].id))
+            .where(eq(schema.students.id, existingStudent.id))
             .returning()
         )[0]
       : (await db.insert(schema.students).values(values).returning())[0];
@@ -413,6 +420,7 @@ async function ensureGuardianLinks(
 ) {
   for (let index = 0; index < guardians.length; index += 1) {
     const guardian = guardians[index];
+    if (!guardian) continue;
     const linkedStudents = students.slice(index * 2, index * 2 + 2);
     for (const [studentIndex, student] of linkedStudents.entries()) {
       const existing = await db
@@ -1177,6 +1185,7 @@ async function ensureDemoPaymentProofs(
 export async function seedDemoData(db: DatabaseInstance = getDb()) {
   console.log('🌱 Seeding deterministic fictional demo data...');
   const schoolYear = await ensureSchoolYear(db);
+  if (!schoolYear) throw new Error('Failed to resolve active school year.');
   await ensureSettings(db, schoolYear.id);
   const academic = await ensureAcademicStructure(db, schoolYear.id);
   const users = await ensureDemoUsers(db);
@@ -1315,6 +1324,7 @@ if (process.argv[1]?.includes('seed.ts')) {
   seedDemoData()
     .then(() => process.exit(0))
     .catch((error: unknown) => {
+      console.error('SEED ERROR:', error);
       logSanitizedError('database.seed', error);
       process.exit(1);
     });

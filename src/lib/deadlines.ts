@@ -13,8 +13,14 @@ export interface DeadlineEvaluation {
 export function calculateDaysFromDueDate(dueDate: string, today = getManilaDateString()): number {
   reportDateSchema.parse(dueDate);
   reportDateSchema.parse(today);
-  const [dueYear, dueMonth, dueDay] = dueDate.split('-').map(Number);
-  const [todayYear, todayMonth, todayDay] = today.split('-').map(Number);
+  const dueParts = dueDate.split('-').map(Number);
+  const todayParts = today.split('-').map(Number);
+  const dueYear = dueParts[0] ?? 0;
+  const dueMonth = dueParts[1] ?? 1;
+  const dueDay = dueParts[2] ?? 1;
+  const todayYear = todayParts[0] ?? 0;
+  const todayMonth = todayParts[1] ?? 1;
+  const todayDay = todayParts[2] ?? 1;
   const due = Date.UTC(dueYear, dueMonth - 1, dueDay);
   const current = Date.UTC(todayYear, todayMonth - 1, todayDay);
   return Math.round((due - current) / 86_400_000);

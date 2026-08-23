@@ -7,7 +7,10 @@ const dateOnly = z
   .string()
   .regex(dateOnlyPattern, 'Use the YYYY-MM-DD date format.')
   .refine((value) => {
-    const [year, month, day] = value.split('-').map(Number);
+    const parts = value.split('-').map(Number);
+    const year = parts[0] ?? 0;
+    const month = parts[1] ?? 1;
+    const day = parts[2] ?? 1;
     const date = new Date(Date.UTC(year, month - 1, day));
     return (
       date.getUTCFullYear() === year &&
@@ -128,7 +131,10 @@ export interface AdministrationUser {
 }
 
 export function dateOnlyToUtcDate(value: string): Date {
-  const [year, month, day] = value.split('-').map(Number);
+  const parts = value.split('-').map(Number);
+  const year = parts[0] ?? 0;
+  const month = parts[1] ?? 1;
+  const day = parts[2] ?? 1;
   return new Date(Date.UTC(year, month - 1, day));
 }
 

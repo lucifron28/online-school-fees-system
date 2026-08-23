@@ -334,7 +334,7 @@ function StructureEditor({
                   value={item.feeCategoryId}
                   onChange={(event) => {
                     const next = [...field.state.value];
-                    next[index] = { ...next[index], feeCategoryId: event.target.value };
+                    next[index] = { ...item, feeCategoryId: event.target.value };
                     field.handleChange(next);
                   }}
                 >
@@ -351,7 +351,7 @@ function StructureEditor({
                   value={item.name}
                   onChange={(event) => {
                     const next = [...field.state.value];
-                    next[index] = { ...next[index], name: event.target.value };
+                    next[index] = { ...item, name: event.target.value };
                     field.handleChange(next);
                   }}
                 />
@@ -364,7 +364,7 @@ function StructureEditor({
                   onChange={(event) => {
                     const next = [...field.state.value];
                     next[index] = {
-                      ...next[index],
+                      ...item,
                       amountCentavos: Number(event.target.value) || 0,
                     };
                     field.handleChange(next);
