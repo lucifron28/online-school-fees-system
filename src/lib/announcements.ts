@@ -47,7 +47,44 @@ export const announcementUpdateInputSchema = announcementShape
     }
   });
 
+export const announcementListInputSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(20),
+  status: announcementStatusSchema.optional(),
+  audience: announcementAudienceSchema.optional(),
+  search: z.string().trim().max(120).optional(),
+  includeArchived: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true')
+    .or(z.boolean())
+    .optional(),
+});
+
 export type AnnouncementAudience = z.infer<typeof announcementAudienceSchema>;
 export type AnnouncementStatus = z.infer<typeof announcementStatusSchema>;
 export type AnnouncementCreateInput = z.infer<typeof announcementCreateInputSchema>;
 export type AnnouncementUpdateInput = z.infer<typeof announcementUpdateInputSchema>;
+export type AnnouncementListInput = z.infer<typeof announcementListInputSchema>;
+
+export interface AnnouncementListPage {
+  items: Array<{
+    id: string;
+    title: string;
+    body: string;
+    audience: AnnouncementAudience;
+    status: AnnouncementStatus;
+    publishAt: Date;
+    expiresAt: Date | null;
+    createdByUserId: string;
+    updatedByUserId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
+}
