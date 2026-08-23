@@ -26,8 +26,8 @@ const clientEnvSchema = z.object({
   NEXT_PUBLIC_ENABLE_DEMO_NAV: z
     .string()
     .optional()
-    .transform((v) => v !== 'false')
-    .default('true'),
+    .transform((value) => value === 'true')
+    .default('false'),
 });
 
 export function getServerEnv() {
