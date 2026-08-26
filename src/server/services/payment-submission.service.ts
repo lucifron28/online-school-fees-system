@@ -116,7 +116,7 @@ function hasProofSignature(mimeType: string, data: Buffer) {
   );
 }
 
-function validateProof(proof: PaymentProofInput) {
+export function validateProof(proof: PaymentProofInput) {
   if (!allowedProofMimeTypes.has(proof.mimeType)) {
     throw new ValidationError('Proof must be a JPEG, PNG, or WebP image.');
   }
@@ -140,11 +140,65 @@ export function assertPaymentProofRequestSize(request: Request) {
   const contentLength = request.headers.get('content-length');
   if (!contentLength) return;
   const parsedLength = Number(contentLength);
-  if (Number.isFinite(parsedLength) && parsedLength > MAX_PAYMENT_PROOF_REQUEST_BYTES) {
-    throw new ValidationError('The payment proof upload is too large.');
+  if (
+    !Number.isFinite(parsedLength) ||
+    parsedLength > MAX_PAYMENT_PROOF_REQUEST_BYTES ||
+    parsedLength < 1
+  ) {
+    throw new ValidationError('The payment proof upload is too large or invalid.');
   }
 }
 
+export function createBoundedStream(
+  stream: ReadableStream<Uint8Array>,
+  maxBytes: number = MAX_PAYMENT_PROOF_REQUEST_BYTES
+): ReadableStream<Uint8Array> {
+  let totalBytes = 0;
+  return new ReadableStream({
+    async start(controller) {
+      const reader = stream.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            controller.close();
+            break;
+          }
+          totalBytes += value.byteLength;
+          if (totalBytes > maxBytes) {
+            controller.error(new ValidationError('The payment proof upload is too large.'));
+            break;
+          }
+          controller.enqueue(value);
+        }
+      } catch (err) {
+        controller.error(err);
+      } finally {
+        reader.releaseLock();
+      }
+    },
+  });
+}
+
+export async function readBoundedMultipartRequest(request: Request): Promise<FormData> {
+  assertPaymentProofRequestSize(request);
+
+  const contentType = request.headers.get('content-type') || '';
+  if (!contentType.includes('multipart/form-data') || !request.body) {
+    return request.formData();
+  }
+
+  const boundedStream = createBoundedStream(request.body, MAX_PAYMENT_PROOF_REQUEST_BYTES);
+  const boundedRequest = new Request(request.url, {
+    method: request.method,
+    headers: request.headers,
+    body: boundedStream,
+    // @ts-expect-error Node duplex option
+    duplex: 'half',
+  });
+
+  return boundedRequest.formData();
+}
 function parsePaidAt(value: string) {
   const paidAt = new Date(value);
   if (!Number.isFinite(paidAt.getTime())) throw new ValidationError('Payment date is invalid.');
@@ -592,7 +646,6 @@ export async function approvePaymentSubmission(
   let paymentId = '';
   try {
     await db.transaction(async (tx) => {
-      const transactionDb = tx as unknown as DatabaseInstance;
       const rows = await tx
         .select()
         .from(schema.paymentSubmissions)
@@ -605,7 +658,7 @@ export async function approvePaymentSubmission(
         throw new ConflictError('Only a pending payment proof can be approved.');
       }
 
-      await lockStudentForLedgerMutation(submission.studentId, transactionDb);
+      await lockStudentForLedgerMutation(submission.studentId, tx);
       const payment = await PaymentService.recordPayment(
         {
           studentId: submission.studentId,
@@ -617,7 +670,7 @@ export async function approvePaymentSubmission(
           skipNotifications: true,
           notificationProvider: provider,
         },
-        transactionDb
+        tx
       );
       paymentId = payment.id;
 

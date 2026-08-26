@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { getDb, type DatabaseInstance } from '../index';
@@ -14,6 +16,8 @@ import {
 import { ConsoleEmailProvider } from '../../server/services/notification.service';
 import { PaymentService } from '../../server/services/payment.service';
 
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 const fictionalPaymentProof = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64'
@@ -115,6 +119,10 @@ async function main() {
     const approved = await approvePaymentSubmission(created.id, finance.id, db, provider);
     paymentId = approved.approvedPaymentId;
     assert(approved.status === 'APPROVED' && paymentId, 'Proof approval did not post payment.');
+    assert(
+      approved.reviewedByUserId === finance.id && approved.reviewedAt,
+      'Approved proof was not attributed to the finance reviewer.'
+    );
     const [payment] = await db
       .select({ method: schema.payments.paymentMethod })
       .from(schema.payments)

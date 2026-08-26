@@ -8,7 +8,7 @@ import { signIn, signOut } from '@/lib/auth/client';
 import { getRoleLandingPath, parseUserRole } from '@/lib/auth/roles';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email address.'),
@@ -58,12 +58,12 @@ export function LoginForm({
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [showPassword, setShowPassword] = useState(false);
   const form = useForm({
     defaultValues: {
       email: defaultEmail,
       password: '',
-      rememberMe: true,
+      rememberMe: false,
     },
     validators: {
       onSubmit: loginSchema,
@@ -113,11 +113,7 @@ export function LoginForm({
           htmlFor={`${portal}-email`}
           className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300"
         >
-          {portal === 'admin'
-            ? 'Email / Admin ID'
-            : portal === 'parent'
-              ? 'Parent Email / Account ID'
-              : 'Student Email / Account ID'}
+          Email address
         </label>
         <form.Field name="email">
           {(field) => {
@@ -153,10 +149,12 @@ export function LoginForm({
           </label>
           <button
             type="button"
-            onClick={() => setFormError('Password reset is managed by the School Administrator.')}
+            onClick={() =>
+              setFormError('Password changes are managed by the School Administrator.')
+            }
             className={`min-h-10 rounded-md px-2 text-xs ${linkClass} hover:bg-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
           >
-            Forgot Password?
+            Need password help?
           </button>
         </div>
         <form.Field name="password">
@@ -164,18 +162,32 @@ export function LoginForm({
             const error = fieldError(field.state.meta.errors);
             return (
               <>
-                <Input
-                  id={`${portal}-password`}
-                  name={field.name}
-                  type="password"
-                  placeholder="Enter password"
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  onBlur={field.handleBlur}
-                  className={`h-11 text-sm ${focusClass}`}
-                  autoComplete="current-password"
-                  aria-invalid={Boolean(error)}
-                />
+                <div className="relative">
+                  <Input
+                    id={`${portal}-password`}
+                    name={field.name}
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter password"
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={field.handleBlur}
+                    className={`h-11 pr-11 text-sm ${focusClass}`}
+                    autoComplete="current-password"
+                    aria-invalid={Boolean(error)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:text-slate-200"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
                 {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
               </>
             );

@@ -42,6 +42,9 @@ export async function clearDemoData(database: DatabaseInstance, includeAuthTable
   await database.delete(schema.notificationDeliveryAttempts);
   await database.delete(schema.notificationDeliveries);
   await database.delete(schema.notifications);
+  await database.delete(schema.announcements);
+  await database.delete(schema.paymentSubmissionProofs);
+  await database.delete(schema.paymentSubmissions);
   await database.delete(schema.auditLogs);
   await database.delete(schema.paymentReversals);
   await database.delete(schema.receipts);

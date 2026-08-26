@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { CreditCard, DollarSign, ChevronRight, RefreshCw } from 'lucide-react';
 import { getClientErrorMessage, requestJson } from '@/lib/client-api';
-import { paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
+import { paymentBalanceAmountClass, paymentStatusClass, paymentStatusLabel } from '@/lib/deadlines';
 import { formatCentavos } from '@/lib/utils/currency';
 import type { PortalChild } from '@/lib/portal-types';
 import { Badge } from '@/components/ui/badge';
@@ -120,7 +120,9 @@ export default function ParentDashboardPage() {
                     <div className="flex items-center justify-between gap-6 sm:justify-end">
                       <div className="text-right">
                         <span className="text-[11px] text-slate-500">Outstanding</span>
-                        <p className="text-base font-extrabold text-rose-600">
+                        <p
+                          className={`text-base font-extrabold ${paymentBalanceAmountClass(child.outstandingBalanceCentavos === 0 ? 'PAID' : 'WITH_REMAINING_BALANCE')}`}
+                        >
                           {formatCentavos(child.outstandingBalanceCentavos)}
                         </p>
                         <Badge

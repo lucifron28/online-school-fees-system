@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
 import { getDb } from '@/db';
@@ -9,6 +11,8 @@ import { calculateAssessmentDueDate } from '@/lib/deadlines';
 import { ReportService } from '@/server/services/report.service';
 import { PaymentService } from '@/server/services/payment.service';
 
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
@@ -322,6 +326,7 @@ async function main() {
 }
 
 main().catch((error) => {
+  console.error('VERIFY REPORTS RECONCILIATION ERROR:', error);
   logSanitizedError('verification.reports_reconciliation', error);
   process.exitCode = 1;
 });

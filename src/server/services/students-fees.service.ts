@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, ilike, inArray, or, type SQL } from 'drizzle-orm';
-import { getDb, type DatabaseInstance } from '@/db';
+import { getDb, type DatabaseClient, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import {
   feeCategoryCreateInputSchema,
@@ -109,10 +109,9 @@ function isUniqueViolation(error: unknown, constraint?: string) {
 async function assertUserRole(
   userId: string | null | undefined,
   role: 'PARENT' | 'STUDENT',
-  db: DatabaseInstance
+  db: DatabaseClient
 ) {
-  if (userId === undefined || userId === null) return;
-
+  if (!userId) return;
   const user = await db
     .select({ id: schema.users.id, role: schema.users.role })
     .from(schema.users)
@@ -125,7 +124,7 @@ async function assertUserRole(
   }
 }
 
-async function selectStudentOutstandingBalances(studentIds: string[], db: DatabaseInstance) {
+async function selectStudentOutstandingBalances(studentIds: string[], db: DatabaseClient) {
   if (studentIds.length === 0) return new Map<string, number>();
   const entries = await db
     .select({
@@ -430,7 +429,7 @@ export async function listGuardians(input: GuardianListInput = {}, db: DatabaseI
   return query;
 }
 
-async function selectGuardian(id: string, db: DatabaseInstance) {
+async function selectGuardian(id: string, db: DatabaseClient) {
   const rows = await db
     .select(guardianFields)
     .from(schema.guardians)
@@ -513,9 +512,8 @@ export async function linkGuardianStudent(
   const values = guardianStudentLinkInputSchema.parse(input);
   try {
     return await db.transaction(async (tx) => {
-      const transactionDb = tx as unknown as DatabaseInstance;
-      await selectGuardian(values.guardianId, transactionDb);
-      await transactionDb
+      await selectGuardian(values.guardianId, tx);
+      await tx
         .select({ id: schema.students.id })
         .from(schema.students)
         .where(eq(schema.students.id, values.studentId))
@@ -524,7 +522,6 @@ export async function linkGuardianStudent(
         .then((rows) => {
           if (!rows[0]) throw new NotFoundError('The student record does not exist.');
         });
-
       const existing = await tx
         .select({ id: schema.guardianStudents.id })
         .from(schema.guardianStudents)
@@ -650,7 +647,7 @@ async function assertFeeStructureReferences(
     status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
     items: FeeStructureItemInput[];
   },
-  db: DatabaseInstance
+  db: DatabaseClient
 ) {
   const [schoolYear, gradeLevel] = await Promise.all([
     db
@@ -739,7 +736,7 @@ export async function listFeeStructures(
   return rows.map((row) => ({ ...row, items: itemsByStructure.get(row.id) ?? [] }));
 }
 
-async function selectFeeStructure(id: string, db: DatabaseInstance) {
+async function selectFeeStructure(id: string, db: DatabaseClient) {
   const rows = await db
     .select(feeStructureFields)
     .from(schema.feeStructures)
@@ -756,7 +753,7 @@ async function selectFeeStructure(id: string, db: DatabaseInstance) {
  * this lock after the student lock; every fee-structure mutation acquires it
  * before checking posted assessments or reading mutable definition data.
  */
-export async function lockFeeStructureForMutation(id: string, db: DatabaseInstance) {
+export async function lockFeeStructureForMutation(id: string, db: DatabaseClient) {
   const rows = await db
     .select()
     .from(schema.feeStructures)
@@ -767,7 +764,7 @@ export async function lockFeeStructureForMutation(id: string, db: DatabaseInstan
   return rows[0];
 }
 
-async function selectFeeStructureItems(id: string, db: DatabaseInstance) {
+async function selectFeeStructureItems(id: string, db: DatabaseClient) {
   return db
     .select(feeStructureItemFields)
     .from(schema.feeStructureItems)
@@ -813,7 +810,7 @@ export async function createFeeStructure(
     .then((created) => getFeeStructure(created.id, db));
 }
 
-async function hasPostedAssessment(id: string, db: DatabaseInstance) {
+async function hasPostedAssessment(id: string, db: DatabaseClient) {
   const posted = await db
     .select({ id: schema.studentAssessments.id })
     .from(schema.studentAssessments)
@@ -840,11 +837,9 @@ export async function updateFeeStructure(
     hasOwn(values, 'name') ||
     hasOwn(values, 'items');
   const updated = await db.transaction(async (tx) => {
-    const transactionDb = tx as unknown as DatabaseInstance;
-    await lockFeeStructureForMutation(id, transactionDb);
-    const current = await selectFeeStructure(id, transactionDb);
-    const posted = await hasPostedAssessment(id, transactionDb);
-
+    await lockFeeStructureForMutation(id, tx);
+    const current = await selectFeeStructure(id, tx);
+    const posted = await hasPostedAssessment(id, tx);
     if (posted && structuralChange) {
       throw new ValidationError(
         'This fee structure has posted assessments and can only be archived; its definition is locked.'
@@ -878,7 +873,7 @@ export async function updateFeeStructure(
       name: values.name ?? current.name,
       status: values.status ?? current.status,
     };
-    const currentItems = await selectFeeStructureItems(id, transactionDb);
+    const currentItems = await selectFeeStructureItems(id, tx);
     const nextItems =
       values.items ??
       currentItems.map((item) => ({
@@ -886,7 +881,7 @@ export async function updateFeeStructure(
         name: item.name,
         amountCentavos: item.amountCentavos,
       }));
-    await assertFeeStructureReferences({ ...next, items: nextItems }, transactionDb);
+    await assertFeeStructureReferences({ ...next, items: nextItems }, tx);
 
     const [updatedStructure] = await tx
       .update(schema.feeStructures)
@@ -915,14 +910,13 @@ export async function addFeeStructureItem(
 ) {
   const values = feeStructureItemInputSchema.parse(input);
   await db.transaction(async (tx) => {
-    const transactionDb = tx as unknown as DatabaseInstance;
-    await lockFeeStructureForMutation(structureId, transactionDb);
-    if (await hasPostedAssessment(structureId, transactionDb)) {
+    await lockFeeStructureForMutation(structureId, tx);
+    if (await hasPostedAssessment(structureId, tx)) {
       throw new ValidationError(
         'Fee items are locked after an assessment is posted. Archive the structure instead.'
       );
     }
-    await assertFeeStructureItemCategory(values.feeCategoryId, transactionDb);
+    await assertFeeStructureItemCategory(values.feeCategoryId, tx);
     const [created] = await tx
       .insert(schema.feeStructureItems)
       .values({ ...values, feeStructureId: structureId })
@@ -932,7 +926,7 @@ export async function addFeeStructureItem(
   return getFeeStructure(structureId, db);
 }
 
-async function assertFeeStructureItemCategory(categoryId: string, db: DatabaseInstance) {
+async function assertFeeStructureItemCategory(categoryId: string, db: DatabaseClient) {
   const category = await db
     .select({ id: schema.feeCategories.id, status: schema.feeCategories.status })
     .from(schema.feeCategories)
@@ -952,9 +946,8 @@ export async function updateFeeStructureItem(
 ) {
   const values = feeStructureItemUpdateInputSchema.parse(input);
   await db.transaction(async (tx) => {
-    const transactionDb = tx as unknown as DatabaseInstance;
-    await lockFeeStructureForMutation(structureId, transactionDb);
-    if (await hasPostedAssessment(structureId, transactionDb)) {
+    await lockFeeStructureForMutation(structureId, tx);
+    if (await hasPostedAssessment(structureId, tx)) {
       throw new ValidationError(
         'Fee items are locked after an assessment is posted. Archive the structure instead.'
       );
@@ -976,7 +969,7 @@ export async function updateFeeStructureItem(
       name: values.name ?? current[0].name,
       amountCentavos: values.amountCentavos ?? current[0].amountCentavos,
     };
-    await assertFeeStructureItemCategory(next.feeCategoryId, transactionDb);
+    await assertFeeStructureItemCategory(next.feeCategoryId, tx);
     const [updated] = await tx
       .update(schema.feeStructureItems)
       .set(next)

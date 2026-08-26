@@ -11,6 +11,26 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends('next/core-web-vitals'),
+  ...compat.config({
+    plugins: ['@typescript-eslint'],
+    overrides: [
+      {
+        files: ['src/server/**/*.ts', 'src/db/**/*.ts', 'src/app/api/**/*.ts', 'src/lib/**/*.ts'],
+        parserOptions: {
+          project: './tsconfig.json',
+        },
+        rules: {
+          '@typescript-eslint/no-floating-promises': 'error',
+          '@typescript-eslint/no-misused-promises': [
+            'error',
+            {
+              checksVoidReturn: false,
+            },
+          ],
+        },
+      },
+    ],
+  }),
   {
     ignores: ['.next/', 'node_modules/', 'playwright-report/', 'dist/'],
   },

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
@@ -17,6 +18,7 @@ import { formatCentavos } from '@/lib/utils/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -53,6 +55,7 @@ export function PaymentSubmissionQueue() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [completedReview, setCompletedReview] = useState<PortalPaymentSubmission | null>(null);
 
   useEffect(() => {
     setPage(1);
@@ -95,14 +98,23 @@ export function PaymentSubmissionQueue() {
         }
       );
     },
-    onSuccess: (_result, action) => {
+    onSuccess: (result, action) => {
+      const reviewedId = selectedId;
       setNotice(
         action === 'approve' ? 'Payment proof approved and posted.' : 'Payment proof rejected.'
       );
       setRequestError(null);
       setRejectionReason('');
+      setCompletedReview(result);
+      setSelectedId(null);
+      setSearch('');
+      setChannel('');
+      setStatus('PENDING_VERIFICATION');
+      setPage(1);
       void queryClient.invalidateQueries({ queryKey: ['admin-payment-submissions'] });
-      void queryClient.invalidateQueries({ queryKey: ['admin-payment-submission', selectedId] });
+      if (reviewedId) {
+        void queryClient.invalidateQueries({ queryKey: ['admin-payment-submission', reviewedId] });
+      }
     },
     onError: (error) => {
       setNotice(null);
@@ -152,6 +164,58 @@ export function PaymentSubmissionQueue() {
         <p role="alert" className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {requestError}
         </p>
+      )}
+      {completedReview && (
+        <Card
+          aria-live="polite"
+          className={
+            completedReview.status === 'APPROVED'
+              ? 'border-emerald-200 bg-emerald-50/70'
+              : 'border-amber-200 bg-amber-50/70'
+          }
+        >
+          <CardContent className="flex flex-wrap items-start justify-between gap-4 p-4">
+            <div className="flex items-start gap-3">
+              {completedReview.status === 'APPROVED' ? (
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+              ) : (
+                <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+              )}
+              <div>
+                <p className="text-sm font-semibold">
+                  {completedReview.status === 'APPROVED'
+                    ? 'Payment proof approved and posted.'
+                    : 'Payment proof rejected.'}
+                </p>
+                <p className="mt-1 text-xs text-slate-600">
+                  {completedReview.studentName} · {completedReview.referenceNumber}
+                </p>
+                {completedReview.rejectionReason && (
+                  <p className="mt-2 text-xs text-amber-800">
+                    Reason: {completedReview.rejectionReason}
+                  </p>
+                )}
+                {completedReview.approvedPaymentId && (
+                  <Link
+                    href={`/admin/transactions/${completedReview.approvedPaymentId}`}
+                    className="mt-2 inline-flex text-xs font-semibold text-emerald-800 underline"
+                  >
+                    View posted transaction
+                  </Link>
+                )}
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setCompletedReview(null)}
+            >
+              Dismiss
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       <Card>
@@ -216,9 +280,10 @@ export function PaymentSubmissionQueue() {
           <Card className="overflow-hidden">
             <CardContent className="p-0">
               {items.length === 0 ? (
-                <p className="p-8 text-center text-sm text-slate-500">
-                  No matching payment proofs.
-                </p>
+                <EmptyState
+                  title="No matching payment proofs"
+                  description="Try another status, channel, or search term."
+                />
               ) : (
                 <Table>
                   <TableHeader>
@@ -233,8 +298,21 @@ export function PaymentSubmissionQueue() {
                     {items.map((item) => (
                       <TableRow
                         key={item.id}
+                        tabIndex={0}
+                        aria-selected={selectedId === item.id}
+                        aria-label={`Review payment proof for ${item.studentName}, ${item.referenceNumber}`}
                         className={selectedId === item.id ? 'bg-blue-50/70' : 'cursor-pointer'}
-                        onClick={() => setSelectedId(item.id)}
+                        onClick={() => {
+                          setCompletedReview(null);
+                          setSelectedId(item.id);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setCompletedReview(null);
+                            setSelectedId(item.id);
+                          }
+                        }}
                       >
                         <TableCell>
                           <p className="text-xs font-semibold">{item.studentName}</p>
@@ -300,6 +378,14 @@ export function PaymentSubmissionQueue() {
               {detailQuery.isLoading && <p className="text-slate-500">Loading submission…</p>}
               {detailQuery.isError && (
                 <p className="text-rose-600">{getClientErrorMessage(detailQuery.error)}</p>
+              )}
+              {!selected && !detailQuery.isLoading && !detailQuery.isError && (
+                <EmptyState
+                  title="Select a payment proof"
+                  description="Choose a row from the queue to review its proof, balance, and decision history."
+                  icon={FileImage}
+                  className="border-0 bg-slate-50/70 p-6 dark:bg-slate-900/50"
+                />
               )}
               {selected && (
                 <>

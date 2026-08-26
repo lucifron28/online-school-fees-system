@@ -84,7 +84,7 @@ $env:TEST_DB_RESET_CONFIRMATION = 'RESET_TEST_DATABASE'
 pnpm db:test:reset
 ```
 
-The reset commands refuse production mode, missing confirmations, and unsafe database-target combinations. Run `pnpm db:verify:migrations` after `pnpm db:migrate` to verify the committed contract on a configured test database. Localhost PostgreSQL URLs use the node-postgres adapter; remote demo URLs continue to use Neon.
+The reset commands refuse production mode, missing confirmations, and unsafe database-target combinations. Run `pnpm db:verify:migrations` after `pnpm db:migrate` to verify the committed contract on a configured test database. Both local PostgreSQL and remote Neon deployments standardize on Drizzle's transaction-capable node-postgres (`pg` Pool) adapter with full interactive transaction and row-locking support.
 
 ## Available scripts
 

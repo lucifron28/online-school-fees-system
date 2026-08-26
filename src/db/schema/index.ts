@@ -3,6 +3,7 @@ import {
   check,
   customType,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -10,6 +11,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -484,6 +486,10 @@ export const studentAssessments = pgTable(
       table.schoolYearId,
       table.assessmentPeriod
     ),
+    idStudentUnique: unique('student_assessments_id_student_id_unique').on(
+      table.id,
+      table.studentId
+    ),
     studentStatusIndex: index('student_assessments_student_status_idx').on(
       table.studentId,
       table.status
@@ -537,12 +543,16 @@ export const adjustments = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    assessmentStudentFk: foreignKey({
+      columns: [table.assessmentId, table.studentId],
+      foreignColumns: [studentAssessments.id, studentAssessments.studentId],
+      name: 'adjustments_assessment_id_student_id_fk',
+    }),
     amountPositive: check('adjustments_amount_positive', sql`${table.amountCentavos} > 0`),
     assessmentIndex: index('adjustments_assessment_idx').on(table.assessmentId),
     studentIndex: index('adjustments_student_idx').on(table.studentId),
   })
 );
-
 export const ledgerEntries = pgTable(
   'ledger_entries',
   {
@@ -559,6 +569,11 @@ export const ledgerEntries = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    assessmentStudentFk: foreignKey({
+      columns: [table.assessmentId, table.studentId],
+      foreignColumns: [studentAssessments.id, studentAssessments.studentId],
+      name: 'ledger_entries_assessment_id_student_id_fk',
+    }),
     amountsNonNegative: check(
       'ledger_entries_amounts_non_negative',
       sql`${table.debitCentavos} >= 0 AND ${table.creditCentavos} >= 0 AND ${table.balanceCentavos} >= 0`
@@ -574,7 +589,6 @@ export const ledgerEntries = pgTable(
     assessmentIndex: index('ledger_entries_assessment_idx').on(table.assessmentId),
   })
 );
-
 // ---------------------------------------------------------------------------
 // Payment, Receipt, Reversal & Audit Domain Tables (Phase 4)
 // ---------------------------------------------------------------------------
@@ -597,6 +611,11 @@ export const payments = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    assessmentStudentFk: foreignKey({
+      columns: [table.assessmentId, table.studentId],
+      foreignColumns: [studentAssessments.id, studentAssessments.studentId],
+      name: 'payments_assessment_id_student_id_fk',
+    }),
     amountPositive: check('payments_amount_positive', sql`${table.amountCentavos} > 0`),
     studentStatusCreatedIndex: index('payments_student_status_created_idx').on(
       table.studentId,
@@ -632,6 +651,7 @@ export const paymentSubmissions = pgTable(
       .unique()
       .references(() => payments.id),
     idempotencyKey: text('idempotency_key').notNull().unique(),
+    legacyReviewerUnknown: boolean('legacy_reviewer_unknown').default(false).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -655,7 +675,7 @@ export const paymentSubmissions = pgTable(
     ),
     lifecycleConsistent: check(
       'payment_submissions_lifecycle_consistent',
-      sql`(${table.status} = 'PENDING_VERIFICATION' AND ${table.reviewedByUserId} IS NULL AND ${table.reviewedAt} IS NULL AND ${table.rejectionReason} IS NULL AND ${table.approvedPaymentId} IS NULL) OR (${table.status} = 'APPROVED' AND ${table.reviewedByUserId} IS NOT NULL AND ${table.reviewedAt} IS NOT NULL AND ${table.rejectionReason} IS NULL AND ${table.approvedPaymentId} IS NOT NULL) OR (${table.status} = 'REJECTED' AND ${table.reviewedByUserId} IS NOT NULL AND ${table.reviewedAt} IS NOT NULL AND ${table.rejectionReason} IS NOT NULL AND length(trim(${table.rejectionReason})) > 0 AND ${table.approvedPaymentId} IS NULL)`
+      sql`(${table.status} = 'PENDING_VERIFICATION' AND ${table.reviewedByUserId} IS NULL AND ${table.reviewedAt} IS NULL AND ${table.rejectionReason} IS NULL AND ${table.approvedPaymentId} IS NULL AND ${table.legacyReviewerUnknown} = false) OR (${table.status} = 'APPROVED' AND ${table.approvedPaymentId} IS NOT NULL AND ${table.rejectionReason} IS NULL AND ((${table.legacyReviewerUnknown} = false AND ${table.reviewedByUserId} IS NOT NULL AND ${table.reviewedAt} IS NOT NULL) OR (${table.legacyReviewerUnknown} = true AND ${table.reviewedByUserId} IS NULL AND ${table.reviewedAt} IS NULL))) OR (${table.status} = 'REJECTED' AND ${table.approvedPaymentId} IS NULL AND ${table.rejectionReason} IS NOT NULL AND length(trim(${table.rejectionReason})) > 0 AND ((${table.legacyReviewerUnknown} = false AND ${table.reviewedByUserId} IS NOT NULL AND ${table.reviewedAt} IS NOT NULL) OR (${table.legacyReviewerUnknown} = true AND ${table.reviewedByUserId} IS NULL AND ${table.reviewedAt} IS NULL)))`
     ),
     statusChannelCreatedIndex: index('payment_submissions_status_channel_created_idx').on(
       table.status,
@@ -961,6 +981,8 @@ export const notificationDeliveries = pgTable(
     status: notificationDeliveryStatusEnum('status').default('PENDING').notNull(),
     attemptCount: integer('attempt_count').default(0).notNull(),
     providerMessageId: text('provider_message_id'),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
     lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
     nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }),
     sentAt: timestamp('sent_at', { withTimezone: true }),
@@ -975,6 +997,10 @@ export const notificationDeliveries = pgTable(
     pendingIndex: index('notification_deliveries_status_next_attempt_idx').on(
       table.status,
       table.nextAttemptAt
+    ),
+    statusLeaseIndex: index('notification_deliveries_status_lease_idx').on(
+      table.status,
+      table.leaseExpiresAt
     ),
     attemptCountNonNegative: check(
       'notification_deliveries_attempt_count_non_negative',

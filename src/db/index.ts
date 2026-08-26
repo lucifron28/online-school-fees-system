@@ -1,14 +1,21 @@
-import { neon, NeonQueryFunction } from '@neondatabase/serverless';
-import { Pool } from 'pg';
-import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import { drizzle as drizzleNodePg } from 'drizzle-orm/node-postgres';
+import { Pool, type PoolConfig } from 'pg';
+import { drizzle, type NodePgDatabase, type NodePgQueryResultHKT } from 'drizzle-orm/node-postgres';
+import { type PgTransaction } from 'drizzle-orm/pg-core';
+import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import * as schema from './schema/index';
 
-export type DatabaseInstance = NeonHttpDatabase<typeof schema>;
+export type DatabaseSchema = typeof schema;
+export type DatabaseInstance = NodePgDatabase<DatabaseSchema>;
+export type TransactionInstance = PgTransaction<
+  NodePgQueryResultHKT,
+  DatabaseSchema,
+  ExtractTablesWithRelations<DatabaseSchema>
+>;
+export type DatabaseClient = DatabaseInstance | TransactionInstance;
 
 let _dbInstance: DatabaseInstance | null = null;
 let _missingDbInstance: DatabaseInstance | null = null;
-const localPoolInstances = new Map<string, Pool>();
+const poolInstances = new Map<string, Pool>();
 
 export const DATABASE_CONFIGURATION_ERROR =
   'DATABASE_URL environment variable is missing. Runtime database access requires a valid PostgreSQL connection string. Configure DATABASE_URL in the environment or .env.local file.';
@@ -21,15 +28,18 @@ function createMissingDatabaseClient(): DatabaseInstance {
   });
 }
 
-function shouldUseLocalPostgres(databaseUrl: string): boolean {
-  if (process.env.DATABASE_DRIVER === 'pg') return true;
+function parsePoolConfig(databaseUrl: string): PoolConfig {
+  const isSslRequired =
+    databaseUrl.includes('sslmode=require') ||
+    databaseUrl.includes('.neon.tech') ||
+    process.env.NODE_ENV === 'production';
 
-  try {
-    const hostname = new URL(databaseUrl).hostname;
-    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-  } catch {
-    return false;
-  }
+  return {
+    connectionString: databaseUrl,
+    ...(isSslRequired && !databaseUrl.includes('localhost') && !databaseUrl.includes('127.0.0.1')
+      ? { ssl: true }
+      : {}),
+  };
 }
 
 export function createDb(databaseUrl: string): DatabaseInstance {
@@ -37,17 +47,14 @@ export function createDb(databaseUrl: string): DatabaseInstance {
     throw new Error('A database URL is required to create a database client.');
   }
 
-  if (shouldUseLocalPostgres(databaseUrl)) {
-    const pool = localPoolInstances.get(databaseUrl) ?? new Pool({ connectionString: databaseUrl });
-    localPoolInstances.set(databaseUrl, pool);
-    // The Drizzle APIs used by the application are shared by both PostgreSQL drivers.
-    return drizzleNodePg(pool, { schema }) as unknown as DatabaseInstance;
+  let pool = poolInstances.get(databaseUrl);
+  if (!pool) {
+    pool = new Pool(parsePoolConfig(databaseUrl));
+    poolInstances.set(databaseUrl, pool);
   }
 
-  const sql: NeonQueryFunction<boolean, boolean> = neon(databaseUrl);
-  return drizzle(sql, { schema });
+  return drizzle(pool, { schema });
 }
-
 /**
  * Server-only database accessor.
  * Returns the Drizzle ORM database client initialized with Neon PostgreSQL.

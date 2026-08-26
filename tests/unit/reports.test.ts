@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getManilaDateString,
   parseManilaDateStart,
+  reportPaginationSchema,
   resolveReportDateRange,
   type CollectionReportItem,
 } from '@/lib/reports';
@@ -58,5 +59,19 @@ describe('Financial Reports & Reconciliation Logic', () => {
     expect(range.to).toBe('2026-08-09');
     expect(range.start).toEqual(parseManilaDateStart('2026-08-01'));
     expect(range.end).toEqual(parseManilaDateStart('2026-08-10'));
+  });
+
+  it('validates report pagination parameters with Zod schema', () => {
+    const defaultPagination = reportPaginationSchema.parse({});
+    expect(defaultPagination.page).toBe(1);
+    expect(defaultPagination.pageSize).toBe(20);
+
+    const customPagination = reportPaginationSchema.parse({ page: '3', pageSize: '12' });
+    expect(customPagination.page).toBe(3);
+    expect(customPagination.pageSize).toBe(12);
+
+    expect(() => reportPaginationSchema.parse({ page: '-1' })).toThrow();
+    expect(() => reportPaginationSchema.parse({ pageSize: '0' })).toThrow();
+    expect(() => reportPaginationSchema.parse({ pageSize: '150' })).toThrow();
   });
 });

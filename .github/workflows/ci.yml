@@ -1,6 +1,7 @@
 name: Foundation CI
 
 on:
+  workflow_dispatch:
   push:
     branches: ['*', 'main', 'feat/*', 'fix/*']
   pull_request:
@@ -117,6 +118,11 @@ jobs:
 
       - name: Run Playwright E2E Smoke Tests
         run: pnpm test:e2e
+
+      - name: Repeat isolated Maya rejection browser test
+        run: >-
+          pnpm exec playwright test tests/e2e/authenticated-workflows.spec.ts --grep
+          "browser-only UI rejects a manual Maya proof" --repeat-each=10
 
       - name: Upload Playwright Report on Failure
         if: failure()

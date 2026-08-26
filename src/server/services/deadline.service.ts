@@ -1,10 +1,9 @@
-import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
-import { getDb, type DatabaseInstance } from '@/db';
+import { and, asc, eq, isNotNull, lte, sql } from 'drizzle-orm';
+import { getDb, type DatabaseClient, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import { evaluateDeadline, type DeadlineState, type PaymentBalanceStatus } from '@/lib/deadlines';
-import { getManilaDateString } from '@/lib/reports';
+import { addManilaDays, getManilaDateString } from '@/lib/reports';
 import { getOrCreateSchoolSettings } from './administration.service';
-import { calculateBalanceFromEntries } from './assessment.service';
 
 export interface AssessmentDeadlineMonitorItem {
   assessmentId: string;
@@ -28,10 +27,30 @@ export interface DeadlineSummary {
 }
 
 export async function listAssessmentDeadlineMonitor(
-  input: { now?: Date; limit?: number } = {},
-  db: DatabaseInstance = getDb()
+  input: { now?: Date; limit?: number; offset?: number } = {},
+  db: DatabaseClient = getDb()
 ): Promise<AssessmentDeadlineMonitorItem[]> {
-  const rows = await db
+  const settings = await getOrCreateSchoolSettings(db);
+  const today = getManilaDateString(input.now);
+  const maxDueDate = addManilaDays(today, settings.reminderLeadDays);
+
+  const ledgerTotals = db
+    .select({
+      assessmentId: schema.ledgerEntries.assessmentId,
+      debitCentavos: sql<number>`coalesce(sum(${schema.ledgerEntries.debitCentavos}), 0)`.as(
+        'debit_centavos'
+      ),
+      creditCentavos: sql<number>`coalesce(sum(${schema.ledgerEntries.creditCentavos}), 0)`.as(
+        'credit_centavos'
+      ),
+    })
+    .from(schema.ledgerEntries)
+    .groupBy(schema.ledgerEntries.assessmentId)
+    .as('deadline_ledger_totals');
+
+  const balanceExpr = sql<number>`coalesce(${ledgerTotals.debitCentavos}, 0) - coalesce(${ledgerTotals.creditCentavos}, 0)`;
+
+  let query = db
     .select({
       assessmentId: schema.studentAssessments.id,
       studentId: schema.studentAssessments.studentId,
@@ -41,6 +60,7 @@ export async function listAssessmentDeadlineMonitor(
       feeStructureName: schema.feeStructures.name,
       dueDate: schema.studentAssessments.dueDate,
       createdAt: schema.studentAssessments.createdAt,
+      balanceCentavos: sql<number>`coalesce(${balanceExpr}, ${schema.studentAssessments.totalAmountCentavos})`,
     })
     .from(schema.studentAssessments)
     .innerJoin(schema.students, eq(schema.students.id, schema.studentAssessments.studentId))
@@ -48,43 +68,31 @@ export async function listAssessmentDeadlineMonitor(
       schema.feeStructures,
       eq(schema.feeStructures.id, schema.studentAssessments.feeStructureId)
     )
+    .leftJoin(ledgerTotals, eq(ledgerTotals.assessmentId, schema.studentAssessments.id))
     .where(
       and(
         eq(schema.studentAssessments.status, 'POSTED'),
-        isNotNull(schema.studentAssessments.dueDate)
+        isNotNull(schema.studentAssessments.dueDate),
+        lte(schema.studentAssessments.dueDate, maxDueDate),
+        sql`coalesce(${balanceExpr}, ${schema.studentAssessments.totalAmountCentavos}) > 0`
       )
     )
-    .orderBy(asc(schema.studentAssessments.dueDate), asc(schema.studentAssessments.createdAt));
+    .orderBy(asc(schema.studentAssessments.dueDate), asc(schema.studentAssessments.id));
 
-  if (rows.length === 0) return [];
-  const assessmentIds = rows.map((row) => row.assessmentId);
-  const [ledgerEntries, settings] = await Promise.all([
-    db
-      .select({
-        assessmentId: schema.ledgerEntries.assessmentId,
-        debitCentavos: schema.ledgerEntries.debitCentavos,
-        creditCentavos: schema.ledgerEntries.creditCentavos,
-      })
-      .from(schema.ledgerEntries)
-      .where(inArray(schema.ledgerEntries.assessmentId, assessmentIds)),
-    getOrCreateSchoolSettings(db),
-  ]);
-  const entriesByAssessment = new Map<
-    string,
-    Array<{ debitCentavos: number; creditCentavos: number }>
-  >();
-  for (const entry of ledgerEntries) {
-    if (!entry.assessmentId) continue;
-    const current = entriesByAssessment.get(entry.assessmentId) ?? [];
-    current.push(entry);
-    entriesByAssessment.set(entry.assessmentId, current);
+  if (input.limit !== undefined) {
+    const limit = Math.max(Math.trunc(input.limit), 0);
+    query = query.limit(limit) as typeof query;
+  }
+  if (input.offset !== undefined) {
+    const offset = Math.max(Math.trunc(input.offset), 0);
+    query = query.offset(offset) as typeof query;
   }
 
-  const today = getManilaDateString(input.now);
+  const rows = await query;
+  if (rows.length === 0) return [];
+
   const evaluated = rows.map((row) => {
-    const balanceCentavos = calculateBalanceFromEntries(
-      entriesByAssessment.get(row.assessmentId) ?? []
-    );
+    const balanceCentavos = Number(row.balanceCentavos);
     const dueDate = row.dueDate!;
     const deadline = evaluateDeadline({
       balanceCentavos,
@@ -107,12 +115,9 @@ export async function listAssessmentDeadlineMonitor(
     } satisfies AssessmentDeadlineMonitorItem;
   });
 
-  const matching = evaluated.filter(
+  return evaluated.filter(
     (item) => item.deadlineState === 'DUE_SOON' || item.deadlineState === 'OVERDUE'
   );
-  if (input.limit === undefined) return matching;
-  const limit = Math.max(Math.trunc(input.limit), 0);
-  return matching.slice(0, limit);
 }
 
 export async function getDeadlineSummary(

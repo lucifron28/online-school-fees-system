@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { reportPaginationSchema } from '@/lib/reports';
 import { requireRequestAuth } from '@/server/auth/guards';
 import { routeErrorResponse } from '@/server/http';
 import { ReportService } from '@/server/services/report.service';
@@ -6,7 +7,11 @@ import { ReportService } from '@/server/services/report.service';
 export async function GET(request: Request) {
   try {
     await requireRequestAuth(request, ['ADMIN', 'FINANCE_STAFF']);
-    return NextResponse.json({ items: await ReportService.getOutstandingBalanceReport() });
+    const params = new URL(request.url).searchParams;
+    const pagination = reportPaginationSchema.parse(Object.fromEntries(params));
+    return NextResponse.json(
+      await ReportService.getOutstandingBalanceReportPage(pagination.page, pagination.pageSize)
+    );
   } catch (error) {
     return routeErrorResponse(error);
   }

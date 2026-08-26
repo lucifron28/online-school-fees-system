@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   ConsoleEmailProvider,
+  DELIVERY_LEASE_MS,
   getEmailProvider,
+  MAX_DELIVERY_ATTEMPTS,
   ResendEmailProvider,
 } from '@/server/services/notification.service';
 import { notificationListInputSchema, notificationTypeSchema } from '@/lib/notifications';
@@ -42,5 +44,10 @@ describe('Notifications', () => {
     expect(notificationListInputSchema.parse({ limit: '25' }).limit).toBe(25);
     expect(notificationTypeSchema.parse('RECEIPT_AVAILABLE')).toBe('RECEIPT_AVAILABLE');
     expect(() => notificationListInputSchema.parse({ limit: 101 })).toThrow();
+  });
+
+  it('enforces crash-recovery lease duration and maximum delivery attempt limits', () => {
+    expect(MAX_DELIVERY_ATTEMPTS).toBe(3);
+    expect(DELIVERY_LEASE_MS).toBe(300000); // 5 minutes in milliseconds
   });
 });

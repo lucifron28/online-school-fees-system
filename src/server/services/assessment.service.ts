@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray } from 'drizzle-orm';
-import { getDb, type DatabaseInstance } from '@/db';
+import { getDb, type DatabaseClient, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import {
   assessmentGenerateInputSchema,
@@ -100,7 +100,7 @@ export function assertStudentAssessmentReconciliation(
 }
 
 async function insertAuditLog(
-  db: DatabaseInstance,
+  db: DatabaseClient,
   input: {
     userId?: string | null;
     action: string;
@@ -118,7 +118,7 @@ async function insertAuditLog(
   });
 }
 
-async function selectStudent(studentId: string, db: DatabaseInstance) {
+async function selectStudent(studentId: string, db: DatabaseClient) {
   const rows = await db
     .select({
       id: schema.students.id,
@@ -136,7 +136,7 @@ async function selectStudent(studentId: string, db: DatabaseInstance) {
   return rows[0];
 }
 
-async function selectAssessment(id: string, db: DatabaseInstance) {
+async function selectAssessment(id: string, db: DatabaseClient) {
   const rows = await db
     .select({
       id: schema.studentAssessments.id,
@@ -329,14 +329,12 @@ export class AssessmentService {
       throw new ValidationError('An authenticated user is required to post an assessment.');
     }
     const created = await db.transaction(async (tx) => {
-      const transactionDb = tx as unknown as DatabaseInstance;
-      const student = await lockStudentForLedgerMutation(values.studentId, transactionDb);
+      const student = await lockStudentForLedgerMutation(values.studentId, tx);
       if (student.status !== 'ACTIVE') {
         throw new ValidationError('Only active students can receive a new assessment.');
       }
       // When both rows are needed, the invariant is student lock -> fee structure lock.
-      await lockFeeStructureForMutation(values.feeStructureId, transactionDb);
-
+      await lockFeeStructureForMutation(values.feeStructureId, tx);
       const structures = await tx
         .select({
           id: schema.feeStructures.id,
@@ -392,7 +390,7 @@ export class AssessmentService {
         (total, item) => addCentavos(total, item.amountCentavos),
         0
       );
-      const settings = await getOrCreateSchoolSettings(transactionDb);
+      const settings = await getOrCreateSchoolSettings(tx);
       const dueDate =
         values.dueDate ?? calculateAssessmentDueDate(new Date(), settings.defaultPaymentTermDays);
 
@@ -454,7 +452,7 @@ export class AssessmentService {
         balanceCentavos: nextBalance,
         description: `Assessment posted from ${structure.name}`,
       });
-      await insertAuditLog(tx as unknown as DatabaseInstance, {
+      await insertAuditLog(tx, {
         userId: actorUserId,
         action: 'ASSESSMENT_POSTED',
         entityType: 'ASSESSMENT',
@@ -482,9 +480,8 @@ export class AssessmentService {
       throw new ValidationError('An authenticated approver is required for an adjustment.');
     }
     const created = await db.transaction(async (tx) => {
-      const transactionDb = tx as unknown as DatabaseInstance;
-      await lockStudentForLedgerMutation(values.studentId, transactionDb);
-      const assessment = await selectAssessment(values.assessmentId, transactionDb);
+      await lockStudentForLedgerMutation(values.studentId, tx);
+      const assessment = await selectAssessment(values.assessmentId, tx);
       if (assessment.studentId !== values.studentId) {
         throw new ValidationError('The adjustment student does not match the assessment.');
       }
@@ -531,7 +528,7 @@ export class AssessmentService {
         balanceCentavos: nextBalance,
         description: values.reason,
       });
-      await insertAuditLog(tx as unknown as DatabaseInstance, {
+      await insertAuditLog(tx, {
         userId: actorUserId,
         action: 'ASSESSMENT_ADJUSTED',
         entityType: 'ADJUSTMENT',

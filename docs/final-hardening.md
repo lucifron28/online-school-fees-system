@@ -23,7 +23,27 @@ This document records the final audit protections for the fictional, single-scho
 ## Privacy, recipients, and pagination
 
 - Notification recipient queries exclude inactive users. The console provider logs only delivery metadata and a truncated recipient hash; it never logs email addresses, subject text, message bodies, names, or financial content.
-- Admin proof review and parent proof history use server-side pagination. The UI displays page state and totals instead of loading an unbounded history into the browser.
+- Admin proof review, portal payment history, child-detail previews, and finance collection/outstanding/reversal reports use SQL `LIMIT`/`OFFSET` queries with total counts. The UI displays page state and totals instead of rendering an unbounded table; full CSV exports remain explicit download operations.
+
+## Reviewer attribution and demo fixtures
+
+- Migration `0008_normal_shotgun.sql` is a forward correction for the already-applied `0007` lifecycle migration. It clears unverifiable legacy submitter/self-review attribution while preserving the terminal decision, and permits an explicitly unknown reviewer as `NULL`; new approval and rejection paths still require the actual finance/admin reviewer.
+- The disposable demo reset clears announcements and payment-proof rows before reseeding deterministic published announcements plus one approved GCash and one rejected Maya proof. Do not run the reset against a shared or production database.
+
+## UI/UX and presentation hardening
+
+- Parent, student, finance, and administrator navigation use segment-aware route matching, so `/parent/payment-submissions` cannot also activate `/parent/pay`; detail pages resolve semantic titles instead of displaying a generic dashboard title.
+- Zero balances use paid/neutral-positive semantics, dashboards show bounded previews, and genuinely large history/report surfaces use server pagination rather than loading an unbounded client collection. Existing paginated surfaces were not given duplicate pagination.
+- Payment-proof mutations leave an explicit success/rejection state, announcement previews have skeleton/error/retry states, and the proof upload uses an accessible labeled control with MIME, size, filename, remove/replace, and safe image-preview behavior.
+- The final desktop audit was run at 1440x900. The retained production capture set is under `artifacts/qa/final-audit-2026-08-17`; preview screenshot capture was attempted after the code fix but the browser CDP timed out on the long pages, so no unverifiable replacement images were added.
+
+## Maya E2E stability
+
+The flaky Maya rejection test was caused by selecting whichever seeded child happened to have a positive balance while the suite could mutate shared financial fixtures. The test now creates and targets an independently assessed, uniquely identified fictional student/reference, then performs the rejection through the browser and asserts the rejection reason plus unchanged balance. The full hosted suite passed 9 tests and the isolated Maya case passed 10/10 repetitions.
+
+## Preview deployment prerequisites
+
+The original Vercel Git preview had no Preview-scope database or Better Auth secret and failed with Better Auth's default-secret error. `resolveAuthBaseUrl` now uses the current Vercel preview URL when no explicit auth URL is configured, but Preview deployments still require `DATABASE_URL`, `DATABASE_DRIVER=pg`, and `BETTER_AUTH_SECRET` (plus the intended feature flags). A temporary CLI preview was validated against the disposable Neon branch `codex-ui-audit-20260817`, expiring 2026-08-24; production environment variables and production data were not changed.
 
 ## Verification checklist
 
@@ -41,3 +61,5 @@ pnpm test:e2e
 ```
 
 Database verifiers and integration tests must use an isolated `TEST_DATABASE_URL`; no demo or production database reset is part of this hardening pass.
+
+The latest hosted Foundation CI run also passed 21 unit-test files/85 tests, 7 PostgreSQL integration-test files/68 tests, formatting, linting, typecheck, production build, 9 Playwright tests, and the repeated 10-run Maya check. These results verify the pushed feature branch; they do not constitute production, accounting, security-certification, or real payment-provider approval.
