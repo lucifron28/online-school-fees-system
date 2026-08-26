@@ -65,4 +65,29 @@ test.describe('Foundation Application & Scaffold Navigation Smoke Tests', () => 
     await page.goto('/unknown-nonexistent-route');
     await expect(page.getByRole('heading', { name: 'Page Not Found' })).toBeVisible();
   });
+
+  test('verifies password show/hide toggle on login page', async ({ page }) => {
+    await page.goto('/login/admin');
+    const passwordInput = page.getByPlaceholder('Enter password');
+    await expect(passwordInput).toHaveAttribute('type', 'password');
+
+    const toggleButton = page.getByRole('button', { name: 'Show password' });
+    await expect(toggleButton).toBeVisible();
+
+    await toggleButton.click();
+    await expect(passwordInput).toHaveAttribute('type', 'text');
+    await expect(page.getByRole('button', { name: 'Hide password' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Hide password' }).click();
+    await expect(passwordInput).toHaveAttribute('type', 'password');
+  });
+
+  test('verifies application security headers on response', async ({ request }) => {
+    const response = await request.get('/login/admin');
+    const headers = response.headers();
+    expect(headers['x-content-type-options']).toBe('nosniff');
+    expect(headers['x-frame-options']).toBe('DENY');
+    expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+    expect(headers['content-security-policy']).toContain("default-src 'self'");
+  });
 });

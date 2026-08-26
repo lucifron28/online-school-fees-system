@@ -1,11 +1,27 @@
-import { and, asc, desc, eq, gt, inArray, isNull, lte, or } from 'drizzle-orm';
-import { getDb, type DatabaseInstance } from '@/db';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  or,
+  type SQL,
+} from 'drizzle-orm';
+import { getDb, type DatabaseClient, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import {
   announcementCreateInputSchema,
+  announcementListInputSchema,
   announcementUpdateInputSchema,
   type AnnouncementAudience,
   type AnnouncementCreateInput,
+  type AnnouncementListInput,
+  type AnnouncementListPage,
   type AnnouncementUpdateInput,
 } from '@/lib/announcements';
 import { isStudentPortalEnabled } from '@/server/services/administration.service';
@@ -38,17 +54,53 @@ async function dispatchIfPublished(
 }
 
 export async function listAnnouncements(
-  input: { includeArchived?: boolean } = {},
-  db: DatabaseInstance = getDb()
-) {
-  const statuses = input.includeArchived
-    ? (['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'] as const)
-    : (['DRAFT', 'SCHEDULED', 'PUBLISHED'] as const);
-  return db
+  input: Partial<AnnouncementListInput> = {},
+  db: DatabaseClient = getDb()
+): Promise<AnnouncementListPage> {
+  const values = announcementListInputSchema.parse(input);
+  const conditions: SQL[] = [];
+
+  if (values.status) {
+    conditions.push(eq(schema.announcements.status, values.status));
+  } else if (!values.includeArchived) {
+    conditions.push(inArray(schema.announcements.status, ['DRAFT', 'SCHEDULED', 'PUBLISHED']));
+  }
+
+  if (values.audience) {
+    conditions.push(eq(schema.announcements.audience, values.audience));
+  }
+
+  if (values.search) {
+    const search = `%${values.search}%`;
+    conditions.push(
+      or(ilike(schema.announcements.title, search), ilike(schema.announcements.body, search)) as SQL
+    );
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const pageSize = Math.min(100, Math.max(1, values.pageSize ?? 20));
+  const totalRows = await db.select({ total: count() }).from(schema.announcements).where(where);
+  const total = Number(totalRows[0]?.total ?? 0);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(pageCount, Math.max(1, values.page ?? 1));
+
+  const items = await db
     .select()
     .from(schema.announcements)
-    .where(inArray(schema.announcements.status, [...statuses]))
-    .orderBy(asc(schema.announcements.publishAt), asc(schema.announcements.createdAt));
+    .where(where)
+    .orderBy(desc(schema.announcements.createdAt), asc(schema.announcements.id))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  return {
+    items,
+    pagination: {
+      page,
+      pageSize,
+      total,
+      pageCount,
+    },
+  };
 }
 
 export async function createAnnouncement(

@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
-import { getDb, type DatabaseInstance } from '@/db';
+import { getDb, type DatabaseClient, type DatabaseInstance } from '@/db';
 import * as schema from '@/db/schema';
 import { getServerEnv } from '@/lib/env';
 import { parseReceiptSnapshot } from '@/lib/receipt-snapshot';
@@ -126,14 +126,31 @@ async function selectLedgerTotals(studentIds: string[], db: DatabaseInstance) {
   return totals;
 }
 
-async function selectParentChildIds(parentUserId: string, db: DatabaseInstance) {
-  const rows = await db
-    .select({ studentId: schema.students.id })
+async function selectParentChildrenProfiles(parentUserId: string, db: DatabaseClient) {
+  return db
+    .select({
+      studentId: schema.students.id,
+      studentNumber: schema.students.studentNumber,
+      firstName: schema.students.firstName,
+      lastName: schema.students.lastName,
+      email: schema.students.email,
+      gradeLevelName: schema.gradeLevels.name,
+      sectionName: schema.sections.name,
+      schoolYearName: schema.schoolYears.name,
+      status: schema.students.status,
+    })
     .from(schema.guardians)
     .innerJoin(schema.guardianStudents, eq(schema.guardianStudents.guardianId, schema.guardians.id))
     .innerJoin(schema.students, eq(schema.students.id, schema.guardianStudents.studentId))
-    .where(eq(schema.guardians.userId, parentUserId));
-  return rows.map((row) => row.studentId);
+    .leftJoin(schema.gradeLevels, eq(schema.gradeLevels.id, schema.students.gradeLevelId))
+    .leftJoin(schema.sections, eq(schema.sections.id, schema.students.sectionId))
+    .leftJoin(schema.schoolYears, eq(schema.schoolYears.id, schema.students.schoolYearId))
+    .where(eq(schema.guardians.userId, parentUserId))
+    .orderBy(
+      asc(schema.students.lastName),
+      asc(schema.students.firstName),
+      asc(schema.students.id)
+    );
 }
 
 async function assertStudentPortalEnabled() {
@@ -380,18 +397,14 @@ export async function listOwnedPaymentsPage(
 
 export async function getParentChildren(
   parentUserId: string,
-  db: DatabaseInstance = getDb()
+  db: DatabaseClient = getDb()
 ): Promise<LinkedChildSummary[]> {
-  const studentIds = await selectParentChildIds(parentUserId, db);
-  if (studentIds.length === 0) return [];
+  const students = await selectParentChildrenProfiles(parentUserId, db);
+  if (students.length === 0) return [];
 
-  const [students, totals] = await Promise.all([
-    Promise.all(studentIds.map((studentId) => selectStudentProfile(studentId, db))),
-    selectLedgerTotals(studentIds, db),
-  ]);
-  return students
-    .map((student) => toChildSummary(student, totals.get(student.studentId)))
-    .sort((a, b) => `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`));
+  const studentIds = students.map((s) => s.studentId);
+  const totals = await selectLedgerTotals(studentIds, db);
+  return students.map((student) => toChildSummary(student, totals.get(student.studentId)));
 }
 
 export async function getStudentAccountForUser(

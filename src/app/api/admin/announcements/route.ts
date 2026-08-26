@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import type { AnnouncementCreateInput } from '@/lib/announcements';
+import { announcementListInputSchema, type AnnouncementCreateInput } from '@/lib/announcements';
 import { requireRequestAuth } from '@/server/auth/guards';
 import { readJson, routeErrorResponse } from '@/server/http';
 import { createAnnouncement, listAnnouncements } from '@/server/services/announcement.service';
@@ -7,7 +7,9 @@ import { createAnnouncement, listAnnouncements } from '@/server/services/announc
 export async function GET(request: Request) {
   try {
     await requireRequestAuth(request, ['ADMIN', 'FINANCE_STAFF']);
-    return NextResponse.json(await listAnnouncements({ includeArchived: true }));
+    const params = new URL(request.url).searchParams;
+    const input = announcementListInputSchema.parse(Object.fromEntries(params));
+    return NextResponse.json(await listAnnouncements({ ...input, includeArchived: true }));
   } catch (error) {
     return routeErrorResponse(error);
   }

@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { getDb, type DatabaseInstance } from '../index';
@@ -14,6 +16,8 @@ import {
 import { ConsoleEmailProvider } from '../../server/services/notification.service';
 import { PaymentService } from '../../server/services/payment.service';
 
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 const fictionalPaymentProof = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64'

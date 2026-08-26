@@ -724,15 +724,19 @@ databaseContract('manual GCash and Maya payment verification PostgreSQL contract
     expect(rejected.reviewedAt).toBeTruthy();
     expect(await paymentRows(fixture.studentId)).toHaveLength(0);
     expect(ledgerBalance(await balanceRows(fixture.studentId))).toBe(100_000);
-    await db
-      .update(schema.paymentSubmissions)
-      .set({ reviewedByUserId: null, reviewedAt: null })
-      .where(eq(schema.paymentSubmissions.id, submission.id));
+    // Clearing reviewer metadata from a normal rejected submission is rejected by database lifecycle constraint
+    await expect(
+      db
+        .update(schema.paymentSubmissions)
+        .set({ reviewedByUserId: null, reviewedAt: null })
+        .where(eq(schema.paymentSubmissions.id, submission.id))
+    ).rejects.toThrow();
+
     expect(await getPaymentSubmission(submission.id, db)).toMatchObject({
       status: 'REJECTED',
-      reviewedByUserId: null,
-      reviewedAt: null,
+      reviewedByUserId: financeUserId,
       rejectionReason: 'The uploaded proof is not readable.',
+      approvedPaymentId: null,
     });
     expect((await notificationsFor(submission.id)).map((row) => row.type)).toContain(
       'PAYMENT_PROOF_REJECTED'

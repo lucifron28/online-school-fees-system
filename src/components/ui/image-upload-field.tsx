@@ -47,14 +47,14 @@ export function ImageUploadField({
         id={id}
         name={id}
         type="file"
-        className="sr-only"
+        className="peer sr-only"
         accept="image/jpeg,image/png,image/webp"
         aria-describedby={`${id}-hint${error ? ` ${id}-error` : ''}`}
         onChange={(event) => onChange(event.target.files?.[0] ?? null)}
       />
       <label
         htmlFor={id}
-        className="flex min-h-24 cursor-pointer items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center transition-colors focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 hover:border-blue-400 hover:bg-blue-50/60 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-blue-500"
+        className="flex min-h-24 cursor-pointer items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/60 peer-focus-visible:border-blue-500 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-blue-500"
       >
         <span className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300">
           <Upload className="h-5 w-5 text-blue-600" aria-hidden="true" />
