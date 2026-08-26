@@ -14,6 +14,10 @@ process.env.ENABLE_MOCK_PAYMENT_HARNESS = 'true';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const databaseContract = testDatabaseUrl ? describe : describe.skip;
+const expectedDemoStudentNumbers = Array.from(
+  { length: 20 },
+  (_, index) => `DEMO-${String(index + 1).padStart(4, '0')}`
+);
 
 function ledgerBalance(entries: Array<{ debitCentavos: number; creditCentavos: number }>) {
   return entries.reduce(
@@ -70,11 +74,21 @@ databaseContract('deterministic demo database workflow', () => {
     expect(activeYears).toHaveLength(1);
     expect(grades.length).toBeGreaterThanOrEqual(6);
     expect(sections.length).toBeGreaterThanOrEqual(12);
-    expect(students.filter((student) => student.studentNumber.startsWith('DEMO-'))).toHaveLength(
-      20
+    const demoStudents = students.filter((student) =>
+      expectedDemoStudentNumbers.includes(student.studentNumber)
     );
-    expect(guardians.filter((guardian) => guardian.email.includes('demo.school'))).toHaveLength(10);
-    expect(links).toHaveLength(20);
+    expect(demoStudents.map((student) => student.studentNumber).sort()).toEqual(
+      expectedDemoStudentNumbers
+    );
+    const demoStudentIds = new Set(demoStudents.map((student) => student.id));
+    const demoGuardians = guardians.filter((guardian) => guardian.email.includes('demo.school'));
+    expect(demoGuardians).toHaveLength(10);
+    const demoGuardianIds = new Set(demoGuardians.map((guardian) => guardian.id));
+    expect(
+      links.filter(
+        (link) => demoStudentIds.has(link.studentId) && demoGuardianIds.has(link.guardianId)
+      )
+    ).toHaveLength(expectedDemoStudentNumbers.length);
     expect(categories.length).toBeGreaterThanOrEqual(4);
     expect(structures.length).toBeGreaterThanOrEqual(6);
 
@@ -97,7 +111,18 @@ databaseContract('deterministic demo database workflow', () => {
     expect(partialStudent).toBeDefined();
 
     const assessments = await db.select().from(schema.studentAssessments);
-    expect(assessments).toHaveLength(20);
+    const demoStudentIds = new Set(
+      (
+        await db
+          .select({ id: schema.students.id })
+          .from(schema.students)
+          .where(inArray(schema.students.studentNumber, expectedDemoStudentNumbers))
+      ).map((student) => student.id)
+    );
+    const demoAssessments = assessments.filter((assessment) =>
+      demoStudentIds.has(assessment.studentId)
+    );
+    expect(demoAssessments).toHaveLength(expectedDemoStudentNumbers.length);
     const payments = await db.select().from(schema.payments);
     const receipts = await db.select().from(schema.receipts);
     const reversals = await db.select().from(schema.paymentReversals);

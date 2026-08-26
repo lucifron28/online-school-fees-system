@@ -43,7 +43,6 @@ databaseContract('Code Review Remediation Database Contract', () => {
   const createdAllocationIds: string[] = [];
   const createdReversalIds: string[] = [];
   const createdSubmissionIds: string[] = [];
-  const createdProofIds: string[] = [];
   const createdNotificationIds: string[] = [];
   const createdDeliveryIds: string[] = [];
   const createdAttemptIds: string[] = [];
@@ -64,10 +63,10 @@ databaseContract('Code Review Remediation Database Contract', () => {
         .delete(schema.notifications)
         .where(inArray(schema.notifications.id, createdNotificationIds));
     }
-    if (createdProofIds.length > 0) {
+    if (createdSubmissionIds.length > 0) {
       await db
         .delete(schema.paymentSubmissionProofs)
-        .where(inArray(schema.paymentSubmissionProofs.id, createdProofIds));
+        .where(inArray(schema.paymentSubmissionProofs.submissionId, createdSubmissionIds));
     }
     if (createdSubmissionIds.length > 0) {
       await db
