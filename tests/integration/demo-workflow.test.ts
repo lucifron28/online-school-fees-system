@@ -266,9 +266,7 @@ databaseContract('deterministic demo database workflow', () => {
     expect(secondStudent).toBeDefined();
 
     const children = await PortalService.getParentChildren(parent!.id, db);
-    expect(children.map((child) => child.studentNumber)).toEqual(
-      expect.arrayContaining(['DEMO-0001', 'DEMO-0002'])
-    );
+    expect(children.map((child) => child.studentNumber).sort()).toEqual(['DEMO-0001', 'DEMO-0002']);
     await expect(
       PortalService.verifyStudentAccess(studentUser!.id, firstStudent!.id, db)
     ).resolves.toBe(true);

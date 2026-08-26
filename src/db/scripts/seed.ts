@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import dotenv from 'dotenv';
 import path from 'path';
 import { createAuth } from '../../lib/auth/server';
@@ -422,6 +422,20 @@ async function ensureGuardianLinks(
     const guardian = guardians[index];
     if (!guardian) continue;
     const linkedStudents = students.slice(index * 2, index * 2 + 2);
+    const desiredStudentIds = new Set(linkedStudents.map((student) => student.id));
+    const existingLinks = await db
+      .select({ id: schema.guardianStudents.id, studentId: schema.guardianStudents.studentId })
+      .from(schema.guardianStudents)
+      .where(eq(schema.guardianStudents.guardianId, guardian.id));
+    const staleLinkIds = existingLinks
+      .filter((link) => !desiredStudentIds.has(link.studentId))
+      .map((link) => link.id);
+    if (staleLinkIds.length > 0) {
+      await db
+        .delete(schema.guardianStudents)
+        .where(inArray(schema.guardianStudents.id, staleLinkIds));
+    }
+
     for (const [studentIndex, student] of linkedStudents.entries()) {
       const existing = await db
         .select({ id: schema.guardianStudents.id })
