@@ -12,3 +12,4 @@
 - [x] The student sees the same posted payment and receipt in payment history.
 - [x] Administrator Transactions and Reports show the posted payment as reconciled.
 - [x] Final desktop captures show no horizontal overflow, clipped controls, or browser errors.
+- [x] Native Playwright recording completed in one 1440×900 Chromium context with zero page errors, console errors, HTTP errors, or overflow failures.

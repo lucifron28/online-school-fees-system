@@ -1,6 +1,6 @@
 # Core workflow desktop recording
 
-Captured on 2026-08-27 against `https://online-school-fees.vercel.app` with a 1440×900 desktop viewport at 100% zoom. The browser raster output is 1425×891 because the browser reserves space for its scrollbars and chrome.
+Captured on 2026-08-27 against `https://online-school-fees.vercel.app` with a 1440×900 desktop viewport at 100% zoom. The screenshots and native Playwright video are 1440×900.
 
 ## Demo sequence
 
@@ -25,11 +25,11 @@ Captured on 2026-08-27 against `https://online-school-fees.vercel.app` with a 14
 - `10-student-payment-history.jpg`
 - `11-admin-transactions-posted.jpg`
 - `12-admin-reports-reconciliation.jpg`
-- `core-workflow-desktop.mp4` — 40.75 seconds, 4 fps, verified readable.
+- `core-workflow-playwright.webm` — native Playwright `recordVideo` output, 1440×900, approximately 148 seconds at 25 fps.
 
 ## Recording notes
 
 - Use the four seeded demo accounts only. Do not show passwords in the recording.
 - The proof, payment, and account data shown here are fictional.
 - If a core step errors or shows overflow, stop the take, capture the issue, fix it on a feature branch, reset and reseed the demo data, and restart from step 1.
-- The MP4 is a continuous desktop walkthrough assembled from live browser frames captured during the verified run.
+- The WebM is a continuous desktop walkthrough recorded by Playwright from one Chromium browser context. It is not a slideshow assembled from screenshots.
