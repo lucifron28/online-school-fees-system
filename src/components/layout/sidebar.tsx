@@ -156,7 +156,12 @@ export function Sidebar({
           ? parentNav
           : studentNav;
 
-  const portalPath = role === 'parent' ? '/parent' : role === 'student' ? '/student' : '/admin';
+  const portalPath =
+    role === 'parent'
+      ? '/parent/dashboard'
+      : role === 'student'
+        ? '/student/dashboard'
+        : '/admin/dashboard';
   const roleTitle =
     role === 'admin'
       ? 'Administrator Portal'
