@@ -651,16 +651,15 @@ test.describe('authenticated financial workflow', () => {
         .getByLabel('Rejection reason (required to reject)')
         .fill('The fictional proof needs a clearer transfer reference.');
       await finance.getByRole('button', { name: 'Reject proof', exact: true }).click();
-      await expect(finance.getByRole('status')).toContainText(
-        'Payment proof rejected.',
-        { timeout: 15_000 }
-      );
+      await expect(finance.getByRole('status')).toContainText('Payment proof rejected.', {
+        timeout: 15_000,
+      });
       await expect(finance.getByLabel('Search student or reference')).toHaveValue('', {
         timeout: 15_000,
       });
-      await expect(
-        finance.getByText('Select a payment proof', { exact: true })
-      ).toBeVisible({ timeout: 15_000 });
+      await expect(finance.getByText('Select a payment proof', { exact: true })).toBeVisible({
+        timeout: 15_000,
+      });
 
       await parent.goto('/parent/payment-submissions');
       await expect(
@@ -675,9 +674,9 @@ test.describe('authenticated financial workflow', () => {
       await expect(
         parent.getByText(formatCentavos(beforeBalance), { exact: true }).first()
       ).toBeVisible({ timeout: 15_000 });
-      await expect(
-        parent.getByText('WITH REMAINING BALANCE', { exact: true }).first()
-      ).toBeVisible({ timeout: 15_000 });
+      await expect(parent.getByText('WITH REMAINING BALANCE', { exact: true }).first()).toBeVisible(
+        { timeout: 15_000 }
+      );
     } finally {
       await Promise.all([adminContext.close(), parentContext.close(), financeContext.close()]);
     }
