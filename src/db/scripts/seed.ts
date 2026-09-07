@@ -1160,6 +1160,53 @@ async function ensureDemoPaymentProofs(
               provider
             );
     }
+
+    await db
+      .update(schema.paymentSubmissionProofs)
+      .set({ createdAt: DEMO_NOW })
+      .where(eq(schema.paymentSubmissionProofs.submissionId, submission.id));
+
+    if (submission.approvedPaymentId) {
+      await db
+        .update(schema.payments)
+        .set({ createdAt: DEMO_NOW, updatedAt: DEMO_NOW })
+        .where(eq(schema.payments.id, submission.approvedPaymentId));
+      await db
+        .update(schema.receipts)
+        .set({ createdAt: DEMO_NOW })
+        .where(eq(schema.receipts.paymentId, submission.approvedPaymentId));
+      await db
+        .update(schema.paymentAllocations)
+        .set({ createdAt: DEMO_NOW })
+        .where(eq(schema.paymentAllocations.paymentId, submission.approvedPaymentId));
+      await db
+        .update(schema.ledgerEntries)
+        .set({ createdAt: DEMO_NOW })
+        .where(
+          and(
+            eq(schema.ledgerEntries.studentId, student.id),
+            eq(schema.ledgerEntries.entryType, 'PAYMENT')
+          )
+        );
+      await db
+        .update(schema.notifications)
+        .set({ createdAt: DEMO_NOW })
+        .where(eq(schema.notifications.entityId, submission.approvedPaymentId));
+      await db
+        .update(schema.paymentSubmissions)
+        .set({ createdAt: DEMO_NOW, updatedAt: DEMO_NOW, reviewedAt: DEMO_NOW })
+        .where(eq(schema.paymentSubmissions.id, submission.id));
+    } else {
+      await db
+        .update(schema.paymentSubmissions)
+        .set({
+          createdAt: DEMO_NOW,
+          updatedAt: DEMO_NOW,
+          reviewedAt: submission.reviewedAt ? DEMO_NOW : null,
+        })
+        .where(eq(schema.paymentSubmissions.id, submission.id));
+    }
+
     return submission;
   };
 
