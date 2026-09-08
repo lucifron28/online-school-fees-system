@@ -1,15 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LoginForm } from '@/components/auth/login-form';
 
+const { replace, signInEmail, signOut } = vi.hoisted(() => ({
+  replace: vi.fn(),
+  signInEmail: vi.fn(),
+  signOut: vi.fn(),
+}));
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace }),
 }));
 
 vi.mock('@/lib/auth/client', () => ({
-  signIn: { email: vi.fn() },
-  signOut: vi.fn(),
+  signIn: { email: signInEmail },
+  signOut,
 }));
 
 describe('LoginForm Password Show/Hide Control', () => {
@@ -60,5 +66,32 @@ describe('LoginForm Password Show/Hide Control', () => {
 
     expect(passwordInput).toHaveAttribute('type', 'password');
     expect(screen.getByRole('button', { name: 'Show password' })).toBeInTheDocument();
+  });
+
+  it('routes when Better Auth returns the authenticated user at the top level', async () => {
+    const user = userEvent.setup();
+    signInEmail.mockResolvedValue({
+      redirect: false,
+      token: 'test-token',
+      user: { role: 'ADMIN' },
+    });
+
+    render(
+      <LoginForm
+        portal="admin"
+        defaultEmail="admin@demo.school"
+        buttonLabel="Sign in"
+        accentClass="bg-blue-600"
+        linkClass="text-blue-700"
+        focusClass="focus-ring"
+      />
+    );
+
+    await user.type(screen.getByPlaceholderText('Enter password'), 'DemoPass123!');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/admin/dashboard'));
+    expect(signOut).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

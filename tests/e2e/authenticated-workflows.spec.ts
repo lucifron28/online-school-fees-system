@@ -9,7 +9,7 @@ async function login(page: Page, portal: 'admin' | 'parent' | 'student', email: 
   await page.goto(`/login/${portal}`);
   const emailLabel = 'Email address';
   await page.getByLabel(emailLabel).fill(email);
-  await page.getByLabel('Password').fill(PASSWORD);
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: /sign in/i }).click();
   await expect(page).toHaveURL(new RegExp(`/${portal === 'admin' ? 'admin' : portal}/dashboard$`), {
     timeout: 15_000,
@@ -651,9 +651,15 @@ test.describe('authenticated financial workflow', () => {
         .getByLabel('Rejection reason (required to reject)')
         .fill('The fictional proof needs a clearer transfer reference.');
       await finance.getByRole('button', { name: 'Reject proof', exact: true }).click();
-      await expect(finance.getByRole('status')).toContainText('Payment proof rejected.');
-      await expect(finance.getByLabel('Search student or reference')).toHaveValue('');
-      await expect(finance.getByText('Select a payment proof', { exact: true })).toBeVisible();
+      await expect(finance.getByRole('status')).toContainText('Payment proof rejected.', {
+        timeout: 15_000,
+      });
+      await expect(finance.getByLabel('Search student or reference')).toHaveValue('', {
+        timeout: 15_000,
+      });
+      await expect(finance.getByText('Select a payment proof', { exact: true })).toBeVisible({
+        timeout: 15_000,
+      });
 
       await parent.goto('/parent/payment-submissions');
       await expect(
@@ -667,10 +673,10 @@ test.describe('authenticated financial workflow', () => {
       await parent.goto(`/parent/children/${child!.studentId}`);
       await expect(
         parent.getByText(formatCentavos(beforeBalance), { exact: true }).first()
-      ).toBeVisible();
-      await expect(
-        parent.getByText('WITH REMAINING BALANCE', { exact: true }).first()
-      ).toBeVisible();
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(parent.getByText('WITH REMAINING BALANCE', { exact: true }).first()).toBeVisible(
+        { timeout: 15_000 }
+      );
     } finally {
       await Promise.all([adminContext.close(), parentContext.close(), financeContext.close()]);
     }

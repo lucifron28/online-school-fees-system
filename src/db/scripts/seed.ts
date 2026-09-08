@@ -1,19 +1,16 @@
-import { and, eq } from 'drizzle-orm';
+import { createHash } from 'node:crypto';
+import { and, eq, inArray } from 'drizzle-orm';
 import dotenv from 'dotenv';
 import path from 'path';
 import { createAuth } from '../../lib/auth/server';
 import { getReceiptProcessorName, receiptSnapshotSchema } from '../../lib/receipt-snapshot';
+import { normalizePaymentReference } from '../../lib/payment-submissions';
+import { formatCentavos } from '../../lib/utils/currency';
 import { getDb, type DatabaseInstance } from '../index';
 import * as schema from '../schema';
 import { logSanitizedError } from '../../server/logging';
 import { calculateAssessmentDueDate } from '../../lib/deadlines';
-import {
-  approvePaymentSubmission,
-  createPaymentSubmission,
-  getPaymentSubmission,
-  rejectPaymentSubmission,
-} from '../../server/services/payment-submission.service';
-import { ConsoleEmailProvider } from '../../server/services/notification.service';
+import { allocateReceiptNumber, getReceiptYear } from '../../server/services/receipt.service';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -26,7 +23,7 @@ export const DEMO_SCHOOL_YEAR_NAME = 'SY 2026–2027';
 export const DEMO_STUDENT_COUNT = 20;
 export const DEMO_GUARDIAN_COUNT = 10;
 
-const DEMO_NOW = new Date('2026-08-01T09:00:00+08:00');
+export const DEMO_NOW = new Date('2026-08-01T09:00:00+08:00');
 const DEMO_EXPIRY = new Date('2026-09-01T09:00:00+08:00');
 
 const gradesData = [
@@ -587,41 +584,128 @@ async function ensureSeedNotifications(
 ) {
   const recipients = [...new Set(await notificationRecipients(db, studentId))];
   for (const userId of recipients) {
-    const dedupeKey = `seed:${type}:${entityId}:${userId}`;
-    const existing = await db
-      .select({ id: schema.notifications.id })
-      .from(schema.notifications)
-      .where(eq(schema.notifications.dedupeKey, dedupeKey))
-      .limit(1);
-    if (existing[0]) continue;
-
-    const [notification] = await db
-      .insert(schema.notifications)
-      .values({
-        userId,
-        type,
-        dedupeKey,
-        entityType,
-        entityId,
-        title,
-        body,
-        createdAt: DEMO_NOW,
-      })
-      .returning();
-    if (!notification) throw new Error(`Notification ${dedupeKey} could not be seeded.`);
-
-    await db.insert(schema.notificationDeliveries).values({
-      notificationId: notification.id,
-      channel: 'CONSOLE',
-      status: 'SENT',
-      attemptCount: 1,
-      providerMessageId: `seed-console-${notification.id}`,
-      lastAttemptAt: DEMO_NOW,
-      sentAt: DEMO_NOW,
-      createdAt: DEMO_NOW,
-      updatedAt: DEMO_NOW,
+    await ensureDeterministicNotification(db, {
+      userId,
+      type,
+      dedupeKey: `seed:${type}:${entityId}:${userId}`,
+      entityType,
+      entityId,
+      title,
+      body,
     });
   }
+}
+
+async function ensureDeterministicNotification(
+  db: DatabaseInstance,
+  input: {
+    userId: string;
+    type: SeedNotificationType;
+    dedupeKey: string;
+    entityType: string;
+    entityId: string;
+    title: string;
+    body: string;
+  }
+) {
+  const existing = await db
+    .select({ id: schema.notifications.id })
+    .from(schema.notifications)
+    .where(eq(schema.notifications.dedupeKey, input.dedupeKey))
+    .limit(1);
+  const notificationId = existing[0]?.id;
+
+  let notification = notificationId
+    ? (
+        await db
+          .update(schema.notifications)
+          .set({
+            userId: input.userId,
+            type: input.type,
+            entityType: input.entityType,
+            entityId: input.entityId,
+            title: input.title,
+            body: input.body,
+            createdAt: DEMO_NOW,
+          })
+          .where(eq(schema.notifications.id, notificationId))
+          .returning()
+      )[0]
+    : undefined;
+
+  if (!notification) {
+    notification = (
+      await db
+        .insert(schema.notifications)
+        .values({
+          userId: input.userId,
+          type: input.type,
+          dedupeKey: input.dedupeKey,
+          entityType: input.entityType,
+          entityId: input.entityId,
+          title: input.title,
+          body: input.body,
+          createdAt: DEMO_NOW,
+        })
+        .returning()
+    )[0];
+  }
+  if (!notification) throw new Error(`Notification ${input.dedupeKey} could not be seeded.`);
+
+  const existingDelivery = await db
+    .select({ id: schema.notificationDeliveries.id })
+    .from(schema.notificationDeliveries)
+    .where(
+      and(
+        eq(schema.notificationDeliveries.notificationId, notification.id),
+        eq(schema.notificationDeliveries.channel, 'CONSOLE')
+      )
+    )
+    .limit(1);
+  const providerMessageId = `seed-console-${notification.id}`;
+  const deliveryId = existingDelivery[0]?.id;
+
+  if (deliveryId) {
+    await db
+      .update(schema.notificationDeliveries)
+      .set({
+        status: 'SENT',
+        attemptCount: 1,
+        providerMessageId,
+        claimedAt: null,
+        leaseExpiresAt: null,
+        lastAttemptAt: DEMO_NOW,
+        nextAttemptAt: null,
+        sentAt: DEMO_NOW,
+        errorMessage: null,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      })
+      .where(eq(schema.notificationDeliveries.id, deliveryId));
+    await db
+      .update(schema.notificationDeliveryAttempts)
+      .set({
+        status: 'SENT',
+        providerMessageId,
+        errorMessage: null,
+        attemptedAt: DEMO_NOW,
+        completedAt: DEMO_NOW,
+      })
+      .where(eq(schema.notificationDeliveryAttempts.deliveryId, deliveryId));
+    return;
+  }
+
+  await db.insert(schema.notificationDeliveries).values({
+    notificationId: notification.id,
+    channel: 'CONSOLE',
+    status: 'SENT',
+    attemptCount: 1,
+    providerMessageId,
+    lastAttemptAt: DEMO_NOW,
+    sentAt: DEMO_NOW,
+    createdAt: DEMO_NOW,
+    updatedAt: DEMO_NOW,
+  });
 }
 
 async function ensureAssessment(
@@ -1100,17 +1184,716 @@ async function ensureDemoPaymentProofs(
   students: SeedStudent[],
   assessments: Map<string, SeedAssessment>
 ) {
-  const provider = new ConsoleEmailProvider();
   const proof = {
     mimeType: 'image/png',
     originalFileName: 'demo-transfer-proof.png',
     data: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    sizeBytes: 8,
+    sha256: createHash('sha256')
+      .update(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+      .digest('hex'),
   };
 
   const studentFor = (studentNumber: string) => {
     const student = students.find((row) => row.studentNumber === studentNumber);
     if (!student) throw new Error(`No seeded student exists for ${studentNumber}.`);
     return student;
+  };
+
+  type ProofAllocation = {
+    targetType: 'ASSESSMENT_ITEM' | 'DEBIT_ADJUSTMENT';
+    name: string;
+    amountCentavos: number;
+  };
+
+  const buildReceiptSnapshot = async (
+    transactionDb: DatabaseInstance,
+    student: SeedStudent,
+    payment: SeedPayment,
+    receiptNumber: string,
+    verificationIdentifier: string,
+    allocations: ProofAllocation[],
+    balanceAfterPaymentCentavos: number
+  ) => {
+    const [settings, gradeRows, sectionRows, processorRows] = await Promise.all([
+      transactionDb.select().from(schema.schoolSettings).limit(1),
+      transactionDb
+        .select({ name: schema.gradeLevels.name })
+        .from(schema.gradeLevels)
+        .where(eq(schema.gradeLevels.id, student.gradeLevelId!))
+        .limit(1),
+      transactionDb
+        .select({ name: schema.sections.name })
+        .from(schema.sections)
+        .where(eq(schema.sections.id, student.sectionId!))
+        .limit(1),
+      transactionDb
+        .select({ name: schema.users.name })
+        .from(schema.users)
+        .where(eq(schema.users.id, financeUserId))
+        .limit(1),
+    ]);
+    const institution = settings[0];
+    return receiptSnapshotSchema.parse({
+      version: 1,
+      issuedAt: DEMO_NOW.toISOString(),
+      receiptNumber,
+      verificationIdentifier,
+      institution: {
+        name: institution?.schoolName ?? 'Online School Fees Monitoring & Payment System',
+        address: institution?.address ?? 'Fictional capstone demonstration',
+        email: institution?.email ?? 'info@schoolfees.example.com',
+        phone: institution?.phone ?? '+63 (2) 8123-4567',
+        timezone: institution?.timezone ?? 'Asia/Manila',
+      },
+      student: {
+        studentNumber: student.studentNumber,
+        name: `${student.firstName} ${student.lastName}`,
+        gradeAndSection: [gradeRows[0]?.name ?? student.gradeCode, sectionRows[0]?.name]
+          .filter(Boolean)
+          .join(' - '),
+      },
+      payment: {
+        amountCentavos: payment.amountCentavos,
+        paymentMethod: payment.paymentMethod,
+        referenceNumber: payment.referenceNumber,
+        balanceAfterPaymentCentavos,
+      },
+      processor: {
+        name: getReceiptProcessorName(payment.paymentMethod, processorRows[0]?.name),
+      },
+      allocations,
+    });
+  };
+
+  const ensureProofRecord = async (submissionId: string) => {
+    const existing = await db
+      .select({ id: schema.paymentSubmissionProofs.id })
+      .from(schema.paymentSubmissionProofs)
+      .where(eq(schema.paymentSubmissionProofs.submissionId, submissionId))
+      .limit(1);
+    if (existing[0]) {
+      await db
+        .update(schema.paymentSubmissionProofs)
+        .set({
+          mimeType: proof.mimeType,
+          originalFileName: proof.originalFileName,
+          sizeBytes: proof.sizeBytes,
+          sha256: proof.sha256,
+          data: proof.data,
+          createdAt: DEMO_NOW,
+        })
+        .where(eq(schema.paymentSubmissionProofs.id, existing[0].id));
+      return;
+    }
+    await db.insert(schema.paymentSubmissionProofs).values({
+      submissionId,
+      mimeType: proof.mimeType,
+      originalFileName: proof.originalFileName,
+      sizeBytes: proof.sizeBytes,
+      sha256: proof.sha256,
+      data: proof.data,
+      createdAt: DEMO_NOW,
+    });
+  };
+
+  const destinationFor = async (
+    transactionDb: DatabaseInstance,
+    paymentChannel: 'GCASH' | 'MAYA'
+  ) => {
+    const settings = await transactionDb.select().from(schema.schoolSettings).limit(1);
+    const institution = settings[0];
+    const destination =
+      paymentChannel === 'GCASH'
+        ? institution?.gcashEnabled &&
+          institution.gcashAccountName &&
+          institution.gcashAccountNumber
+          ? {
+              accountName: institution.gcashAccountName,
+              accountNumber: institution.gcashAccountNumber,
+            }
+          : null
+        : institution?.mayaEnabled && institution.mayaAccountName && institution.mayaAccountNumber
+          ? {
+              accountName: institution.mayaAccountName,
+              accountNumber: institution.mayaAccountNumber,
+            }
+          : null;
+    if (!destination) throw new Error(`${paymentChannel} proof submissions are not enabled.`);
+    return destination;
+  };
+
+  const createApprovedSubmission = async (input: {
+    student: SeedStudent;
+    assessment: SeedAssessment;
+    paymentChannel: 'GCASH' | 'MAYA';
+    amountCentavos: number;
+    referenceNumber: string;
+    idempotencyKey: string;
+  }) =>
+    db.transaction(async (tx) => {
+      const transactionDb = tx as unknown as DatabaseInstance;
+      const destination = await destinationFor(transactionDb, input.paymentChannel);
+      const ledgerRows = await tx
+        .select({
+          debitCentavos: schema.ledgerEntries.debitCentavos,
+          creditCentavos: schema.ledgerEntries.creditCentavos,
+        })
+        .from(schema.ledgerEntries)
+        .where(eq(schema.ledgerEntries.studentId, input.student.id));
+      const currentBalance = sumLedger(ledgerRows);
+      if (input.amountCentavos <= 0 || input.amountCentavos > currentBalance) {
+        throw new Error(
+          `Seed payment proof for ${input.student.studentNumber} exceeds the current balance.`
+        );
+      }
+
+      const assessmentItems = await tx
+        .select()
+        .from(schema.assessmentItems)
+        .where(eq(schema.assessmentItems.assessmentId, input.assessment.id));
+      let remaining = input.amountCentavos;
+      const allocations: Array<{
+        assessmentItemId: string;
+        name: string;
+        amountCentavos: number;
+      }> = [];
+      for (const item of assessmentItems) {
+        if (remaining === 0) break;
+        const prior = await tx
+          .select({ amountCentavos: schema.paymentAllocations.amountCentavos })
+          .from(schema.paymentAllocations)
+          .innerJoin(schema.payments, eq(schema.payments.id, schema.paymentAllocations.paymentId))
+          .where(
+            and(
+              eq(schema.paymentAllocations.assessmentItemId, item.id),
+              eq(schema.payments.status, 'POSTED')
+            )
+          );
+        const alreadyAllocated = prior.reduce((total, row) => total + row.amountCentavos, 0);
+        const available = Math.max(0, item.amountCentavos - alreadyAllocated);
+        const allocationAmount = Math.min(remaining, available);
+        if (allocationAmount > 0) {
+          allocations.push({
+            assessmentItemId: item.id,
+            name: item.name,
+            amountCentavos: allocationAmount,
+          });
+          remaining -= allocationAmount;
+        }
+      }
+      if (remaining !== 0) {
+        throw new Error(
+          `Seed payment proof for ${input.student.studentNumber} could not be allocated.`
+        );
+      }
+
+      const [payment] = await tx
+        .insert(schema.payments)
+        .values({
+          studentId: input.student.id,
+          assessmentId: input.assessment.id,
+          amountCentavos: input.amountCentavos,
+          paymentMethod: input.paymentChannel,
+          referenceNumber: input.referenceNumber,
+          idempotencyKey: `payment-submission:${input.idempotencyKey}`,
+          status: 'POSTED',
+          processedByUserId: financeUserId,
+          createdAt: DEMO_NOW,
+          updatedAt: DEMO_NOW,
+        })
+        .returning();
+      if (!payment) throw new Error('The deterministic GCash payment could not be seeded.');
+
+      await tx.insert(schema.paymentAllocations).values(
+        allocations.map((allocation) => ({
+          paymentId: payment.id,
+          assessmentItemId: allocation.assessmentItemId,
+          adjustmentId: null,
+          amountCentavos: allocation.amountCentavos,
+          createdAt: DEMO_NOW,
+        }))
+      );
+      await tx.insert(schema.ledgerEntries).values({
+        studentId: input.student.id,
+        assessmentId: input.assessment.id,
+        entryType: 'PAYMENT',
+        debitCentavos: 0,
+        creditCentavos: input.amountCentavos,
+        balanceCentavos: currentBalance - input.amountCentavos,
+        description: `Payment ${payment.id}`,
+        createdAt: DEMO_NOW,
+      });
+
+      const sequence = await allocateReceiptNumber(tx, DEMO_NOW);
+      await tx
+        .update(schema.receiptNumberSequences)
+        .set({ updatedAt: DEMO_NOW })
+        .where(
+          and(
+            eq(schema.receiptNumberSequences.prefix, sequence.prefix),
+            eq(schema.receiptNumberSequences.year, sequence.year)
+          )
+        );
+      const verificationIdentifier = `VER-${payment.id}`;
+      const receiptSnapshot = await buildReceiptSnapshot(
+        transactionDb,
+        input.student,
+        payment,
+        sequence.receiptNumber,
+        verificationIdentifier,
+        allocations.map((allocation) => ({
+          targetType: 'ASSESSMENT_ITEM' as const,
+          name: allocation.name,
+          amountCentavos: allocation.amountCentavos,
+        })),
+        currentBalance - input.amountCentavos
+      );
+      const [receipt] = await tx
+        .insert(schema.receipts)
+        .values({
+          paymentId: payment.id,
+          receiptNumber: sequence.receiptNumber,
+          verificationIdentifier,
+          status: 'ACTIVE',
+          issuanceSnapshot: receiptSnapshot,
+          createdAt: DEMO_NOW,
+        })
+        .returning();
+      if (!receipt) throw new Error('The deterministic payment receipt could not be seeded.');
+
+      const [submission] = await tx
+        .insert(schema.paymentSubmissions)
+        .values({
+          studentId: input.student.id,
+          submittedByUserId: parentUserId,
+          paymentChannel: input.paymentChannel,
+          amountCentavos: input.amountCentavos,
+          referenceNumber: input.referenceNumber,
+          normalizedReferenceNumber: normalizePaymentReference(input.referenceNumber),
+          destinationAccountName: destination.accountName,
+          destinationAccountNumber: destination.accountNumber,
+          paidAt: DEMO_NOW,
+          status: 'APPROVED',
+          reviewedByUserId: financeUserId,
+          reviewedAt: DEMO_NOW,
+          rejectionReason: null,
+          approvedPaymentId: payment.id,
+          idempotencyKey: input.idempotencyKey,
+          createdAt: DEMO_NOW,
+          updatedAt: DEMO_NOW,
+        })
+        .returning();
+      if (!submission) throw new Error('The deterministic approved proof could not be seeded.');
+
+      await tx.insert(schema.paymentSubmissionProofs).values({
+        submissionId: submission.id,
+        mimeType: proof.mimeType,
+        originalFileName: proof.originalFileName,
+        sizeBytes: proof.sizeBytes,
+        sha256: proof.sha256,
+        data: proof.data,
+        createdAt: DEMO_NOW,
+      });
+      await tx.insert(schema.auditLogs).values([
+        {
+          userId: parentUserId,
+          action: 'PAYMENT_PROOF_SUBMITTED',
+          entityType: 'PAYMENT_SUBMISSION',
+          entityId: submission.id,
+          details: JSON.stringify({
+            studentId: input.student.id,
+            paymentChannel: input.paymentChannel,
+            amountCentavos: input.amountCentavos,
+            referenceNumber: input.referenceNumber,
+            paidAt: DEMO_NOW.toISOString(),
+            proofMimeType: proof.mimeType,
+            proofSizeBytes: proof.sizeBytes,
+            proofSha256: proof.sha256,
+          }),
+          createdAt: DEMO_NOW,
+        },
+        {
+          userId: financeUserId,
+          action: 'PAYMENT_PROOF_APPROVED',
+          entityType: 'PAYMENT_SUBMISSION',
+          entityId: submission.id,
+          details: JSON.stringify({
+            submissionId: submission.id,
+            staffUserId: financeUserId,
+            paymentId: payment.id,
+            decision: 'APPROVED',
+          }),
+          createdAt: DEMO_NOW,
+        },
+        {
+          userId: financeUserId,
+          action: 'PAYMENT_POSTED',
+          entityType: 'PAYMENT',
+          entityId: payment.id,
+          details: JSON.stringify({
+            amountCentavos: input.amountCentavos,
+            paymentMethod: input.paymentChannel,
+            allocationCount: allocations.length,
+            idempotencyKey: `payment-submission:${input.idempotencyKey}`,
+          }),
+          createdAt: DEMO_NOW,
+        },
+        {
+          userId: financeUserId,
+          action: 'RECEIPT_ISSUED',
+          entityType: 'RECEIPT',
+          entityId: receipt.id,
+          details: JSON.stringify({ paymentId: payment.id, receiptNumber: sequence.receiptNumber }),
+          createdAt: DEMO_NOW,
+        },
+      ]);
+
+      return submission;
+    });
+
+  const createRejectedSubmission = async (input: {
+    student: SeedStudent;
+    paymentChannel: 'GCASH' | 'MAYA';
+    amountCentavos: number;
+    referenceNumber: string;
+    idempotencyKey: string;
+    rejectionReason: string;
+  }) =>
+    db.transaction(async (tx) => {
+      const destination = await destinationFor(
+        tx as unknown as DatabaseInstance,
+        input.paymentChannel
+      );
+      const [submission] = await tx
+        .insert(schema.paymentSubmissions)
+        .values({
+          studentId: input.student.id,
+          submittedByUserId: parentUserId,
+          paymentChannel: input.paymentChannel,
+          amountCentavos: input.amountCentavos,
+          referenceNumber: input.referenceNumber,
+          normalizedReferenceNumber: normalizePaymentReference(input.referenceNumber),
+          destinationAccountName: destination.accountName,
+          destinationAccountNumber: destination.accountNumber,
+          paidAt: DEMO_NOW,
+          status: 'REJECTED',
+          reviewedByUserId: financeUserId,
+          reviewedAt: DEMO_NOW,
+          rejectionReason: input.rejectionReason,
+          approvedPaymentId: null,
+          idempotencyKey: input.idempotencyKey,
+          createdAt: DEMO_NOW,
+          updatedAt: DEMO_NOW,
+        })
+        .returning();
+      if (!submission) throw new Error('The deterministic rejected proof could not be seeded.');
+
+      await tx.insert(schema.paymentSubmissionProofs).values({
+        submissionId: submission.id,
+        mimeType: proof.mimeType,
+        originalFileName: proof.originalFileName,
+        sizeBytes: proof.sizeBytes,
+        sha256: proof.sha256,
+        data: proof.data,
+        createdAt: DEMO_NOW,
+      });
+      await tx.insert(schema.auditLogs).values([
+        {
+          userId: parentUserId,
+          action: 'PAYMENT_PROOF_SUBMITTED',
+          entityType: 'PAYMENT_SUBMISSION',
+          entityId: submission.id,
+          details: JSON.stringify({
+            studentId: input.student.id,
+            paymentChannel: input.paymentChannel,
+            amountCentavos: input.amountCentavos,
+            referenceNumber: input.referenceNumber,
+            paidAt: DEMO_NOW.toISOString(),
+            proofMimeType: proof.mimeType,
+            proofSizeBytes: proof.sizeBytes,
+            proofSha256: proof.sha256,
+          }),
+          createdAt: DEMO_NOW,
+        },
+        {
+          userId: financeUserId,
+          action: 'PAYMENT_PROOF_REJECTED',
+          entityType: 'PAYMENT_SUBMISSION',
+          entityId: submission.id,
+          details: JSON.stringify({
+            submissionId: submission.id,
+            staffUserId: financeUserId,
+            decision: 'REJECTED',
+            reason: input.rejectionReason,
+          }),
+          createdAt: DEMO_NOW,
+        },
+      ]);
+      return submission;
+    });
+
+  const reconcileApprovedSubmission = async (
+    submission: typeof schema.paymentSubmissions.$inferSelect,
+    student: SeedStudent
+  ) => {
+    if (!submission.approvedPaymentId) {
+      throw new Error(`Approved demo proof ${submission.id} is missing its payment.`);
+    }
+    const payment = (
+      await db
+        .select()
+        .from(schema.payments)
+        .where(eq(schema.payments.id, submission.approvedPaymentId))
+        .limit(1)
+    )[0];
+    const receipt = (
+      await db
+        .select()
+        .from(schema.receipts)
+        .where(eq(schema.receipts.paymentId, submission.approvedPaymentId))
+        .limit(1)
+    )[0];
+    if (!payment || !receipt) {
+      throw new Error(`Approved demo proof ${submission.id} is missing its payment receipt.`);
+    }
+
+    const allocationRows = await db
+      .select({
+        assessmentItemId: schema.paymentAllocations.assessmentItemId,
+        adjustmentId: schema.paymentAllocations.adjustmentId,
+        amountCentavos: schema.paymentAllocations.amountCentavos,
+        itemName: schema.assessmentItems.name,
+        adjustmentReason: schema.adjustments.reason,
+      })
+      .from(schema.paymentAllocations)
+      .leftJoin(
+        schema.assessmentItems,
+        eq(schema.assessmentItems.id, schema.paymentAllocations.assessmentItemId)
+      )
+      .leftJoin(
+        schema.adjustments,
+        eq(schema.adjustments.id, schema.paymentAllocations.adjustmentId)
+      )
+      .where(eq(schema.paymentAllocations.paymentId, payment.id));
+    const ledgerRows = await db
+      .select({
+        debitCentavos: schema.ledgerEntries.debitCentavos,
+        creditCentavos: schema.ledgerEntries.creditCentavos,
+      })
+      .from(schema.ledgerEntries)
+      .where(eq(schema.ledgerEntries.studentId, student.id));
+    const balanceAfterPaymentCentavos = sumLedger(ledgerRows);
+    const allocations: ProofAllocation[] = allocationRows.map((allocation) => ({
+      targetType: allocation.adjustmentId ? 'DEBIT_ADJUSTMENT' : 'ASSESSMENT_ITEM',
+      name: allocation.itemName ?? allocation.adjustmentReason ?? 'Debit adjustment',
+      amountCentavos: allocation.amountCentavos,
+    }));
+    const settings = await db.select().from(schema.schoolSettings).limit(1);
+    const timezone = settings[0]?.timezone ?? 'Asia/Manila';
+    const expectedYear = getReceiptYear(DEMO_NOW, timezone);
+    let receiptNumber = receipt.receiptNumber;
+    if (!new RegExp(`-${expectedYear}-\\d{6}$`).test(receiptNumber)) {
+      const sequence = await allocateReceiptNumber(db, DEMO_NOW);
+      receiptNumber = sequence.receiptNumber;
+      await db
+        .update(schema.receiptNumberSequences)
+        .set({ updatedAt: DEMO_NOW })
+        .where(
+          and(
+            eq(schema.receiptNumberSequences.prefix, sequence.prefix),
+            eq(schema.receiptNumberSequences.year, sequence.year)
+          )
+        );
+    }
+    const verificationIdentifier = `VER-${payment.id}`;
+    const existingSnapshot = receiptSnapshotSchema.safeParse(receipt.issuanceSnapshot);
+    const receiptSnapshot =
+      existingSnapshot.success &&
+      existingSnapshot.data.issuedAt === DEMO_NOW.toISOString() &&
+      existingSnapshot.data.receiptNumber === receiptNumber &&
+      existingSnapshot.data.verificationIdentifier === verificationIdentifier
+        ? existingSnapshot.data
+        : await buildReceiptSnapshot(
+            db,
+            student,
+            payment,
+            receiptNumber,
+            verificationIdentifier,
+            allocations,
+            balanceAfterPaymentCentavos
+          );
+
+    await db
+      .update(schema.payments)
+      .set({ createdAt: DEMO_NOW, updatedAt: DEMO_NOW })
+      .where(eq(schema.payments.id, payment.id));
+    await db
+      .update(schema.paymentAllocations)
+      .set({ createdAt: DEMO_NOW })
+      .where(eq(schema.paymentAllocations.paymentId, payment.id));
+    await db
+      .update(schema.ledgerEntries)
+      .set({ createdAt: DEMO_NOW })
+      .where(
+        and(
+          eq(schema.ledgerEntries.studentId, student.id),
+          eq(schema.ledgerEntries.entryType, 'PAYMENT'),
+          eq(schema.ledgerEntries.description, `Payment ${payment.id}`)
+        )
+      );
+    await db
+      .update(schema.receipts)
+      .set({
+        receiptNumber,
+        verificationIdentifier,
+        issuanceSnapshot: receiptSnapshot,
+        createdAt: DEMO_NOW,
+      })
+      .where(eq(schema.receipts.id, receipt.id));
+    await db
+      .update(schema.paymentSubmissions)
+      .set({
+        status: 'APPROVED',
+        paidAt: DEMO_NOW,
+        reviewedByUserId: financeUserId,
+        reviewedAt: DEMO_NOW,
+        rejectionReason: null,
+        approvedPaymentId: payment.id,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      })
+      .where(eq(schema.paymentSubmissions.id, submission.id));
+    await db
+      .update(schema.auditLogs)
+      .set({ createdAt: DEMO_NOW })
+      .where(
+        and(
+          eq(schema.auditLogs.entityType, 'PAYMENT'),
+          eq(schema.auditLogs.entityId, payment.id),
+          eq(schema.auditLogs.action, 'PAYMENT_POSTED')
+        )
+      );
+    await db
+      .update(schema.auditLogs)
+      .set({ createdAt: DEMO_NOW })
+      .where(
+        and(
+          eq(schema.auditLogs.entityType, 'RECEIPT'),
+          eq(schema.auditLogs.entityId, receipt.id),
+          eq(schema.auditLogs.action, 'RECEIPT_ISSUED')
+        )
+      );
+    await db
+      .update(schema.auditLogs)
+      .set({ createdAt: DEMO_NOW })
+      .where(
+        and(
+          eq(schema.auditLogs.entityType, 'PAYMENT_SUBMISSION'),
+          eq(schema.auditLogs.entityId, submission.id),
+          inArray(schema.auditLogs.action, ['PAYMENT_PROOF_SUBMITTED', 'PAYMENT_PROOF_APPROVED'])
+        )
+      );
+    const sequenceParts = /^(.+)-(\d{4})-\d{6}$/.exec(receiptNumber);
+    if (sequenceParts?.[1] && sequenceParts[2]) {
+      await db
+        .update(schema.receiptNumberSequences)
+        .set({ updatedAt: DEMO_NOW })
+        .where(
+          and(
+            eq(schema.receiptNumberSequences.prefix, sequenceParts[1]),
+            eq(schema.receiptNumberSequences.year, Number(sequenceParts[2]))
+          )
+        );
+    }
+  };
+
+  const reconcileRejectedSubmission = async (
+    submission: typeof schema.paymentSubmissions.$inferSelect,
+    rejectionReason: string
+  ) => {
+    await db
+      .update(schema.paymentSubmissions)
+      .set({
+        status: 'REJECTED',
+        paidAt: DEMO_NOW,
+        reviewedByUserId: financeUserId,
+        reviewedAt: DEMO_NOW,
+        rejectionReason,
+        approvedPaymentId: null,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      })
+      .where(eq(schema.paymentSubmissions.id, submission.id));
+    await db
+      .update(schema.auditLogs)
+      .set({ createdAt: DEMO_NOW })
+      .where(
+        and(
+          eq(schema.auditLogs.entityType, 'PAYMENT_SUBMISSION'),
+          eq(schema.auditLogs.entityId, submission.id),
+          inArray(schema.auditLogs.action, ['PAYMENT_PROOF_SUBMITTED', 'PAYMENT_PROOF_REJECTED'])
+        )
+      );
+  };
+
+  const ensureProofNotifications = async (input: {
+    student: SeedStudent;
+    submission: typeof schema.paymentSubmissions.$inferSelect;
+    payment?: SeedPayment;
+    receipt?: SeedReceipt;
+    rejectionReason?: string;
+  }) => {
+    const studentName = `${input.student.firstName} ${input.student.lastName}`;
+    await ensureDeterministicNotification(db, {
+      userId: parentUserId,
+      type: 'PAYMENT_PROOF_SUBMITTED',
+      dedupeKey: `payment-proof-submitted:${input.submission.id}:${parentUserId}`,
+      entityType: 'PAYMENT_SUBMISSION',
+      entityId: input.submission.id,
+      title: 'Payment proof submitted for review',
+      body: `Your ${input.submission.paymentChannel} payment proof for ${studentName} (${formatCentavos(input.submission.amountCentavos)}) is pending school verification.`,
+    });
+
+    if (input.submission.status === 'REJECTED') {
+      await ensureDeterministicNotification(db, {
+        userId: parentUserId,
+        type: 'PAYMENT_PROOF_REJECTED',
+        dedupeKey: `payment-proof-rejected:${input.submission.id}:${parentUserId}`,
+        entityType: 'PAYMENT_SUBMISSION',
+        entityId: input.submission.id,
+        title: 'Payment proof needs attention',
+        body: `Your ${input.submission.paymentChannel} payment proof for ${studentName} was rejected. Reason: ${input.rejectionReason ?? input.submission.rejectionReason ?? 'The school requested a correction.'}`,
+      });
+      return;
+    }
+
+    if (!input.payment || !input.receipt) {
+      throw new Error(
+        `Approved demo proof ${input.submission.id} is missing notification records.`
+      );
+    }
+    const recipients = [...new Set(await notificationRecipients(db, input.student.id))];
+    for (const userId of recipients) {
+      await ensureDeterministicNotification(db, {
+        userId,
+        type: 'PAYMENT_SUCCESSFUL',
+        dedupeKey: `payment-successful:${input.payment.id}:${userId}`,
+        entityType: 'PAYMENT',
+        entityId: input.payment.id,
+        title: `Payment received for ${studentName}`,
+        body: `${formatCentavos(input.payment.amountCentavos)} was posted for ${studentName} through ${input.payment.paymentMethod}.`,
+      });
+      await ensureDeterministicNotification(db, {
+        userId,
+        type: 'RECEIPT_AVAILABLE',
+        dedupeKey: `receipt-available:${input.receipt.id}:${userId}`,
+        entityType: 'RECEIPT',
+        entityId: input.receipt.id,
+        title: 'System-generated payment receipt available',
+        body: `System-generated payment receipt ${input.receipt.receiptNumber} is available for ${studentName}.`,
+      });
+    }
   };
 
   const ensureSubmission = async (input: {
@@ -1123,44 +1906,93 @@ async function ensureDemoPaymentProofs(
     rejectionReason?: string;
   }) => {
     const student = studentFor(input.studentNumber);
-    if (!assessments.has(input.studentNumber)) {
+    const assessment = assessments.get(input.studentNumber);
+    if (!assessment) {
       throw new Error(`No seeded assessment exists for ${input.studentNumber}.`);
     }
     const existing = await db
-      .select({ id: schema.paymentSubmissions.id })
+      .select()
       .from(schema.paymentSubmissions)
       .where(eq(schema.paymentSubmissions.idempotencyKey, input.idempotencyKey))
       .limit(1);
-    let submission = existing[0]
-      ? await getPaymentSubmission(existing[0].id, db)
-      : await createPaymentSubmission(
-          {
-            studentId: student.id,
-            paymentChannel: input.paymentChannel,
-            amountCentavos: input.amountCentavos,
-            referenceNumber: input.referenceNumber,
-            paidAt: DEMO_NOW.toISOString(),
-            idempotencyKey: input.idempotencyKey,
-            proof,
-          },
-          parentUserId,
-          db,
-          provider
-        );
-
-    if (submission.status === 'PENDING_VERIFICATION') {
+    let submission = existing[0];
+    if (!submission) {
       submission =
         input.decision === 'APPROVE'
-          ? await approvePaymentSubmission(submission.id, financeUserId, db, provider)
-          : await rejectPaymentSubmission(
-              submission.id,
-              financeUserId,
-              { reason: input.rejectionReason },
-              db,
-              provider
-            );
+          ? await createApprovedSubmission({
+              student,
+              assessment,
+              paymentChannel: input.paymentChannel,
+              amountCentavos: input.amountCentavos,
+              referenceNumber: input.referenceNumber,
+              idempotencyKey: input.idempotencyKey,
+            })
+          : await createRejectedSubmission({
+              student,
+              paymentChannel: input.paymentChannel,
+              amountCentavos: input.amountCentavos,
+              referenceNumber: input.referenceNumber,
+              idempotencyKey: input.idempotencyKey,
+              rejectionReason: input.rejectionReason ?? 'Demo rejection.',
+            });
+    } else {
+      if (
+        submission.studentId !== student.id ||
+        submission.paymentChannel !== input.paymentChannel ||
+        submission.amountCentavos !== input.amountCentavos ||
+        submission.referenceNumber !== input.referenceNumber
+      ) {
+        throw new Error(`Existing demo proof ${input.idempotencyKey} does not match its fixture.`);
+      }
+      await ensureProofRecord(submission.id);
+      if (input.decision === 'APPROVE') {
+        if (submission.status === 'REJECTED') {
+          throw new Error(`Demo proof ${input.idempotencyKey} was already rejected.`);
+        }
+        await reconcileApprovedSubmission(submission, student);
+      } else {
+        if (submission.status === 'APPROVED') {
+          throw new Error(`Demo proof ${input.idempotencyKey} was already approved.`);
+        }
+        await reconcileRejectedSubmission(submission, input.rejectionReason ?? 'Demo rejection.');
+      }
+      submission = (
+        await db
+          .select()
+          .from(schema.paymentSubmissions)
+          .where(eq(schema.paymentSubmissions.id, submission.id))
+          .limit(1)
+      )[0];
+      if (!submission)
+        throw new Error(`Demo proof ${input.idempotencyKey} disappeared during reconciliation.`);
     }
-    return submission;
+
+    await ensureProofRecord(submission.id);
+    const payment = submission.approvedPaymentId
+      ? (
+          await db
+            .select()
+            .from(schema.payments)
+            .where(eq(schema.payments.id, submission.approvedPaymentId))
+            .limit(1)
+        )[0]
+      : undefined;
+    const receipt = payment
+      ? (
+          await db
+            .select()
+            .from(schema.receipts)
+            .where(eq(schema.receipts.paymentId, payment.id))
+            .limit(1)
+        )[0]
+      : undefined;
+    await ensureProofNotifications({
+      student,
+      submission,
+      payment,
+      receipt,
+      rejectionReason: input.rejectionReason,
+    });
   };
 
   await ensureSubmission({
