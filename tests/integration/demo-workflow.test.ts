@@ -7,6 +7,7 @@ import { processMockCallback } from '@/server/services/payment-gateway.service';
 import { PaymentService } from '@/server/services/payment.service';
 import { listOwnedPaymentsPage, PortalService } from '@/server/services/portal.service';
 import { ReportService } from '@/server/services/report.service';
+import { DEMO_NOW, seedDemoData } from '@/db/scripts/seed';
 import { describe, expect, it } from 'vitest';
 
 // This suite intentionally exercises the persisted mock gateway harness.
@@ -399,6 +400,199 @@ databaseContract('deterministic demo database workflow', () => {
       await db
         .delete(schema.mockPaymentCallbackEvents)
         .where(eq(schema.mockPaymentCallbackEvents.eventId, 'phase11-conflict-event'));
+    }
+  });
+
+  it('keeps the seeded payment-proof financial timeline deterministic and isolated', async () => {
+    const submission = (
+      await db
+        .select()
+        .from(schema.paymentSubmissions)
+        .where(eq(schema.paymentSubmissions.idempotencyKey, 'seed-proof-gcash-approved'))
+        .limit(1)
+    )[0];
+    expect(submission).toBeDefined();
+    expect(submission?.status).toBe('APPROVED');
+    expect(submission?.approvedPaymentId).toBeTruthy();
+
+    const payment = (
+      await db
+        .select()
+        .from(schema.payments)
+        .where(eq(schema.payments.id, submission!.approvedPaymentId!))
+        .limit(1)
+    )[0];
+    expect(payment).toBeDefined();
+    const receipt = (
+      await db
+        .select()
+        .from(schema.receipts)
+        .where(eq(schema.receipts.paymentId, payment!.id))
+        .limit(1)
+    )[0];
+    expect(receipt).toBeDefined();
+
+    const expectedTimestamp = DEMO_NOW.toISOString();
+    expect(payment!.createdAt.toISOString()).toBe(expectedTimestamp);
+    expect(payment!.updatedAt.toISOString()).toBe(expectedTimestamp);
+    expect(receipt!.createdAt.toISOString()).toBe(expectedTimestamp);
+    expect(receipt!.receiptNumber).toMatch(/-2026-\d{6}$/);
+
+    const snapshot = receipt!.issuanceSnapshot as {
+      issuedAt: string;
+      receiptNumber: string;
+    } | null;
+    expect(snapshot?.issuedAt).toBe(expectedTimestamp);
+    expect(snapshot?.receiptNumber).toBe(receipt!.receiptNumber);
+
+    const allocations = await db
+      .select()
+      .from(schema.paymentAllocations)
+      .where(eq(schema.paymentAllocations.paymentId, payment!.id));
+    expect(allocations.length).toBeGreaterThan(0);
+    expect(
+      allocations.every((allocation) => allocation.createdAt.toISOString() === expectedTimestamp)
+    ).toBe(true);
+
+    const paymentLedger = await db
+      .select()
+      .from(schema.ledgerEntries)
+      .where(
+        and(
+          eq(schema.ledgerEntries.studentId, payment!.studentId),
+          eq(schema.ledgerEntries.entryType, 'PAYMENT'),
+          eq(schema.ledgerEntries.description, `Payment ${payment!.id}`)
+        )
+      );
+    expect(paymentLedger).toHaveLength(1);
+    expect(paymentLedger[0]!.createdAt.toISOString()).toBe(expectedTimestamp);
+
+    const report = await ReportService.getCollectionReport(
+      { from: '2026-08-01', to: '2026-08-31' },
+      db
+    );
+    expect(
+      report.items.some(
+        (item) => item.paymentMethod === 'GCASH' && item.referenceNumber === 'DEMO-GCASH-APPROVED'
+      )
+    ).toBe(true);
+
+    const stableBefore = {
+      submission: {
+        id: submission!.id,
+        createdAt: submission!.createdAt,
+        updatedAt: submission!.updatedAt,
+        reviewedAt: submission!.reviewedAt,
+      },
+      payment: {
+        id: payment!.id,
+        createdAt: payment!.createdAt,
+        updatedAt: payment!.updatedAt,
+      },
+      receipt: {
+        id: receipt!.id,
+        receiptNumber: receipt!.receiptNumber,
+        createdAt: receipt!.createdAt,
+        issuanceSnapshot: receipt!.issuanceSnapshot,
+      },
+      allocations: allocations.map((allocation) => ({
+        id: allocation.id,
+        createdAt: allocation.createdAt,
+      })),
+      paymentLedger: paymentLedger.map((entry) => ({ id: entry.id, createdAt: entry.createdAt })),
+    };
+
+    const demoStudent = (
+      await db
+        .select()
+        .from(schema.students)
+        .where(eq(schema.students.studentNumber, 'DEMO-0001'))
+        .limit(1)
+    )[0];
+    const assessment = (
+      await db
+        .select()
+        .from(schema.studentAssessments)
+        .where(eq(schema.studentAssessments.studentId, demoStudent!.id))
+        .limit(1)
+    )[0];
+    const unrelatedCreatedAt = new Date('2025-01-01T00:00:00.000Z');
+    const [unrelatedLedgerEntry] = await db
+      .insert(schema.ledgerEntries)
+      .values({
+        studentId: demoStudent!.id,
+        assessmentId: assessment!.id,
+        entryType: 'PAYMENT',
+        debitCentavos: 0,
+        creditCentavos: 1,
+        balanceCentavos: 1,
+        description: 'Unrelated same-student payment ledger fixture',
+        createdAt: unrelatedCreatedAt,
+      })
+      .returning();
+    expect(unrelatedLedgerEntry).toBeDefined();
+
+    try {
+      await seedDemoData(db);
+
+      const stableAfter = {
+        submission: (
+          await db
+            .select({
+              id: schema.paymentSubmissions.id,
+              createdAt: schema.paymentSubmissions.createdAt,
+              updatedAt: schema.paymentSubmissions.updatedAt,
+              reviewedAt: schema.paymentSubmissions.reviewedAt,
+            })
+            .from(schema.paymentSubmissions)
+            .where(eq(schema.paymentSubmissions.id, submission!.id))
+        )[0],
+        payment: (
+          await db
+            .select({
+              id: schema.payments.id,
+              createdAt: schema.payments.createdAt,
+              updatedAt: schema.payments.updatedAt,
+            })
+            .from(schema.payments)
+            .where(eq(schema.payments.id, payment!.id))
+        )[0],
+        receipt: (
+          await db
+            .select({
+              id: schema.receipts.id,
+              receiptNumber: schema.receipts.receiptNumber,
+              createdAt: schema.receipts.createdAt,
+              issuanceSnapshot: schema.receipts.issuanceSnapshot,
+            })
+            .from(schema.receipts)
+            .where(eq(schema.receipts.id, receipt!.id))
+        )[0],
+        allocations: await db
+          .select({
+            id: schema.paymentAllocations.id,
+            createdAt: schema.paymentAllocations.createdAt,
+          })
+          .from(schema.paymentAllocations)
+          .where(eq(schema.paymentAllocations.paymentId, payment!.id)),
+        paymentLedger: await db
+          .select({ id: schema.ledgerEntries.id, createdAt: schema.ledgerEntries.createdAt })
+          .from(schema.ledgerEntries)
+          .where(eq(schema.ledgerEntries.id, paymentLedger[0]!.id)),
+      };
+      expect(stableAfter).toEqual(stableBefore);
+
+      const unrelatedAfter = (
+        await db
+          .select({ createdAt: schema.ledgerEntries.createdAt })
+          .from(schema.ledgerEntries)
+          .where(eq(schema.ledgerEntries.id, unrelatedLedgerEntry!.id))
+      )[0];
+      expect(unrelatedAfter?.createdAt.toISOString()).toBe(unrelatedCreatedAt.toISOString());
+    } finally {
+      await db
+        .delete(schema.ledgerEntries)
+        .where(eq(schema.ledgerEntries.id, unrelatedLedgerEntry!.id));
     }
   });
 });
