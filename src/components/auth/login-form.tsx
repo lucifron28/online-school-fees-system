@@ -82,9 +82,12 @@ export function LoginForm({
 
         if (result.error) throw result.error;
 
-        const role = parseUserRole(
-          (result.data?.user as Record<string, unknown> | undefined)?.role
-        );
+        const authResult = result as typeof result & {
+          user?: Record<string, unknown>;
+        };
+        const signedInUser =
+          (authResult.data?.user as Record<string, unknown> | undefined) ?? authResult.user;
+        const role = parseUserRole(signedInUser?.role);
         if (!role) {
           await signOut();
           throw new Error('Your account has no valid portal role.');
