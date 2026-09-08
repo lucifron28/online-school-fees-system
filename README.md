@@ -96,6 +96,7 @@ The reset commands refuse production mode, missing confirmations, and unsafe dat
 - `pnpm test` - run unit and component tests
 - `pnpm test:integration` - run database/tooling integration tests
 - `pnpm test:e2e` - run Playwright browser tests
+- `pnpm demo:record` - reset an isolated demo database, build, and retain the three desktop core-workflow recordings
 - `pnpm db:generate` - generate Drizzle migrations
 - `pnpm db:migrate` - apply committed Drizzle migrations
 - `pnpm db:verify:migrations` - verify tables, constraints, enums, timestamps, and financial delete protection
@@ -110,6 +111,29 @@ The reset commands refuse production mode, missing confirmations, and unsafe dat
 - `pnpm db:seed` - seed fictional demo data
 - `pnpm db:reset` - reset the demo database after explicit confirmation
 - `pnpm db:test:reset` - reset only the separately configured test database
+
+## Core Workflow Recordings
+
+The dedicated recording suite covers three fictional, UI-driven workflows: GCash proof approval, Maya proof
+rejection, and Finance OTC cash payment. It uses Playwright's built-in Chromium video capture at a 1280×720 desktop
+viewport. The recording tests are excluded from the normal `pnpm test:e2e` suite.
+
+Run it only against a disposable, non-production Neon branch:
+
+```powershell
+$env:DEMO_RECORDING_DATABASE_URL = '<isolated Neon branch connection string>'
+pnpm demo:record
+```
+
+The command resets that branch with the deterministic fictional seed, builds the production bundle, and writes exactly
+these ignored local artifacts under `artifacts/core-workflow-videos/`:
+
+- `01-gcash-payment-approval.webm`
+- `02-maya-payment-rejection.webm`
+- `03-otc-cash-payment.webm`
+
+GCash and Maya remain external/manual transfer channels; the recordings show proof submission and Finance review, not
+gateway integration. Generated videos must not be committed.
 
 ## Demo accounts
 

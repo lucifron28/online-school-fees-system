@@ -8,6 +8,7 @@
 /playwright-report
 /blob-report
 /playwright/.cache
+/artifacts/core-workflow-videos/
 
 # next.js
 /.next/
